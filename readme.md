@@ -1,4 +1,3 @@
-README.md (mẫu hoàn chỉnh)
 # Dungeon Learning Adventure
 
 A simple 2D dungeon exploration game developed in **Java** for the **Object-Oriented Programming course**.
@@ -253,20 +252,3 @@ The game uses **Java Swing rendering** with:
 - paintComponent()
 
 Sprites and objects are drawn inside the render function.
-
----
-# Future Improvements
-
-Possible extensions:
-
-- Better monster AI
-- More dungeon floors
-- Additional skills
-- Multiplayer mode
-- Procedural dungeon generation
-
----
-
-# Author
-
-OOP Course Project
