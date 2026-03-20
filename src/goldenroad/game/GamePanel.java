@@ -30,14 +30,23 @@ public class GamePanel extends JPanel implements Runnable {
     private static final int PLAYER_HEIGHT = 60;
 
     private static final double MOVE_SPEED = 4.0;
+    private static final double SPRINT_MULTIPLIER = 1.9;
     private static final double GRAVITY = 1.1;
     private static final double JUMP_SPEED = -18.0;
     private static final double MAX_FALL_SPEED = 20.0;
     private static final int MAX_JUMPS = 2;
     private static final int TRANSITION_SPAWN_PADDING = 2;
-    private static final double BULLET_SPEED = 10.0;
-    private static final int NORMAL_BULLET_DIAMETER = 10;
-    private static final int LARGE_BULLET_DIAMETER = 22;
+    private static final double LASER_SPEED = 13.0;
+    private static final int LASER_DIAMETER = 14;
+    private static final int LASER_DAMAGE = 4;
+    private static final Color LASER_COLOR = new Color(255, 90, 80);
+
+    private static final double CLUSTER_BULLET_SPEED = 10.5;
+    private static final int CLUSTER_BULLET_DIAMETER = 7;
+    private static final int CLUSTER_BULLET_DAMAGE = 1;
+    private static final int CLUSTER_BULLET_COUNT = 6;
+    private static final double CLUSTER_SPREAD_DEGREES = 22.0;
+    private static final Color CLUSTER_COLOR = new Color(255, 235, 160);
 
     private final KeyHandler keyHandler = new KeyHandler();
     private final MouseHandler mouseHandler = new MouseHandler();
@@ -90,11 +99,12 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void update() {
+        double currentMoveSpeed = keyHandler.sprintPressed ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED;
         double moveX = 0;
         if (keyHandler.leftPressed && !keyHandler.rightPressed) {
-            moveX = -MOVE_SPEED;
+            moveX = -currentMoveSpeed;
         } else if (keyHandler.rightPressed && !keyHandler.leftPressed) {
-            moveX = MOVE_SPEED;
+            moveX = currentMoveSpeed;
         }
 
         applyHorizontalMovement(moveX);
@@ -117,30 +127,97 @@ public class GamePanel extends JPanel implements Runnable {
 
     private void handleShootingInput() {
         if (mouseHandler.consumeLeftClick()) {
-            spawnBullet(NORMAL_BULLET_DIAMETER, new Color(255, 245, 210));
+            spawnLaserShot();
         }
 
         if (mouseHandler.consumeRightClick()) {
-            spawnBullet(LARGE_BULLET_DIAMETER, new Color(255, 150, 90));
+            spawnClusterShot();
         }
     }
 
-    private void spawnBullet(int diameter, Color color) {
+    private void spawnLaserShot() {
         double originX = playerX + (PLAYER_WIDTH / 2.0);
         double originY = playerY + (PLAYER_HEIGHT / 2.0);
 
         double directionX = mouseHandler.getMouseX() - originX;
         double directionY = mouseHandler.getMouseY() - originY;
 
+        spawnBullet(
+            originX,
+            originY,
+            directionX,
+            directionY,
+            LASER_SPEED,
+            LASER_DIAMETER,
+            LASER_COLOR,
+            LASER_DAMAGE
+        );
+    }
+
+    private void spawnClusterShot() {
+        double originX = playerX + (PLAYER_WIDTH / 2.0);
+        double originY = playerY + (PLAYER_HEIGHT / 2.0);
+
+        double baseDirectionX = mouseHandler.getMouseX() - originX;
+        double baseDirectionY = mouseHandler.getMouseY() - originY;
+
+        if (baseDirectionX == 0 && baseDirectionY == 0) {
+            baseDirectionX = 1;
+        }
+
+        double spreadStep = CLUSTER_BULLET_COUNT == 1
+            ? 0
+            : CLUSTER_SPREAD_DEGREES / (CLUSTER_BULLET_COUNT - 1);
+        double startAngle = -CLUSTER_SPREAD_DEGREES / 2.0;
+
+        for (int i = 0; i < CLUSTER_BULLET_COUNT; i++) {
+            double angleDegrees = startAngle + (spreadStep * i);
+            double[] rotatedDirection = rotateVector(baseDirectionX, baseDirectionY, Math.toRadians(angleDegrees));
+
+            spawnBullet(
+                originX,
+                originY,
+                rotatedDirection[0],
+                rotatedDirection[1],
+                CLUSTER_BULLET_SPEED,
+                CLUSTER_BULLET_DIAMETER,
+                CLUSTER_COLOR,
+                CLUSTER_BULLET_DAMAGE
+            );
+        }
+    }
+
+    private void spawnBullet(
+        double originX,
+        double originY,
+        double directionX,
+        double directionY,
+        double speed,
+        int diameter,
+        Color color,
+        int damage
+    ) {
+
         bullets.add(new Bullet(
             originX - (diameter / 2.0),
             originY - (diameter / 2.0),
             directionX,
             directionY,
-            BULLET_SPEED,
+            speed,
             diameter,
-            color
+            color,
+            damage
         ));
+    }
+
+    private double[] rotateVector(double x, double y, double angleRadians) {
+        double cos = Math.cos(angleRadians);
+        double sin = Math.sin(angleRadians);
+
+        return new double[] {
+            (x * cos) - (y * sin),
+            (x * sin) + (y * cos)
+        };
     }
 
     private void updateBullets() {
@@ -160,7 +237,9 @@ public class GamePanel extends JPanel implements Runnable {
             boolean hitMonster = false;
             for (Monster monster : currentScreen.getMonsters()) {
                 if (bulletBounds.intersects(monster.getBounds())) {
-                    currentScreen.removeMonster(monster);
+                    if (monster.takeDamage(bullet.getDamage())) {
+                        currentScreen.removeMonster(monster);
+                    }
                     bulletIterator.remove();
                     hitMonster = true;
                     break;
