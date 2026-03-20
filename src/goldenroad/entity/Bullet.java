@@ -12,8 +12,9 @@ public class Bullet {
 
     private final int diameter;
     private final Color color;
+    private final int damage;
 
-    public Bullet(double x, double y, double directionX, double directionY, double speed, int diameter, Color color) {
+    public Bullet(double x, double y, double directionX, double directionY, double speed, int diameter, Color color, int damage) {
         this.x = x;
         this.y = y;
 
@@ -28,6 +29,7 @@ public class Bullet {
         this.velocityY = (directionY / length) * speed;
         this.diameter = diameter;
         this.color = color;
+        this.damage = damage;
     }
 
     public void update() {
@@ -53,5 +55,9 @@ public class Bullet {
 
     public Color getColor() {
         return color;
+    }
+
+    public int getDamage() {
+        return damage;
     }
 }

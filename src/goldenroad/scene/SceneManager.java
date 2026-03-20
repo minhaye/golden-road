@@ -28,7 +28,7 @@ public class SceneManager {
                 new Rectangle(560, 340, 170, 20)
             ),
             List.of(
-                new Monster(640, 300, 36, 40, new Color(200, 70, 70))
+                new Monster(640, 300, 36, 40, new Color(200, 70, 70), 6)
             ),
             List.of(
                 new Item(280, 355, 18, 18, new Color(80, 210, 120), Item.Shape.OVAL)
@@ -42,8 +42,8 @@ public class SceneManager {
                 new Rectangle(500, 400, 220, 20)
             ),
             List.of(
-                new Monster(160, 320, 40, 40, new Color(220, 90, 60)),
-                new Monster(610, 360, 34, 36, new Color(180, 60, 90))
+                new Monster(160, 320, 40, 40, new Color(220, 90, 60), 5),
+                new Monster(610, 360, 34, 36, new Color(180, 60, 90), 4)
             ),
             List.of(
                 new Item(545, 370, 20, 20, new Color(70, 180, 240), Item.Shape.RECTANGLE)
@@ -56,7 +56,7 @@ public class SceneManager {
                 new Rectangle(320, 330, 200, 20)
             ),
             List.of(
-                new Monster(380, 290, 42, 42, new Color(170, 70, 160))
+                new Monster(380, 290, 42, 42, new Color(170, 70, 160), 7)
             ),
             List.of(
                 new Item(430, 440, 22, 22, new Color(240, 200, 70), Item.Shape.OVAL),
