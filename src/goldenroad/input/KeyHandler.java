@@ -8,11 +8,21 @@ public class KeyHandler implements KeyListener {
     public boolean rightPressed;
     public boolean jumpPressed;
     public boolean sprintPressed;
+    public boolean interactPressed;
     private boolean jumpJustPressed;
+    private boolean interactJustPressed;
 
     public boolean consumeJumpJustPressed() {
         if (jumpJustPressed) {
             jumpJustPressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean consumeInteractJustPressed() {
+        if (interactJustPressed) {
+            interactJustPressed = false;
             return true;
         }
         return false;
@@ -44,6 +54,13 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_SHIFT) {
             sprintPressed = true;
         }
+
+        if (code == KeyEvent.VK_E) {
+            if (!interactPressed) {
+                interactJustPressed = true;
+            }
+            interactPressed = true;
+        }
     }
 
     @Override
@@ -64,6 +81,10 @@ public class KeyHandler implements KeyListener {
 
         if (code == KeyEvent.VK_SHIFT) {
             sprintPressed = false;
+        }
+
+        if (code == KeyEvent.VK_E) {
+            interactPressed = false;
         }
     }
 }

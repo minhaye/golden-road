@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Rectangle;
+import java.awt.Polygon;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -36,6 +37,9 @@ public class GamePanel extends JPanel implements Runnable {
     private static final double MAX_FALL_SPEED = 20.0;
     private static final int MAX_JUMPS = 2;
     private static final int TRANSITION_SPAWN_PADDING = 2;
+    private static final int EXIT_DOOR_WIDTH = 44;
+    private static final int EXIT_DOOR_HEIGHT = 72;
+    private static final int EXIT_DOOR_MARGIN_RIGHT = 24;
     private static final double LASER_SPEED = 13.0;
     private static final int LASER_DIAMETER = 14;
     private static final int LASER_DAMAGE = 4;
@@ -48,16 +52,24 @@ public class GamePanel extends JPanel implements Runnable {
     private static final double CLUSTER_SPREAD_DEGREES = 22.0;
     private static final Color CLUSTER_COLOR = new Color(255, 235, 160);
 
+    private static final int CAMERA_DEAD_ZONE_WIDTH = 220;
+    private static final int CAMERA_DEAD_ZONE_HEIGHT = 140;
+    private static final double FIXED_DELTA_SECONDS = 1.0 / TARGET_FPS;
+
     private final KeyHandler keyHandler = new KeyHandler();
     private final MouseHandler mouseHandler = new MouseHandler();
     private final SceneManager sceneManager = new SceneManager();
     private final List<Bullet> bullets = new ArrayList<>();
+    private final List<Bullet> enemyBullets = new ArrayList<>();
 
     private double playerX = START_PLAYER_X;
     private double playerY = START_PLAYER_Y;
     private double velocityY = 0;
     private int jumpCount = 0;
     private boolean onGround = true;
+    private double cameraX = 0;
+    private double cameraY = 0;
+    private boolean exitDoorVisible = false;
 
     private Thread gameThread;
 
@@ -121,8 +133,13 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         applyVerticalMovement(velocityY);
+        updateExitDoorVisibility();
+        handleExitDoorTransition();
+        updateCamera();
         handleShootingInput();
         updateBullets();
+        updateMonsters();
+        updateEnemyBullets();
     }
 
     private void handleShootingInput() {
@@ -139,8 +156,8 @@ public class GamePanel extends JPanel implements Runnable {
         double originX = playerX + (PLAYER_WIDTH / 2.0);
         double originY = playerY + (PLAYER_HEIGHT / 2.0);
 
-        double directionX = mouseHandler.getMouseX() - originX;
-        double directionY = mouseHandler.getMouseY() - originY;
+        double directionX = toWorldMouseX() - originX;
+        double directionY = toWorldMouseY() - originY;
 
         spawnBullet(
             originX,
@@ -158,8 +175,8 @@ public class GamePanel extends JPanel implements Runnable {
         double originX = playerX + (PLAYER_WIDTH / 2.0);
         double originY = playerY + (PLAYER_HEIGHT / 2.0);
 
-        double baseDirectionX = mouseHandler.getMouseX() - originX;
-        double baseDirectionY = mouseHandler.getMouseY() - originY;
+        double baseDirectionX = toWorldMouseX() - originX;
+        double baseDirectionY = toWorldMouseY() - originY;
 
         if (baseDirectionX == 0 && baseDirectionY == 0) {
             baseDirectionX = 1;
@@ -229,7 +246,7 @@ public class GamePanel extends JPanel implements Runnable {
             bullet.update();
 
             Rectangle bulletBounds = bullet.getBounds();
-            if (isOutOfScreen(bulletBounds) || collidesWithSolidBlock(bulletBounds)) {
+            if (isOutOfWorld(bulletBounds) || collidesWithSolidBlock(bulletBounds)) {
                 bulletIterator.remove();
                 continue;
             }
@@ -252,6 +269,40 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
+    private void updateMonsters() {
+        Screen currentScreen = sceneManager.getCurrentScreen();
+        double playerCenterX = playerX + (PLAYER_WIDTH / 2.0);
+        double playerCenterY = playerY + (PLAYER_HEIGHT / 2.0);
+
+        for (Monster monster : currentScreen.getMonsters()) {
+            monster.update(playerCenterX, playerCenterY, FIXED_DELTA_SECONDS);
+            Bullet shot = monster.createShotTowardPlayer(playerCenterX, playerCenterY);
+            if (shot != null) {
+                enemyBullets.add(shot);
+            }
+        }
+    }
+
+    private void updateEnemyBullets() {
+        Iterator<Bullet> bulletIterator = enemyBullets.iterator();
+        Rectangle playerBounds = getPlayerBounds(playerX, playerY);
+
+        while (bulletIterator.hasNext()) {
+            Bullet bullet = bulletIterator.next();
+            bullet.update();
+
+            Rectangle bulletBounds = bullet.getBounds();
+            if (isOutOfWorld(bulletBounds) || collidesWithSolidBlock(bulletBounds)) {
+                bulletIterator.remove();
+                continue;
+            }
+
+            if (bulletBounds.intersects(playerBounds)) {
+                bulletIterator.remove();
+            }
+        }
+    }
+
     private boolean collidesWithSolidBlock(Rectangle bounds) {
         for (Rectangle block : getCurrentSolidBlocks()) {
             if (bounds.intersects(block)) {
@@ -261,11 +312,42 @@ public class GamePanel extends JPanel implements Runnable {
         return false;
     }
 
-    private boolean isOutOfScreen(Rectangle bounds) {
+    private boolean isOutOfWorld(Rectangle bounds) {
+        int worldWidth = getCurrentWorldWidth();
+        int worldHeight = getCurrentWorldHeight();
+
         return bounds.x + bounds.width < 0
-            || bounds.x > SCREEN_WIDTH
+            || bounds.x > worldWidth
             || bounds.y + bounds.height < 0
-            || bounds.y > SCREEN_HEIGHT;
+            || bounds.y > worldHeight;
+    }
+
+    private void updateCamera() {
+        double playerCenterX = playerX + (PLAYER_WIDTH / 2.0);
+        double playerCenterY = playerY + (PLAYER_HEIGHT / 2.0);
+
+        double deadZoneLeft = cameraX + ((SCREEN_WIDTH - CAMERA_DEAD_ZONE_WIDTH) / 2.0);
+        double deadZoneRight = deadZoneLeft + CAMERA_DEAD_ZONE_WIDTH;
+        if (playerCenterX < deadZoneLeft) {
+            cameraX = playerCenterX - ((SCREEN_WIDTH - CAMERA_DEAD_ZONE_WIDTH) / 2.0);
+        } else if (playerCenterX > deadZoneRight) {
+            cameraX = playerCenterX - ((SCREEN_WIDTH + CAMERA_DEAD_ZONE_WIDTH) / 2.0);
+        }
+
+        double deadZoneTop = cameraY + ((SCREEN_HEIGHT - CAMERA_DEAD_ZONE_HEIGHT) / 2.0);
+        double deadZoneBottom = deadZoneTop + CAMERA_DEAD_ZONE_HEIGHT;
+        if (playerCenterY < deadZoneTop) {
+            cameraY = playerCenterY - ((SCREEN_HEIGHT - CAMERA_DEAD_ZONE_HEIGHT) / 2.0);
+        } else if (playerCenterY > deadZoneBottom) {
+            cameraY = playerCenterY - ((SCREEN_HEIGHT + CAMERA_DEAD_ZONE_HEIGHT) / 2.0);
+        }
+
+        cameraX = clamp(cameraX, 0, Math.max(0, getCurrentWorldWidth() - SCREEN_WIDTH));
+        cameraY = clamp(cameraY, 0, Math.max(0, getCurrentWorldHeight() - SCREEN_HEIGHT));
+    }
+
+    private double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     private void applyHorizontalMovement(double deltaX) {
@@ -288,7 +370,7 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         playerX = nextX;
-        handleScreenTransition();
+        playerX = clamp(playerX, 0, getCurrentWorldWidth() - PLAYER_WIDTH);
     }
 
     private void applyVerticalMovement(double deltaY) {
@@ -320,30 +402,80 @@ public class GamePanel extends JPanel implements Runnable {
         return new Rectangle((int) x, (int) y, PLAYER_WIDTH, PLAYER_HEIGHT);
     }
 
-    private void handleScreenTransition() {
-        boolean transitioned = false;
+    private void updateExitDoorVisibility() {
+        exitDoorVisible = sceneManager.canMoveToRightScreen();
+    }
 
-        if (playerX + PLAYER_WIDTH > SCREEN_WIDTH) {
-            if (sceneManager.moveToRightScreen()) {
-                playerX = TRANSITION_SPAWN_PADDING;
-                transitioned = true;
-            } else {
-                playerX = SCREEN_WIDTH - PLAYER_WIDTH;
+    private Rectangle getExitDoorBounds() {
+        int worldWidth = getCurrentWorldWidth();
+
+        int doorX = worldWidth - EXIT_DOOR_WIDTH - EXIT_DOOR_MARGIN_RIGHT;
+        int floorTopY = getDoorFloorTopY(doorX, EXIT_DOOR_WIDTH);
+        int doorY = floorTopY - EXIT_DOOR_HEIGHT;
+
+        return new Rectangle(doorX, doorY, EXIT_DOOR_WIDTH, EXIT_DOOR_HEIGHT);
+    }
+
+    private int getDoorFloorTopY(int doorX, int doorWidth) {
+        int floorTopY = Integer.MIN_VALUE;
+
+        for (Rectangle block : getCurrentSolidBlocks()) {
+            boolean overlapsDoor = block.x < doorX + doorWidth && block.x + block.width > doorX;
+            if (overlapsDoor && block.y > floorTopY) {
+                floorTopY = block.y;
             }
         }
 
-        if (playerX < 0) {
-            if (sceneManager.moveToLeftScreen()) {
-                playerX = SCREEN_WIDTH - PLAYER_WIDTH - TRANSITION_SPAWN_PADDING;
-                transitioned = true;
-            } else {
-                playerX = 0;
-            }
+        if (floorTopY == Integer.MIN_VALUE) {
+            floorTopY = getCurrentWorldHeight() - EXIT_DOOR_HEIGHT - 12;
         }
 
-        if (transitioned) {
-            bullets.clear();
+        return floorTopY;
+    }
+
+    private void handleExitDoorTransition() {
+        if (!exitDoorVisible) {
+            return;
         }
+
+        Rectangle playerBounds = getPlayerBounds(playerX, playerY);
+        if (!playerBounds.intersects(getExitDoorBounds())) {
+            return;
+        }
+
+        if (!keyHandler.consumeInteractJustPressed()) {
+            return;
+        }
+
+        if (!sceneManager.moveToRightScreen()) {
+            return;
+        }
+
+        playerX = TRANSITION_SPAWN_PADDING;
+        velocityY = 0;
+        jumpCount = 0;
+        onGround = false;
+        bullets.clear();
+        enemyBullets.clear();
+        cameraX = 0;
+        cameraY = 0;
+        exitDoorVisible = false;
+    }
+
+    private int getCurrentWorldWidth() {
+        return sceneManager.getCurrentScreen().getWorldWidth();
+    }
+
+    private int getCurrentWorldHeight() {
+        return sceneManager.getCurrentScreen().getWorldHeight();
+    }
+
+    private double toWorldMouseX() {
+        return mouseHandler.getMouseX() + cameraX;
+    }
+
+    private double toWorldMouseY() {
+        return mouseHandler.getMouseY() + cameraY;
     }
 
     private List<Rectangle> getCurrentSolidBlocks() {
@@ -362,36 +494,93 @@ public class GamePanel extends JPanel implements Runnable {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
+        int renderOffsetX = (int) Math.round(cameraX);
+        int renderOffsetY = (int) Math.round(cameraY);
+
         g.setColor(new Color(70, 110, 160));
         g.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
         g.setColor(new Color(55, 45, 35));
         for (Rectangle block : getCurrentSolidBlocks()) {
-            g.fillRect(block.x, block.y, block.width, block.height);
+            g.fillRect(block.x - renderOffsetX, block.y - renderOffsetY, block.width, block.height);
         }
 
         for (Item item : getCurrentItems()) {
             Rectangle itemBounds = item.getBounds();
             g.setColor(item.getColor());
             if (item.getShape() == Item.Shape.OVAL) {
-                g.fillOval(itemBounds.x, itemBounds.y, itemBounds.width, itemBounds.height);
+                g.fillOval(itemBounds.x - renderOffsetX, itemBounds.y - renderOffsetY, itemBounds.width, itemBounds.height);
             } else {
-                g.fillRect(itemBounds.x, itemBounds.y, itemBounds.width, itemBounds.height);
+                g.fillRect(itemBounds.x - renderOffsetX, itemBounds.y - renderOffsetY, itemBounds.width, itemBounds.height);
             }
         }
 
         for (Monster monster : getCurrentMonsters()) {
             Rectangle monsterBounds = monster.getBounds();
             g.setColor(monster.getColor());
-            g.fillRect(monsterBounds.x, monsterBounds.y, monsterBounds.width, monsterBounds.height);
+            drawMonster(g, monster, monsterBounds, renderOffsetX, renderOffsetY);
         }
 
         for (Bullet bullet : bullets) {
             g.setColor(bullet.getColor());
-            g.fillOval(bullet.getRenderX(), bullet.getRenderY(), bullet.getDiameter(), bullet.getDiameter());
+            g.fillOval(bullet.getRenderX() - renderOffsetX, bullet.getRenderY() - renderOffsetY, bullet.getDiameter(), bullet.getDiameter());
+        }
+
+        for (Bullet bullet : enemyBullets) {
+            g.setColor(bullet.getColor());
+            g.fillOval(bullet.getRenderX() - renderOffsetX, bullet.getRenderY() - renderOffsetY, bullet.getDiameter(), bullet.getDiameter());
         }
 
         g.setColor(new Color(230, 190, 70));
-        g.fillRect((int) playerX, (int) playerY, PLAYER_WIDTH, PLAYER_HEIGHT);
+        g.fillRect((int) playerX - renderOffsetX, (int) playerY - renderOffsetY, PLAYER_WIDTH, PLAYER_HEIGHT);
+
+        if (exitDoorVisible) {
+            Rectangle doorBounds = getExitDoorBounds();
+
+            g.setColor(new Color(40, 60, 90));
+            g.fillRect(doorBounds.x - renderOffsetX, doorBounds.y - renderOffsetY, doorBounds.width, doorBounds.height);
+
+            g.setColor(new Color(230, 245, 255));
+            g.drawRect(doorBounds.x - renderOffsetX, doorBounds.y - renderOffsetY, doorBounds.width, doorBounds.height);
+
+            g.setColor(new Color(245, 215, 130));
+            int knobSize = 7;
+            int knobX = doorBounds.x + doorBounds.width - 12;
+            int knobY = doorBounds.y + (doorBounds.height / 2);
+            g.fillOval(knobX - renderOffsetX, knobY - renderOffsetY, knobSize, knobSize);
+
+            Rectangle playerBounds = getPlayerBounds(playerX, playerY);
+            if (playerBounds.intersects(doorBounds)) {
+                g.setColor(new Color(255, 255, 255));
+                g.drawString("Press E to enter", doorBounds.x - renderOffsetX - 22, doorBounds.y - renderOffsetY - 8);
+            }
+        }
+
+        g.setColor(new Color(255, 255, 255, 55));
+        int deadZoneRenderX = (SCREEN_WIDTH - CAMERA_DEAD_ZONE_WIDTH) / 2;
+        int deadZoneRenderY = (SCREEN_HEIGHT - CAMERA_DEAD_ZONE_HEIGHT) / 2;
+        g.drawRect(deadZoneRenderX, deadZoneRenderY, CAMERA_DEAD_ZONE_WIDTH, CAMERA_DEAD_ZONE_HEIGHT);
+    }
+
+    private void drawMonster(Graphics g, Monster monster, Rectangle bounds, int renderOffsetX, int renderOffsetY) {
+        int x = bounds.x - renderOffsetX;
+        int y = bounds.y - renderOffsetY;
+
+        switch (monster.getRenderShape()) {
+            case OVAL:
+                g.fillOval(x, y, bounds.width, bounds.height);
+                break;
+            case TRIANGLE:
+                Polygon triangle = new Polygon(
+                    new int[] { x + (bounds.width / 2), x, x + bounds.width },
+                    new int[] { y, y + bounds.height, y + bounds.height },
+                    3
+                );
+                g.fillPolygon(triangle);
+                break;
+            default:
+                g.fillRect(x, y, bounds.width, bounds.height);
+                break;
+        }
     }
 }

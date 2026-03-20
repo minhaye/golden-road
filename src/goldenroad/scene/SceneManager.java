@@ -5,8 +5,11 @@ import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
 
+import goldenroad.entity.AirMonster;
+import goldenroad.entity.GroundMonster;
 import goldenroad.entity.Item;
 import goldenroad.entity.Monster;
+import goldenroad.entity.Monster.RenderShape;
 
 public class SceneManager {
     private final List<Floor> floors = new ArrayList<>();
@@ -19,56 +22,85 @@ public class SceneManager {
     }
 
     private void setupPrototypeData() {
-        List<Screen> floor1Screens = new ArrayList<>();
+        final int worldHeight = 780;
 
-        floor1Screens.add(new Screen(
+        Screen map1 = new Screen(
             List.of(
-                new Rectangle(0, 470, 960, 70),
-                new Rectangle(220, 390, 180, 20),
-                new Rectangle(560, 340, 170, 20)
+                new Rectangle(0, 470, 1800, 70),
+                new Rectangle(140, 410, 320, 34),
+                new Rectangle(560, 350, 260, 30),
+                new Rectangle(900, 290, 220, 26),
+                new Rectangle(1180, 360, 290, 28),
+                new Rectangle(1520, 270, 220, 24)
             ),
             List.of(
-                new Monster(640, 300, 36, 40, new Color(200, 70, 70), 6)
+                new GroundMonster(620, 430, 44, 42, new Color(220, 70, 70), 8, 112, 460, 1750, 2.0, 8.8, 1, 8, new Color(255, 145, 120), RenderShape.OVAL),
+                new AirMonster(1060, 200, 40, 36, new Color(135, 80, 200), 6, 128, 860, 1720, 110, 340, 3.0, 9.2, 1, 8, new Color(210, 140, 255), RenderShape.TRIANGLE)
             ),
             List.of(
-                new Item(280, 355, 18, 18, new Color(80, 210, 120), Item.Shape.OVAL)
-            )
-        ));
+                new Item(255, 375, 18, 18, new Color(80, 210, 120), Item.Shape.OVAL),
+                new Item(950, 258, 16, 16, new Color(95, 220, 190), Item.Shape.RECTANGLE)
+            ),
+            1800,
+            worldHeight
+        );
 
-        floor1Screens.add(new Screen(
+        Screen map2 = new Screen(
             List.of(
-                new Rectangle(0, 470, 960, 70),
-                new Rectangle(120, 360, 170, 20),
-                new Rectangle(500, 400, 220, 20)
+                new Rectangle(0, 500, 2000, 70),
+                new Rectangle(100, 420, 360, 34),
+                new Rectangle(560, 360, 250, 28),
+                new Rectangle(900, 300, 220, 26),
+                new Rectangle(1180, 240, 190, 22),
+                new Rectangle(1440, 330, 260, 26),
+                new Rectangle(1730, 400, 210, 30)
             ),
             List.of(
-                new Monster(160, 320, 40, 40, new Color(220, 90, 60), 5),
-                new Monster(610, 360, 34, 36, new Color(180, 60, 90), 4)
+                new GroundMonster(230, 460, 42, 40, new Color(230, 85, 65), 8, 120, 50, 1920, 2.2, 9.0, 1, 8, new Color(255, 150, 125), RenderShape.TRIANGLE),
+                new GroundMonster(1510, 290, 40, 38, new Color(165, 85, 220), 8, 116, 1300, 1920, 2.0, 9.0, 1, 8, new Color(235, 175, 255), RenderShape.OVAL),
+                new AirMonster(980, 150, 38, 36, new Color(95, 185, 230), 7, 148, 760, 1860, 80, 300, 2.5, 10.0, 1, 8, new Color(145, 220, 255), RenderShape.RECTANGLE)
             ),
             List.of(
-                new Item(545, 370, 20, 20, new Color(70, 180, 240), Item.Shape.RECTANGLE)
-            )
-        ));
+                new Item(620, 326, 18, 18, new Color(120, 220, 150), Item.Shape.RECTANGLE),
+                new Item(1215, 208, 16, 16, new Color(245, 205, 90), Item.Shape.OVAL),
+                new Item(1780, 368, 16, 16, new Color(90, 200, 240), Item.Shape.RECTANGLE)
+            ),
+            2000,
+            worldHeight
+        );
 
-        floor1Screens.add(new Screen(
+        Screen map3 = new Screen(
             List.of(
-                new Rectangle(0, 470, 960, 70),
-                new Rectangle(320, 330, 200, 20)
+                new Rectangle(0, 490, 2200, 70),
+                new Rectangle(120, 430, 280, 30),
+                new Rectangle(470, 380, 300, 30),
+                new Rectangle(860, 330, 220, 26),
+                new Rectangle(1150, 280, 220, 24),
+                new Rectangle(1440, 330, 260, 26),
+                new Rectangle(1740, 260, 180, 22),
+                new Rectangle(1940, 390, 210, 28)
             ),
             List.of(
-                new Monster(380, 290, 42, 42, new Color(170, 70, 160), 7)
+                new GroundMonster(540, 450, 44, 40, new Color(210, 75, 75), 9, 124, 160, 2100, 1.9, 9.4, 1, 8, new Color(255, 150, 135), RenderShape.RECTANGLE),
+                new GroundMonster(1990, 350, 36, 36, new Color(175, 80, 230), 8, 120, 1900, 2150, 2.0, 9.2, 1, 8, new Color(240, 180, 255), RenderShape.TRIANGLE),
+                new AirMonster(1260, 170, 40, 36, new Color(100, 190, 235), 7, 156, 930, 2100, 90, 320, 2.4, 10.2, 1, 8, new Color(150, 230, 255), RenderShape.OVAL)
             ),
             List.of(
-                new Item(430, 440, 22, 22, new Color(240, 200, 70), Item.Shape.OVAL),
-                new Item(350, 300, 16, 16, new Color(110, 220, 150), Item.Shape.RECTANGLE)
-            )
-        ));
+                new Item(520, 348, 16, 16, new Color(105, 220, 170), Item.Shape.OVAL),
+                new Item(1470, 298, 18, 18, new Color(250, 205, 95), Item.Shape.RECTANGLE),
+                new Item(1975, 356, 16, 16, new Color(85, 200, 240), Item.Shape.OVAL)
+            ),
+            2200,
+            worldHeight
+        );
 
-        floors.add(new Floor(floor1Screens));
+        floors.add(new Floor(List.of(map1)));
+        floors.add(new Floor(List.of(map2)));
+        floors.add(new Floor(List.of(map3)));
     }
 
     public Screen getCurrentScreen() {
-        return floors.get(currentFloorIndex).getScreen(currentScreenIndex);
+        return floors.get(currentFloorIndex).getScreen(0);
     }
 
     public int getCurrentFloorIndex() {
@@ -76,30 +108,30 @@ public class SceneManager {
     }
 
     public int getCurrentScreenIndex() {
-        return currentScreenIndex;
+        return 0;
+    }
+
+    public boolean canMoveToRightScreen() {
+        return currentFloorIndex + 1 < floors.size();
     }
 
     public boolean moveToRightScreen() {
-        Floor floor = floors.get(currentFloorIndex);
-        int nextScreen = currentScreenIndex + 1;
-
-        if (!floor.hasScreen(nextScreen)) {
+        if (!canMoveToRightScreen()) {
             return false;
         }
 
-        currentScreenIndex = nextScreen;
+        currentFloorIndex++;
+        currentScreenIndex = 0;
         return true;
     }
 
     public boolean moveToLeftScreen() {
-        Floor floor = floors.get(currentFloorIndex);
-        int previousScreen = currentScreenIndex - 1;
-
-        if (!floor.hasScreen(previousScreen)) {
+        if (currentFloorIndex == 0) {
             return false;
         }
 
-        currentScreenIndex = previousScreen;
+        currentFloorIndex--;
+        currentScreenIndex = 0;
         return true;
     }
 }

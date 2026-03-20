@@ -12,15 +12,23 @@ public class Screen {
     private final List<Rectangle> solidBlocks;
     private final List<Monster> monsters;
     private final List<Item> items;
+    private final int worldWidth;
+    private final int worldHeight;
 
     public Screen(List<Rectangle> solidBlocks) {
-        this(solidBlocks, List.of(), List.of());
+        this(solidBlocks, List.of(), List.of(), 960, 540);
     }
 
     public Screen(List<Rectangle> solidBlocks, List<Monster> monsters, List<Item> items) {
+        this(solidBlocks, monsters, items, 960, 540);
+    }
+
+    public Screen(List<Rectangle> solidBlocks, List<Monster> monsters, List<Item> items, int worldWidth, int worldHeight) {
         this.solidBlocks = new ArrayList<>(solidBlocks);
         this.monsters = new ArrayList<>(monsters);
         this.items = new ArrayList<>(items);
+        this.worldWidth = Math.max(960, worldWidth);
+        this.worldHeight = Math.max(540, worldHeight);
     }
 
     public List<Rectangle> getSolidBlocks() {
@@ -37,5 +45,13 @@ public class Screen {
 
     public List<Item> getItems() {
         return Collections.unmodifiableList(items);
+    }
+
+    public int getWorldWidth() {
+        return worldWidth;
+    }
+
+    public int getWorldHeight() {
+        return worldHeight;
     }
 }

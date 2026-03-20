@@ -1,0 +1,12 @@
+C:\Users\HP\Documents\20252\oop\golden-road\src\goldenroad\entity\AirMonster.java
+C:\Users\HP\Documents\20252\oop\golden-road\src\goldenroad\entity\Bullet.java
+C:\Users\HP\Documents\20252\oop\golden-road\src\goldenroad\entity\GroundMonster.java
+C:\Users\HP\Documents\20252\oop\golden-road\src\goldenroad\entity\Item.java
+C:\Users\HP\Documents\20252\oop\golden-road\src\goldenroad\entity\Monster.java
+C:\Users\HP\Documents\20252\oop\golden-road\src\goldenroad\game\GamePanel.java
+C:\Users\HP\Documents\20252\oop\golden-road\src\goldenroad\input\KeyHandler.java
+C:\Users\HP\Documents\20252\oop\golden-road\src\goldenroad\input\MouseHandler.java
+C:\Users\HP\Documents\20252\oop\golden-road\src\goldenroad\main\Main.java
+C:\Users\HP\Documents\20252\oop\golden-road\src\goldenroad\scene\Floor.java
+C:\Users\HP\Documents\20252\oop\golden-road\src\goldenroad\scene\SceneManager.java
+C:\Users\HP\Documents\20252\oop\golden-road\src\goldenroad\scene\Screen.java
