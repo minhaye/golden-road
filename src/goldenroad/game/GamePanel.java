@@ -25,9 +25,10 @@ public class GamePanel extends JPanel implements Runnable {
     private static final int PLAYER_HEIGHT = 60;
 
     private static final double MOVE_SPEED = 4.0;
-    private static final double GRAVITY = 0.6;
-    private static final double JUMP_SPEED = -12.0;
-    private static final double MAX_FALL_SPEED = 14.0;
+    private static final double GRAVITY = 1.1;
+    private static final double JUMP_SPEED = -18.0;
+    private static final double MAX_FALL_SPEED = 20.0;
+    private static final int MAX_JUMPS = 2;
     private static final int TRANSITION_SPAWN_PADDING = 2;
 
     private final KeyHandler keyHandler = new KeyHandler();
@@ -36,6 +37,7 @@ public class GamePanel extends JPanel implements Runnable {
     private double playerX = START_PLAYER_X;
     private double playerY = START_PLAYER_Y;
     private double velocityY = 0;
+    private int jumpCount = 0;
     private boolean onGround = true;
 
     private Thread gameThread;
@@ -85,8 +87,9 @@ public class GamePanel extends JPanel implements Runnable {
 
         applyHorizontalMovement(moveX);
 
-        if (keyHandler.jumpPressed && onGround) {
+        if (keyHandler.consumeJumpJustPressed() && jumpCount < MAX_JUMPS) {
             velocityY = JUMP_SPEED;
+            jumpCount++;
             onGround = false;
         }
 
@@ -141,6 +144,9 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         playerY = nextY;
+        if (onGround) {
+            jumpCount = 0;
+        }
     }
 
     private Rectangle getPlayerBounds(double x, double y) {

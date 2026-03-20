@@ -7,6 +7,15 @@ public class KeyHandler implements KeyListener {
     public boolean leftPressed;
     public boolean rightPressed;
     public boolean jumpPressed;
+    private boolean jumpJustPressed;
+
+    public boolean consumeJumpJustPressed() {
+        if (jumpJustPressed) {
+            jumpJustPressed = false;
+            return true;
+        }
+        return false;
+    }
 
     @Override
     public void keyTyped(KeyEvent e) {
@@ -25,6 +34,9 @@ public class KeyHandler implements KeyListener {
         }
 
         if (code == KeyEvent.VK_W || code == KeyEvent.VK_UP || code == KeyEvent.VK_SPACE) {
+            if (!jumpPressed) {
+                jumpJustPressed = true;
+            }
             jumpPressed = true;
         }
     }
