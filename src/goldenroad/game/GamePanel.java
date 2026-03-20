@@ -4,13 +4,18 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Rectangle;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.swing.JPanel;
 
+import goldenroad.entity.Bullet;
 import goldenroad.entity.Item;
 import goldenroad.entity.Monster;
 import goldenroad.input.KeyHandler;
+import goldenroad.input.MouseHandler;
+import goldenroad.scene.Screen;
 import goldenroad.scene.SceneManager;
 
 public class GamePanel extends JPanel implements Runnable {
@@ -30,9 +35,14 @@ public class GamePanel extends JPanel implements Runnable {
     private static final double MAX_FALL_SPEED = 20.0;
     private static final int MAX_JUMPS = 2;
     private static final int TRANSITION_SPAWN_PADDING = 2;
+    private static final double BULLET_SPEED = 10.0;
+    private static final int NORMAL_BULLET_DIAMETER = 10;
+    private static final int LARGE_BULLET_DIAMETER = 22;
 
     private final KeyHandler keyHandler = new KeyHandler();
+    private final MouseHandler mouseHandler = new MouseHandler();
     private final SceneManager sceneManager = new SceneManager();
+    private final List<Bullet> bullets = new ArrayList<>();
 
     private double playerX = START_PLAYER_X;
     private double playerY = START_PLAYER_Y;
@@ -48,6 +58,8 @@ public class GamePanel extends JPanel implements Runnable {
         setDoubleBuffered(true);
         setFocusable(true);
         addKeyListener(keyHandler);
+        addMouseListener(mouseHandler);
+        addMouseMotionListener(mouseHandler);
     }
 
     public void startGameLoop() {
@@ -99,6 +111,82 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         applyVerticalMovement(velocityY);
+        handleShootingInput();
+        updateBullets();
+    }
+
+    private void handleShootingInput() {
+        if (mouseHandler.consumeLeftClick()) {
+            spawnBullet(NORMAL_BULLET_DIAMETER, new Color(255, 245, 210));
+        }
+
+        if (mouseHandler.consumeRightClick()) {
+            spawnBullet(LARGE_BULLET_DIAMETER, new Color(255, 150, 90));
+        }
+    }
+
+    private void spawnBullet(int diameter, Color color) {
+        double originX = playerX + (PLAYER_WIDTH / 2.0);
+        double originY = playerY + (PLAYER_HEIGHT / 2.0);
+
+        double directionX = mouseHandler.getMouseX() - originX;
+        double directionY = mouseHandler.getMouseY() - originY;
+
+        bullets.add(new Bullet(
+            originX - (diameter / 2.0),
+            originY - (diameter / 2.0),
+            directionX,
+            directionY,
+            BULLET_SPEED,
+            diameter,
+            color
+        ));
+    }
+
+    private void updateBullets() {
+        Screen currentScreen = sceneManager.getCurrentScreen();
+        Iterator<Bullet> bulletIterator = bullets.iterator();
+
+        while (bulletIterator.hasNext()) {
+            Bullet bullet = bulletIterator.next();
+            bullet.update();
+
+            Rectangle bulletBounds = bullet.getBounds();
+            if (isOutOfScreen(bulletBounds) || collidesWithSolidBlock(bulletBounds)) {
+                bulletIterator.remove();
+                continue;
+            }
+
+            boolean hitMonster = false;
+            for (Monster monster : currentScreen.getMonsters()) {
+                if (bulletBounds.intersects(monster.getBounds())) {
+                    currentScreen.removeMonster(monster);
+                    bulletIterator.remove();
+                    hitMonster = true;
+                    break;
+                }
+            }
+
+            if (hitMonster) {
+                continue;
+            }
+        }
+    }
+
+    private boolean collidesWithSolidBlock(Rectangle bounds) {
+        for (Rectangle block : getCurrentSolidBlocks()) {
+            if (bounds.intersects(block)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isOutOfScreen(Rectangle bounds) {
+        return bounds.x + bounds.width < 0
+            || bounds.x > SCREEN_WIDTH
+            || bounds.y + bounds.height < 0
+            || bounds.y > SCREEN_HEIGHT;
     }
 
     private void applyHorizontalMovement(double deltaX) {
@@ -154,9 +242,12 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void handleScreenTransition() {
+        boolean transitioned = false;
+
         if (playerX + PLAYER_WIDTH > SCREEN_WIDTH) {
             if (sceneManager.moveToRightScreen()) {
                 playerX = TRANSITION_SPAWN_PADDING;
+                transitioned = true;
             } else {
                 playerX = SCREEN_WIDTH - PLAYER_WIDTH;
             }
@@ -165,9 +256,14 @@ public class GamePanel extends JPanel implements Runnable {
         if (playerX < 0) {
             if (sceneManager.moveToLeftScreen()) {
                 playerX = SCREEN_WIDTH - PLAYER_WIDTH - TRANSITION_SPAWN_PADDING;
+                transitioned = true;
             } else {
                 playerX = 0;
             }
+        }
+
+        if (transitioned) {
+            bullets.clear();
         }
     }
 
@@ -209,6 +305,11 @@ public class GamePanel extends JPanel implements Runnable {
             Rectangle monsterBounds = monster.getBounds();
             g.setColor(monster.getColor());
             g.fillRect(monsterBounds.x, monsterBounds.y, monsterBounds.width, monsterBounds.height);
+        }
+
+        for (Bullet bullet : bullets) {
+            g.setColor(bullet.getColor());
+            g.fillOval(bullet.getRenderX(), bullet.getRenderY(), bullet.getDiameter(), bullet.getDiameter());
         }
 
         g.setColor(new Color(230, 190, 70));

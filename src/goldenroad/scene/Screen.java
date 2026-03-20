@@ -31,6 +31,10 @@ public class Screen {
         return Collections.unmodifiableList(monsters);
     }
 
+    public boolean removeMonster(Monster monster) {
+        return monsters.remove(monster);
+    }
+
     public List<Item> getItems() {
         return Collections.unmodifiableList(items);
     }
