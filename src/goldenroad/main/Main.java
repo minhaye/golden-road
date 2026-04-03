@@ -10,13 +10,14 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
             JFrame window = new JFrame("Golden Road Prototype");
             window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            window.setResizable(false);
+            window.setResizable(true);
 
             GamePanel gamePanel = new GamePanel();
             window.add(gamePanel);
             window.pack();
             window.setLocationRelativeTo(null);
             window.setVisible(true);
+            window.setExtendedState(JFrame.MAXIMIZED_BOTH);
 
             gamePanel.startGameLoop();
         });

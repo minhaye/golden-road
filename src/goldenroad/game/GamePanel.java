@@ -5,6 +5,7 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Rectangle;
 import java.awt.Polygon;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -20,8 +21,8 @@ import goldenroad.scene.Screen;
 import goldenroad.scene.SceneManager;
 
 public class GamePanel extends JPanel implements Runnable {
-    public static final int SCREEN_WIDTH = 960;
-    public static final int SCREEN_HEIGHT = 540;
+    public static final int DEFAULT_SCREEN_WIDTH = 1280;
+    public static final int DEFAULT_SCREEN_HEIGHT = 720;
 
     private static final int TARGET_FPS = 60;
 
@@ -74,7 +75,7 @@ public class GamePanel extends JPanel implements Runnable {
     private Thread gameThread;
 
     public GamePanel() {
-        setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
+        setPreferredSize(new Dimension(DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT));
         setBackground(new Color(20, 26, 38));
         setDoubleBuffered(true);
         setFocusable(true);
@@ -323,27 +324,38 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void updateCamera() {
+        int viewportWidth = getViewportWidth();
+        int viewportHeight = getViewportHeight();
+
         double playerCenterX = playerX + (PLAYER_WIDTH / 2.0);
         double playerCenterY = playerY + (PLAYER_HEIGHT / 2.0);
 
-        double deadZoneLeft = cameraX + ((SCREEN_WIDTH - CAMERA_DEAD_ZONE_WIDTH) / 2.0);
+        double deadZoneLeft = cameraX + ((viewportWidth - CAMERA_DEAD_ZONE_WIDTH) / 2.0);
         double deadZoneRight = deadZoneLeft + CAMERA_DEAD_ZONE_WIDTH;
         if (playerCenterX < deadZoneLeft) {
-            cameraX = playerCenterX - ((SCREEN_WIDTH - CAMERA_DEAD_ZONE_WIDTH) / 2.0);
+            cameraX = playerCenterX - ((viewportWidth - CAMERA_DEAD_ZONE_WIDTH) / 2.0);
         } else if (playerCenterX > deadZoneRight) {
-            cameraX = playerCenterX - ((SCREEN_WIDTH + CAMERA_DEAD_ZONE_WIDTH) / 2.0);
+            cameraX = playerCenterX - ((viewportWidth + CAMERA_DEAD_ZONE_WIDTH) / 2.0);
         }
 
-        double deadZoneTop = cameraY + ((SCREEN_HEIGHT - CAMERA_DEAD_ZONE_HEIGHT) / 2.0);
+        double deadZoneTop = cameraY + ((viewportHeight - CAMERA_DEAD_ZONE_HEIGHT) / 2.0);
         double deadZoneBottom = deadZoneTop + CAMERA_DEAD_ZONE_HEIGHT;
         if (playerCenterY < deadZoneTop) {
-            cameraY = playerCenterY - ((SCREEN_HEIGHT - CAMERA_DEAD_ZONE_HEIGHT) / 2.0);
+            cameraY = playerCenterY - ((viewportHeight - CAMERA_DEAD_ZONE_HEIGHT) / 2.0);
         } else if (playerCenterY > deadZoneBottom) {
-            cameraY = playerCenterY - ((SCREEN_HEIGHT + CAMERA_DEAD_ZONE_HEIGHT) / 2.0);
+            cameraY = playerCenterY - ((viewportHeight + CAMERA_DEAD_ZONE_HEIGHT) / 2.0);
         }
 
-        cameraX = clamp(cameraX, 0, Math.max(0, getCurrentWorldWidth() - SCREEN_WIDTH));
-        cameraY = clamp(cameraY, 0, Math.max(0, getCurrentWorldHeight() - SCREEN_HEIGHT));
+        cameraX = clamp(cameraX, 0, Math.max(0, getCurrentWorldWidth() - viewportWidth));
+        cameraY = clamp(cameraY, 0, Math.max(0, getCurrentWorldHeight() - viewportHeight));
+    }
+
+    private int getViewportWidth() {
+        return Math.max(1, getWidth());
+    }
+
+    private int getViewportHeight() {
+        return Math.max(1, getHeight());
     }
 
     private double clamp(double value, double min, double max) {
@@ -494,15 +506,23 @@ public class GamePanel extends JPanel implements Runnable {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
+        int viewportWidth = getViewportWidth();
+        int viewportHeight = getViewportHeight();
+
+        Screen currentScreen = sceneManager.getCurrentScreen();
         int renderOffsetX = (int) Math.round(cameraX);
         int renderOffsetY = (int) Math.round(cameraY);
 
         g.setColor(new Color(70, 110, 160));
-        g.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        g.fillRect(0, 0, viewportWidth, viewportHeight);
 
-        g.setColor(new Color(55, 45, 35));
-        for (Rectangle block : getCurrentSolidBlocks()) {
-            g.fillRect(block.x - renderOffsetX, block.y - renderOffsetY, block.width, block.height);
+        if (currentScreen.hasTileMap()) {
+            drawTileMap(g, currentScreen, renderOffsetX, renderOffsetY);
+        } else {
+            g.setColor(new Color(55, 45, 35));
+            for (Rectangle block : getCurrentSolidBlocks()) {
+                g.fillRect(block.x - renderOffsetX, block.y - renderOffsetY, block.width, block.height);
+            }
         }
 
         for (Item item : getCurrentItems()) {
@@ -557,9 +577,129 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         g.setColor(new Color(255, 255, 255, 55));
-        int deadZoneRenderX = (SCREEN_WIDTH - CAMERA_DEAD_ZONE_WIDTH) / 2;
-        int deadZoneRenderY = (SCREEN_HEIGHT - CAMERA_DEAD_ZONE_HEIGHT) / 2;
+        int deadZoneRenderX = (viewportWidth - CAMERA_DEAD_ZONE_WIDTH) / 2;
+        int deadZoneRenderY = (viewportHeight - CAMERA_DEAD_ZONE_HEIGHT) / 2;
         g.drawRect(deadZoneRenderX, deadZoneRenderY, CAMERA_DEAD_ZONE_WIDTH, CAMERA_DEAD_ZONE_HEIGHT);
+    }
+
+    private void drawTileMap(Graphics g, Screen screen, int renderOffsetX, int renderOffsetY) {
+        if (screen.hasTiledTileMap()) {
+            drawImageTileMap(g, screen, renderOffsetX, renderOffsetY);
+            return;
+        }
+
+        drawLegacyTileMap(g, screen, renderOffsetX, renderOffsetY);
+    }
+
+    private void drawImageTileMap(Graphics g, Screen screen, int renderOffsetX, int renderOffsetY) {
+        int[][] gids = screen.getTileGids();
+        int tileSize = screen.getTileSize();
+        BufferedImage tilesetImage = screen.getTilesetImage();
+
+        if (gids == null || tileSize <= 0) {
+            return;
+        }
+
+        int sourceTileSize = tileSize;
+        if (tilesetImage != null) {
+            sourceTileSize = determineSourceTileSize(tilesetImage, tileSize);
+        }
+
+        int tilesetColumns = tilesetImage == null ? 0 : Math.max(1, tilesetImage.getWidth() / sourceTileSize);
+
+        for (int row = 0; row < gids.length; row++) {
+            int[] rowData = gids[row];
+            if (rowData == null) {
+                continue;
+            }
+
+            for (int col = 0; col < rowData.length; col++) {
+                int gid = rowData[col];
+                if (gid <= 0) {
+                    continue;
+                }
+
+                int drawX = (col * tileSize) - renderOffsetX;
+                int drawY = (row * tileSize) - renderOffsetY;
+
+                if (tilesetImage != null) {
+                    int tileIndex = gid - 1;
+                    int sourceX = (tileIndex % tilesetColumns) * sourceTileSize;
+                    int sourceY = (tileIndex / tilesetColumns) * sourceTileSize;
+
+                    if (sourceX + sourceTileSize <= tilesetImage.getWidth() && sourceY + sourceTileSize <= tilesetImage.getHeight()) {
+                        g.drawImage(
+                            tilesetImage,
+                            drawX,
+                            drawY,
+                            drawX + tileSize,
+                            drawY + tileSize,
+                            sourceX,
+                            sourceY,
+                            sourceX + sourceTileSize,
+                            sourceY + sourceTileSize,
+                            null
+                        );
+                        continue;
+                    }
+                }
+
+                g.setColor(new Color(90, 90, 90));
+                g.fillRect(drawX, drawY, tileSize, tileSize);
+            }
+        }
+    }
+
+    private int determineSourceTileSize(BufferedImage tilesetImage, int fallbackTileSize) {
+        int[] candidates = new int[] {32, 24, 16, fallbackTileSize};
+        for (int candidate : candidates) {
+            if (candidate > 0 && tilesetImage.getWidth() % candidate == 0 && tilesetImage.getHeight() % candidate == 0) {
+                return candidate;
+            }
+        }
+        return Math.max(1, fallbackTileSize);
+    }
+
+    private void drawLegacyTileMap(Graphics g, Screen screen, int renderOffsetX, int renderOffsetY) {
+        List<String> rows = screen.getTileRows();
+        int tileSize = screen.getTileSize();
+
+        for (int row = 0; row < rows.size(); row++) {
+            String rowData = rows.get(row);
+            for (int col = 0; col < rowData.length(); col++) {
+                char tile = rowData.charAt(col);
+                Color tileColor = getTileColor(tile);
+
+                int drawX = (col * tileSize) - renderOffsetX;
+                int drawY = (row * tileSize) - renderOffsetY;
+
+                if (tileColor != null) {
+                    g.setColor(tileColor);
+                    g.fillRect(drawX, drawY, tileSize, tileSize);
+                }
+
+                // Keep a subtle grid guide so artists can replace tiles later.
+                g.setColor(new Color(255, 255, 255, 20));
+                g.drawRect(drawX, drawY, tileSize, tileSize);
+            }
+        }
+    }
+
+    private Color getTileColor(char tile) {
+        switch (tile) {
+            case '#':
+                return new Color(75, 70, 66);
+            case '=':
+                return new Color(118, 108, 96);
+            case 'B':
+                return new Color(120, 52, 58);
+            case 'K':
+                return new Color(244, 209, 90);
+            case 'E':
+                return new Color(78, 205, 190);
+            default:
+                return null;
+        }
     }
 
     private void drawMonster(Graphics g, Monster monster, Rectangle bounds, int renderOffsetX, int renderOffsetY) {
