@@ -1,254 +1,42 @@
-# Dungeon Learning Adventure
+# Golden Road (LibGDX)
 
-A simple 2D dungeon exploration game developed in **Java** for the **Object-Oriented Programming course**.
+A 2D dungeon-style game project for OOP, migrated to a LibGDX multi-module structure.
 
-The player explores dungeon floors, fights monsters, collects items, and solves questions to unlock doors and progress to the next level.
+## Tech Stack
 
----
+- Language: Java 17
+- Engine: LibGDX 1.12.1
+- Desktop backend: LWJGL3
+- Build tool: Gradle (multi-module)
 
-# Game Overview
+## Project Structure
 
-Dungeon Learning Adventure is a small dungeon-style game where the player must survive through multiple floors filled with monsters and challenges.
+- `core/`: game logic and rendering code shared across platforms
+- `lwjgl3/`: desktop launcher (LWJGL3 backend)
+- `src/`: legacy Java Swing prototype code kept for reference
 
-The game combines:
+Current runtime entry points:
 
-- Exploration
-- Combat
-- Item collection
-- Puzzle challenges
+- LibGDX game class: `core/src/main/java/goldenroad/GoldenRoadGame.java`
+- Desktop launcher: `lwjgl3/src/main/java/goldenroad/lwjgl3/Lwjgl3Launcher.java`
 
-At the end of the dungeon, the player must defeat the **Boss Monster**.
+## Build and Run
 
----
+Use Gradle Wrapper (recommended):
 
-# Gameplay Mechanics
+```bash
+./gradlew :core:build
+./gradlew :lwjgl3:run
+```
 
-## Player
+On Windows PowerShell:
 
-The player has the following attributes:
+```powershell
+.\gradlew.bat :core:build
+.\gradlew.bat :lwjgl3:run
+```
 
-- HP (Health Points)
-- MP (Mana Points)
-- HP regeneration over time
-- MP regeneration over time
-- Skills
-- Inventory
+## Notes
 
-Player abilities:
-
-- Move
-- Attack
-- Use skill
-- Use item
-
----
-
-## Monsters
-
-There are **three types of monsters** in the game.
-
-### Ground Monster
-
-- Moves within a fixed area
-- Close-range attacks
-
-### Flying Monster
-
-- Moves freely in the air
-- Ranged attacks
-
-### Boss Monster
-
-- Large HP
-- Multiple skills
-- Guards the final floor
-
-Monster behavior:
-
-- Uses skills every few seconds
-- Attacks the player automatically when in range
-
----
-
-## Map System
-
-Each map contains:
-
-- Terrain
-- Underground tunnels
-- Monster zones
-- Items
-- Doors
-
-### Items
-
-Items available in the game:
-
-- HP Potion
-- MP Potion
-- Key
-- Treasure Chest
-
----
-
-# Level Design
-
-The dungeon has **3 floors**.
-
-Floor 1  
-- Scene 1  
-- Scene 2  
-- Scene 3  
-
-Floor 2  
-- Scene 1  
-- Scene 2  
-- Scene 3  
-
-Floor 3  
-- Boss fight
-
----
-
-# Floor Progression
-
-To advance to the next floor, the player must:
-
-1. Reach the exit area
-2. Defeat the gate guardian monster
-3. Answer the door challenge question correctly
-
-Example questions:
-
-- 1 + 1 = ?
-- What programming language is this game written in?
-- Who is the most handsome developer? (humor question)
-
----
-
-# Technology Stack
-
-Language
-
-Java
-
-Graphics
-
-Java Swing (2D rendering)
-
-Programming Paradigm
-
-Object-Oriented Programming
-
-Concepts used:
-
-- Inheritance
-- Polymorphism
-- Encapsulation
-- Composition
-
----
-
-# Project Architecture
-
-The project follows a simple **game engine architecture suitable for a small Java game project**.
-
-
-Game
-│
-├── engine
-│ ├── GameLoop
-│ ├── Renderer
-│ └── InputHandler
-│
-├── entity
-│ ├── Entity
-│ ├── Player
-│ └── Monster
-│ ├── GroundMonster
-│ ├── FlyingMonster
-│ └── Boss
-│
-├── item
-│ ├── Item
-│ ├── HpPotion
-│ ├── MpPotion
-│ ├── Key
-│ └── Chest
-│
-├── map
-│ ├── GameMap
-│ ├── Tile
-│ └── Door
-│
-├── skill
-│ ├── Skill
-│ └── AttackSkill
-│
-└── main
-└── Game
-
-
----
-
-# Core System Design
-
-## Entity System
-
-All objects in the game inherit from the base class:
-
-
-Entity
-
-
-Examples:
-
-
-Player extends Entity
-
-Monster extends Entity
-
-Boss extends Monster
-
-
-This design allows:
-
-- code reuse
-- polymorphism
-- easy extension
-
----
-
-## Game Loop
-
-The game runs using a **main game loop**.
-
-
-while (gameRunning) {
-
-update();
-
-render();
-
-sleep(16ms);
-
-}
-
-
-This loop controls:
-
-- game logic
-- entity updates
-- rendering
-
----
-
-## Rendering System
-
-The game uses **Java Swing rendering** with:
-
-- JFrame
-- JPanel
-- paintComponent()
-
-Sprites and objects are drawn inside the render function.
+- The legacy Swing code under `src/` is not part of the LibGDX runtime modules.
+- Primary gameplay screen for LibGDX is implemented in `PlayScreen`.
