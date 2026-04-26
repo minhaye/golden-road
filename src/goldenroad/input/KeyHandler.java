@@ -8,11 +8,21 @@ public class KeyHandler implements KeyListener {
     public boolean rightPressed;
     public boolean jumpPressed;
     public boolean sprintPressed;
+    public boolean dashPressed;
+    private boolean dashJustPressed;
     private boolean jumpJustPressed;
+
 
     public boolean consumeJumpJustPressed() {
         if (jumpJustPressed) {
             jumpJustPressed = false;
+            return true;
+        }
+        return false;
+    }
+    public boolean consumeDashJustPressed() {
+        if (dashJustPressed) {
+            dashJustPressed = false;
             return true;
         }
         return false;
@@ -41,8 +51,11 @@ public class KeyHandler implements KeyListener {
             jumpPressed = true;
         }
 
-        if (code == KeyEvent.VK_SHIFT) {
+        if (code == KeyEvent.VK_CONTROL) {
             sprintPressed = true;
+        }
+        if (code == KeyEvent.VK_SHIFT) {
+            dashPressed = true;
         }
     }
 
@@ -62,8 +75,30 @@ public class KeyHandler implements KeyListener {
             jumpPressed = false;
         }
 
-        if (code == KeyEvent.VK_SHIFT) {
+        if (code == KeyEvent.VK_CONTROL) {
             sprintPressed = false;
         }
+        if (code == KeyEvent.VK_SHIFT) {
+            dashPressed = false;
+        }
     }
+
+
+    /*
+    private final int FPS_SET = 120;
+    @Override
+    public void run() {
+        double timePerFrame = 1000000000.0 / FPS_SET;
+        long lastFrame = System.nanoTime();
+        long currentTime = System.nanoTime();
+        while(true){
+            currentTime = System.nanoTime();
+            if (currentTime - lastFrame >= timePerFrame) {
+                
+                lastFrame = System.nanoTime();
+            }
+        }
+    }
+    */
+ 
 }

@@ -23,9 +23,9 @@ public class SceneManager {
 
         floor1Screens.add(new Screen(
             List.of(
-                new Rectangle(0, 470, 960, 70),
+                new Rectangle(0, 730, 1920, 70),
                 new Rectangle(220, 390, 180, 20),
-                new Rectangle(560, 340, 170, 20)
+                new Rectangle(560, 340, 170, 20) 
             ),
             List.of(
                 new Monster(640, 300, 36, 40, new Color(200, 70, 70), 6)
@@ -37,7 +37,7 @@ public class SceneManager {
 
         floor1Screens.add(new Screen(
             List.of(
-                new Rectangle(0, 470, 960, 70),
+                new Rectangle(0, 730, 1920, 70),
                 new Rectangle(120, 360, 170, 20),
                 new Rectangle(500, 400, 220, 20)
             ),
@@ -52,7 +52,7 @@ public class SceneManager {
 
         floor1Screens.add(new Screen(
             List.of(
-                new Rectangle(0, 470, 960, 70),
+                new Rectangle(0, 730, 1920, 70),
                 new Rectangle(320, 330, 200, 20)
             ),
             List.of(

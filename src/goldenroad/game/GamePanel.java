@@ -1,74 +1,108 @@
 package goldenroad.game;
 
+import goldenroad.entity.Bullet;
+import goldenroad.entity.Item;
+import goldenroad.entity.Monster;
+import goldenroad.entity.Player;
+import goldenroad.input.KeyHandler;
+import goldenroad.input.MouseHandler;
+import goldenroad.scene.SceneManager;
+import goldenroad.scene.Screen;
+
+
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Rectangle;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+
 import javax.swing.JPanel;
 
-import goldenroad.entity.Bullet;
-import goldenroad.entity.Item;
-import goldenroad.entity.Monster;
-import goldenroad.input.KeyHandler;
-import goldenroad.input.MouseHandler;
-import goldenroad.scene.Screen;
-import goldenroad.scene.SceneManager;
 
 public class GamePanel extends JPanel implements Runnable {
-    public static final int SCREEN_WIDTH = 960;
-    public static final int SCREEN_HEIGHT = 540;
-
+    //public static final int SCREEN_WIDTH = 960;
+    //public static final int SCREEN_HEIGHT = 540;
+    public static final int SCREEN_WIDTH = 640;
+    public static final int SCREEN_HEIGHT = 360;
+    public static final double SCREEN_SCALE = 1.25; // Adjust this value to scale the game (example: 1.25 for 1080p, 1.25/1.5 for 1440p)
+    public double SCALE = 3 / SCREEN_SCALE; 
+    // Default to 720p, can be changed to 1080p or 1440p by adjusting the denominator 
+    // (example: for 1080p, use 1.25, for 1440p, use 1.25/1.5)
+    // x2 = 1280x720 = 720p
+    // x3 = 1920x1080 = 1080p
+    // x4 = 2560x1440 = 1440p
+    // x6 = 3840x2160 = 4K
     private static final int TARGET_FPS = 60;
 
-    private static final int START_PLAYER_X = 120;
-    private static final int START_PLAYER_Y = 380;
-    private static final int PLAYER_WIDTH = 40;
-    private static final int PLAYER_HEIGHT = 60;
+    // CAMERA
+    private double cameraX = 0;
+    private double cameraY = 0;
+    private final double DEADZONE_WIDTH = 150;
+    private final double DEADZONE_HEIGHT = 120;
+    private double lookAhead = 0;
+    private double LOOK_AHEAD_DISTANCE = 50;
 
-    private static final double MOVE_SPEED = 4.0;
-    private static final double SPRINT_MULTIPLIER = 1.9;
-    private static final double GRAVITY = 1.1;
-    private static final double JUMP_SPEED = -18.0;
-    private static final double MAX_FALL_SPEED = 20.0;
-    private static final int MAX_JUMPS = 2;
-    private static final int TRANSITION_SPAWN_PADDING = 2;
-    private static final double LASER_SPEED = 13.0;
+    private static final int START_PLAYER_X = 120; 
+    private static final int START_PLAYER_Y = 380;
+    private double PLAYER_WIDTH = 25 * SCALE;
+    private double PLAYER_HEIGHT = 40 * SCALE;
+
+    private static final int TRANSITION_SPAWN_PADDING = 2;      
+    private double LASER_SPEED = 10.0 * SCALE;
     private static final int LASER_DIAMETER = 14;
     private static final int LASER_DAMAGE = 4;
     private static final Color LASER_COLOR = new Color(255, 90, 80);
 
-    private static final double CLUSTER_BULLET_SPEED = 10.5;
+    private static final double CLUSTER_BULLET_SPEED = 20.5;
     private static final int CLUSTER_BULLET_DIAMETER = 7;
     private static final int CLUSTER_BULLET_DAMAGE = 1;
     private static final int CLUSTER_BULLET_COUNT = 6;
     private static final double CLUSTER_SPREAD_DEGREES = 22.0;
     private static final Color CLUSTER_COLOR = new Color(255, 235, 160);
+    // END OF PLAYER VARIABLES
 
+    // INPUT HANDLERS, SCENE MANAGER, AND BULLET LIST
     private final KeyHandler keyHandler = new KeyHandler();
     private final MouseHandler mouseHandler = new MouseHandler();
     private final SceneManager sceneManager = new SceneManager();
     private final List<Bullet> bullets = new ArrayList<>();
 
-    private double playerX = START_PLAYER_X;
-    private double playerY = START_PLAYER_Y;
-    private double velocityY = 0;
-    private int jumpCount = 0;
-    private boolean onGround = true;
 
     private Thread gameThread;
 
+    private Player player;
+
+    public void initPlayer() {
+        player = new Player(120, 380); 
+        player.update(keyHandler, getCurrentSolidBlocks());
+    }
+
     public GamePanel() {
-        setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
+        setPanelSize();
         setBackground(new Color(20, 26, 38));
         setDoubleBuffered(true);
         setFocusable(true);
         addKeyListener(keyHandler);
         addMouseListener(mouseHandler);
         addMouseMotionListener(mouseHandler);
+        initPlayer();
+    }
+
+
+
+    private void setPanelSize() {
+        int scaledWidth = (int) (SCREEN_WIDTH * SCALE);
+        int scaledHeight = (int) (SCREEN_HEIGHT * SCALE);
+        Dimension size = new Dimension(scaledWidth, scaledHeight);
+        setPreferredSize(size);
+        setMinimumSize(size);
+        setMaximumSize(size);
+        revalidate();
     }
 
     public void startGameLoop() {
@@ -95,36 +129,77 @@ public class GamePanel extends JPanel implements Runnable {
                 repaint();
                 delta--;
             }
+            //updateFPS();
         }
     }
 
     private void update() {
-        double currentMoveSpeed = keyHandler.sprintPressed ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED;
-        double moveX = 0;
-        if (keyHandler.leftPressed && !keyHandler.rightPressed) {
-            moveX = -currentMoveSpeed;
-        } else if (keyHandler.rightPressed && !keyHandler.leftPressed) {
-            moveX = currentMoveSpeed;
-        }
+        player.update(keyHandler, getCurrentSolidBlocks());
 
-        applyHorizontalMovement(moveX);
+        updateCamera();
 
-        if (keyHandler.consumeJumpJustPressed() && jumpCount < MAX_JUMPS) {
-            velocityY = JUMP_SPEED;
-            jumpCount++;
-            onGround = false;
-        }
-
-        velocityY += GRAVITY;
-        if (velocityY > MAX_FALL_SPEED) {
-            velocityY = MAX_FALL_SPEED;
-        }
-
-        applyVerticalMovement(velocityY);
         handleShootingInput();
         updateBullets();
+
+    }
+    
+    int worldWidth = 3000;
+    int worldHeight = 1000;
+
+ 
+
+private void updateCamera() {
+
+    double halfW = (SCREEN_WIDTH * SCALE) / 2;
+    double halfH = (SCREEN_HEIGHT * SCALE) / 2;
+
+    // ===== 1. target mặc định (center player) =====
+    double targetX = player.getX() - halfW;
+    double targetY = player.getY() - halfH;
+
+    // ===== 2. DEADZONE =====
+    double screenCenterX = cameraX + halfW;
+    double screenCenterY = cameraY + halfH;
+
+    double dx = player.getX() - screenCenterX;
+    double dy = player.getY() - screenCenterY;
+
+    // chỉ điều chỉnh target khi vượt deadzone
+    if (Math.abs(dx) > DEADZONE_WIDTH / 2) {
+        targetX = cameraX + (dx > 0
+                ? dx - DEADZONE_WIDTH / 2
+                : dx + DEADZONE_WIDTH / 2);
+    } else {
+        targetX = cameraX; // giữ nguyên
     }
 
+    if (Math.abs(dy) > DEADZONE_HEIGHT / 2) {
+        targetY = cameraY + (dy > 0
+                ? dy - DEADZONE_HEIGHT / 2
+                : dy + DEADZONE_HEIGHT / 2);
+    } else {
+        targetY = cameraY;
+    }
+
+    // ===== 3. IDLE → kéo về center =====
+    if (player.isIdle()) {
+        double centerX = player.getX() - halfW;
+        targetX += (centerX - targetX) * 0.5; // nhẹ hơn để mượt
+    }
+    
+    // ===== 4. LERP CAMERA =====
+    cameraX += (targetX - cameraX) * 0.1;
+    cameraY += (targetY - cameraY) * 0.1;
+
+    // ===== 5. CLAMP (optional) =====
+    cameraX = Math.max(0, cameraX);
+    cameraY = Math.max(0, cameraY);
+
+    cameraX = Math.min(cameraX, worldWidth - SCREEN_WIDTH * SCALE);
+    cameraY = Math.min(cameraY, worldHeight - SCREEN_HEIGHT * SCALE);
+}
+
+// Handle shooting input and bullet spawning
     private void handleShootingInput() {
         if (mouseHandler.consumeLeftClick()) {
             spawnLaserShot();
@@ -135,31 +210,39 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
-    private void spawnLaserShot() {
-        double originX = playerX + (PLAYER_WIDTH / 2.0);
-        double originY = playerY + (PLAYER_HEIGHT / 2.0);
+ private void spawnLaserShot() {
+    double originX = player.getX() + 25;
+    double originY = player.getY() + 40;
 
-        double directionX = mouseHandler.getMouseX() - originX;
-        double directionY = mouseHandler.getMouseY() - originY;
+    // 👉 convert mouse sang world space
+    double worldMouseX = mouseHandler.getMouseX() + cameraX;
+    double worldMouseY = mouseHandler.getMouseY() + cameraY;
 
-        spawnBullet(
-            originX,
-            originY,
-            directionX,
-            directionY,
-            LASER_SPEED,
-            LASER_DIAMETER,
-            LASER_COLOR,
-            LASER_DAMAGE
-        );
-    }
+    // 👉 dùng world space để tính direction
+    double directionX = worldMouseX - originX;
+    double directionY = worldMouseY - originY;
+
+    spawnBullet(
+        originX,
+        originY,
+        directionX,
+        directionY,
+        LASER_SPEED,
+        LASER_DIAMETER,
+        LASER_COLOR,
+        LASER_DAMAGE
+    );
+}
 
     private void spawnClusterShot() {
-        double originX = playerX + (PLAYER_WIDTH / 2.0);
-        double originY = playerY + (PLAYER_HEIGHT / 2.0);
+        double originX = player.getX() + 25;
+        double originY = player.getY() + 40;
 
-        double baseDirectionX = mouseHandler.getMouseX() - originX;
-        double baseDirectionY = mouseHandler.getMouseY() - originY;
+        double worldMouseX = mouseHandler.getMouseX() + cameraX;
+        double worldMouseY = mouseHandler.getMouseY() + cameraY;
+
+        double baseDirectionX = worldMouseX - originX;
+        double baseDirectionY = worldMouseY - originY;
 
         if (baseDirectionX == 0 && baseDirectionY == 0) {
             baseDirectionX = 1;
@@ -198,6 +281,13 @@ public class GamePanel extends JPanel implements Runnable {
         int damage
     ) {
 
+        double length = Math.sqrt(directionX * directionX + directionY * directionY);
+
+        if (length != 0) {
+            directionX /= length;
+            directionY /= length;
+        }
+
         bullets.add(new Bullet(
             originX - (diameter / 2.0),
             originY - (diameter / 2.0),
@@ -207,7 +297,8 @@ public class GamePanel extends JPanel implements Runnable {
             diameter,
             color,
             damage
-        ));
+        )
+        );
     }
 
     private double[] rotateVector(double x, double y, double angleRadians) {
@@ -263,81 +354,31 @@ public class GamePanel extends JPanel implements Runnable {
 
     private boolean isOutOfScreen(Rectangle bounds) {
         return bounds.x + bounds.width < 0
-            || bounds.x > SCREEN_WIDTH
+            || bounds.x > SCREEN_WIDTH * SCALE
             || bounds.y + bounds.height < 0
-            || bounds.y > SCREEN_HEIGHT;
+            || bounds.y > SCREEN_HEIGHT * SCALE;
     }
 
-    private void applyHorizontalMovement(double deltaX) {
-        if (deltaX == 0) {
-            return;
-        }
 
-        double nextX = playerX + deltaX;
-        Rectangle nextBounds = getPlayerBounds(nextX, playerY);
-
-        for (Rectangle block : getCurrentSolidBlocks()) {
-            if (nextBounds.intersects(block)) {
-                if (deltaX > 0) {
-                    nextX = block.x - PLAYER_WIDTH;
-                } else {
-                    nextX = block.x + block.width;
-                }
-                break;
-            }
-        }
-
-        playerX = nextX;
-        handleScreenTransition();
-    }
-
-    private void applyVerticalMovement(double deltaY) {
-        double nextY = playerY + deltaY;
-        Rectangle nextBounds = getPlayerBounds(playerX, nextY);
-
-        onGround = false;
-
-        for (Rectangle block : getCurrentSolidBlocks()) {
-            if (nextBounds.intersects(block)) {
-                if (deltaY > 0) {
-                    nextY = block.y - PLAYER_HEIGHT;
-                    onGround = true;
-                } else if (deltaY < 0) {
-                    nextY = block.y + block.height;
-                }
-                velocityY = 0;
-                break;
-            }
-        }
-
-        playerY = nextY;
-        if (onGround) {
-            jumpCount = 0;
-        }
-    }
-
-    private Rectangle getPlayerBounds(double x, double y) {
-        return new Rectangle((int) x, (int) y, PLAYER_WIDTH, PLAYER_HEIGHT);
-    }
-
-    private void handleScreenTransition() {
+    
+    private void handleScreenTransition(float x, float y) {
         boolean transitioned = false;
-
-        if (playerX + PLAYER_WIDTH > SCREEN_WIDTH) {
+        // Check if player has moved beyond the right edge of the screen
+        if (x + PLAYER_WIDTH > SCREEN_WIDTH * SCALE ) { // If player's right edge goes beyond the screen width
             if (sceneManager.moveToRightScreen()) {
-                playerX = TRANSITION_SPAWN_PADDING;
+                x = TRANSITION_SPAWN_PADDING; 
                 transitioned = true;
             } else {
-                playerX = SCREEN_WIDTH - PLAYER_WIDTH;
+                x = (float) (SCREEN_WIDTH * SCALE - PLAYER_WIDTH); 
             }
         }
-
-        if (playerX < 0) {
+        // Check if player has moved beyond the left edge of the screen
+        if (x < 0) {
             if (sceneManager.moveToLeftScreen()) {
-                playerX = SCREEN_WIDTH - PLAYER_WIDTH - TRANSITION_SPAWN_PADDING;
+                x = (float)(SCREEN_WIDTH * SCALE - PLAYER_WIDTH - TRANSITION_SPAWN_PADDING);
                 transitioned = true;
             } else {
-                playerX = 0;
+                x = 0;
             }
         }
 
@@ -361,9 +402,11 @@ public class GamePanel extends JPanel implements Runnable {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        Graphics2D g2 = (Graphics2D) g;
+        g2.translate(-cameraX, -cameraY);
 
         g.setColor(new Color(70, 110, 160));
-        g.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        g.fillRect(0, 0, (int)(SCREEN_WIDTH * SCALE), (int)(SCREEN_HEIGHT * SCALE));
 
         g.setColor(new Color(55, 45, 35));
         for (Rectangle block : getCurrentSolidBlocks()) {
@@ -390,8 +433,10 @@ public class GamePanel extends JPanel implements Runnable {
             g.setColor(bullet.getColor());
             g.fillOval(bullet.getRenderX(), bullet.getRenderY(), bullet.getDiameter(), bullet.getDiameter());
         }
-
-        g.setColor(new Color(230, 190, 70));
-        g.fillRect((int) playerX, (int) playerY, PLAYER_WIDTH, PLAYER_HEIGHT);
+       
+        
+        player.draw((Graphics2D) g);
+            
+        
     }
 }
