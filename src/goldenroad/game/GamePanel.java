@@ -15,12 +15,13 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.image.BufferedImage;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-
+import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 
 
@@ -29,8 +30,8 @@ public class GamePanel extends JPanel implements Runnable {
     //public static final int SCREEN_HEIGHT = 540;
     public static final int SCREEN_WIDTH = 640;
     public static final int SCREEN_HEIGHT = 360;
-    public static final double SCREEN_SCALE = 1.25; // Adjust this value to scale the game (example: 1.25 for 1080p, 1.25/1.5 for 1440p)
-    public double SCALE = 3 / SCREEN_SCALE; 
+    private static final double SCREEN_SCALE = 3;
+    public double SCALE = 2.4; 
     // Default to 720p, can be changed to 1080p or 1440p by adjusting the denominator 
     // (example: for 1080p, use 1.25, for 1440p, use 1.25/1.5)
     // x2 = 1280x720 = 720p
@@ -43,16 +44,16 @@ public class GamePanel extends JPanel implements Runnable {
     private double cameraX = 0;
     private double cameraY = 0;
     private final double DEADZONE_WIDTH = 150;
-    private final double DEADZONE_HEIGHT = 120;
-    private double lookAhead = 0;
-    private double LOOK_AHEAD_DISTANCE = 50;
-
-    private static final int START_PLAYER_X = 120; 
-    private static final int START_PLAYER_Y = 380;
-    private double PLAYER_WIDTH = 25 * SCALE;
-    private double PLAYER_HEIGHT = 40 * SCALE;
-
-    private static final int TRANSITION_SPAWN_PADDING = 2;      
+    private final double DEADZONE_HEIGHT = 150;
+    
+    // MAP
+    private BufferedImage mapImage;
+    private final int WORLD_WIDTH = 4480;
+    private final int WORLD_HEIGHT = 2560;
+        
+    int worldWidth =    (int) (WORLD_WIDTH  * SCALE);
+    int worldHeight =   (int) (WORLD_HEIGHT * SCALE);
+    
     private double LASER_SPEED = 10.0 * SCALE;
     private static final int LASER_DIAMETER = 14;
     private static final int LASER_DAMAGE = 4;
@@ -78,9 +79,25 @@ public class GamePanel extends JPanel implements Runnable {
     private Player player;
 
     public void initPlayer() {
-        player = new Player(120, 380); 
+        player = new Player(1520, 4080); 
         player.update(keyHandler, getCurrentSolidBlocks());
     }
+
+    public void loadMap() {
+    try {
+        var stream = getClass().getResourceAsStream("/assets/map/BIG_INTRO_ROOM_MIRAI.png");
+
+        if (stream == null) {
+            System.out.println("Không tìm thấy map!");
+            return;
+        }
+
+        mapImage = ImageIO.read(stream);
+        System.out.println("Load map thành công");
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
 
     public GamePanel() {
         setPanelSize();
@@ -91,13 +108,14 @@ public class GamePanel extends JPanel implements Runnable {
         addMouseListener(mouseHandler);
         addMouseMotionListener(mouseHandler);
         initPlayer();
+        
     }
 
 
 
     private void setPanelSize() {
-        int scaledWidth = (int) (SCREEN_WIDTH * SCALE);
-        int scaledHeight = (int) (SCREEN_HEIGHT * SCALE);
+        int scaledWidth = (int) (SCREEN_WIDTH * SCREEN_SCALE);
+        int scaledHeight = (int) (SCREEN_HEIGHT * SCREEN_SCALE);
         Dimension size = new Dimension(scaledWidth, scaledHeight);
         setPreferredSize(size);
         setMinimumSize(size);
@@ -142,9 +160,6 @@ public class GamePanel extends JPanel implements Runnable {
         updateBullets();
 
     }
-    
-    int worldWidth = 3000;
-    int worldHeight = 1000;
 
  
 
@@ -198,6 +213,7 @@ private void updateCamera() {
     cameraX = Math.min(cameraX, worldWidth - SCREEN_WIDTH * SCALE);
     cameraY = Math.min(cameraY, worldHeight - SCREEN_HEIGHT * SCALE);
 }
+
 
 // Handle shooting input and bullet spawning
     private void handleShootingInput() {
@@ -354,38 +370,11 @@ private void updateCamera() {
 
     private boolean isOutOfScreen(Rectangle bounds) {
         return bounds.x + bounds.width < 0
-            || bounds.x > SCREEN_WIDTH * SCALE
+            || bounds.x > SCREEN_WIDTH * SCREEN_SCALE
             || bounds.y + bounds.height < 0
-            || bounds.y > SCREEN_HEIGHT * SCALE;
+            || bounds.y > SCREEN_HEIGHT * SCREEN_SCALE;
     }
 
-
-    
-    private void handleScreenTransition(float x, float y) {
-        boolean transitioned = false;
-        // Check if player has moved beyond the right edge of the screen
-        if (x + PLAYER_WIDTH > SCREEN_WIDTH * SCALE ) { // If player's right edge goes beyond the screen width
-            if (sceneManager.moveToRightScreen()) {
-                x = TRANSITION_SPAWN_PADDING; 
-                transitioned = true;
-            } else {
-                x = (float) (SCREEN_WIDTH * SCALE - PLAYER_WIDTH); 
-            }
-        }
-        // Check if player has moved beyond the left edge of the screen
-        if (x < 0) {
-            if (sceneManager.moveToLeftScreen()) {
-                x = (float)(SCREEN_WIDTH * SCALE - PLAYER_WIDTH - TRANSITION_SPAWN_PADDING);
-                transitioned = true;
-            } else {
-                x = 0;
-            }
-        }
-
-        if (transitioned) {
-            bullets.clear();
-        }
-    }
 
     private List<Rectangle> getCurrentSolidBlocks() {
         return sceneManager.getCurrentScreen().getSolidBlocks();
@@ -403,10 +392,11 @@ private void updateCamera() {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
+        
         g2.translate(-cameraX, -cameraY);
 
         g.setColor(new Color(70, 110, 160));
-        g.fillRect(0, 0, (int)(SCREEN_WIDTH * SCALE), (int)(SCREEN_HEIGHT * SCALE));
+        g.fillRect(0, 0, (int)(SCREEN_WIDTH * SCREEN_SCALE), (int)(SCREEN_HEIGHT * SCREEN_SCALE));
 
         g.setColor(new Color(55, 45, 35));
         for (Rectangle block : getCurrentSolidBlocks()) {
@@ -434,9 +424,16 @@ private void updateCamera() {
             g.fillOval(bullet.getRenderX(), bullet.getRenderY(), bullet.getDiameter(), bullet.getDiameter());
         }
        
-        
+        // DRAW MAP
+        if (mapImage != null) {
+            g2.drawImage(mapImage, -0, -0, worldWidth, worldHeight, null);
+        }
+
+
+        // DRAW MIRAI
         player.draw((Graphics2D) g);
             
-        
+        g.setColor(new Color(150, 110, 160));
+        g.fillRect(0, 0, (int)(100), (int)(100));
     }
 }

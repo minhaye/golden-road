@@ -16,11 +16,10 @@ public class Player extends Entity {
 
     private static final int FRAME_W = 96;
     private static final int FRAME_H = 96;
-    private static final int DRAW_OFFSET_X = -72; 
-    private static final int DRAW_OFFSET_Y = -84;
-
-    public static final double SCREEN_SCALE = 1.25; // Adjust this value to scale the game (example: 1.25 for 1080p, 1.25/1.5 for 1440p)
-    public double SCALE = 3 / SCREEN_SCALE; 
+    private static final int DRAW_OFFSET_X = -85; 
+    private static final int DRAW_OFFSET_Y = -95;
+    private static final double SCREEN_SCALE = 3;
+    public double SCALE = 3; 
     // Default to 720p, can be changed to 1080p or 1440p by adjusting the denominator 
     // (example: for 1080p, use 1.25, for 1440p, use 1.25/1.5)
     // x2 = 1280x720 = 720p
@@ -59,14 +58,14 @@ public class Player extends Entity {
 
     private double MOVE_SPEED = 4 * SCALE;
     private double GRAVITY = 1.2;
-    private double JUMP_SPEED = -9 * SCALE;
+    private double JUMP_SPEED = -8.5 * SCALE;
     private double MAX_FALL = 10.0 * SCALE;
 
     private int jumpCount = 0;
     private static final int MAX_JUMPS = 2;
 
     // ====== DASH ======
-    private double DASH_SPEED = 7 * SCALE;
+    private double DASH_SPEED = 10 * 3;
     private int dashDuration = 0;
     private int dashCooldown = 0;
     private boolean dashUsed = false;
@@ -137,6 +136,7 @@ public class Player extends Entity {
         if (coyoteTime > 0) coyoteTime--;
 
         // ===== DASH =====
+       /*
         if (input.dashPressed && !dashUsed && dashOnAirCount < MAX_DASH_ON_AIR) {
             if(coyoteTime == 0)
             dashOnAirCount++;                                   // Increment dash on air count if not on ground ( if you dash off from a high ground into air, you cannot dash again until you land, but if you dash on ground, you can dash again in air - Nhat)
@@ -144,7 +144,7 @@ public class Player extends Entity {
             dashDuration = DASH_DURATION;                       // SET DASH DURATION (example value, adjust as needed)
             dashCooldown = DASH_COOLDOWN;                       // SET DASH COOLDOWN (example value, adjust as needed)
         }
-
+          */
         if(dashDuration > 0 && dashUsed) {
             moveX = DASH_SPEED * direction;
             velocityY = 0;                                      // Cancel vertical velocity during dash but allow upward momentum to persist (you can still jump higher if you dash while moving upwards, but if you dash while falling, your fall will be stopped during the dash )
@@ -162,6 +162,7 @@ public class Player extends Entity {
         }
 
         // ===== JUMP =====
+        /*
         if (jumpBuffer > 0 && (coyoteTime > 0 || jumpCount < MAX_JUMPS)) {
             velocityY = JUMP_SPEED;
             if (onGround == false && coyoteTime == 0) {
@@ -175,6 +176,31 @@ public class Player extends Entity {
             jumpBuffer = 0;
             coyoteTime = 0;
         }
+         */
+
+        
+        //      GOD MODE
+        if (jumpBuffer > 0 ) {
+            velocityY = JUMP_SPEED;
+
+            onGround = false;
+            jumpCount++;
+            dashDuration = 0;                       // Cancel dash if you jump
+            GRAVITY = 1.2; 
+
+            jumpBuffer = 0;
+            coyoteTime = 0;
+        }
+        if (input.dashPressed && !dashUsed && dashOnAirCount < MAX_DASH_ON_AIR) {   
+                                 // Increment dash on air count if not on ground ( if you dash off from a high ground into air, you cannot dash again until you land, but if you dash on ground, you can dash again in air - Nhat)
+            dashUsed = true;
+            dashDuration = DASH_DURATION;                       // SET DASH DURATION (example value, adjust as needed)
+            dashCooldown = DASH_COOLDOWN;     
+            GRAVITY = 0;                    // SET DASH COOLDOWN (example value, adjust as needed)
+        }
+
+        //END GOD MODE
+        /**/
 
         // ===== PHYSICS =====
         velocityY += GRAVITY;
@@ -316,15 +342,15 @@ public class Player extends Entity {
     // ====== DRAW ======
     public void draw(Graphics2D g) {
         BufferedImage img = getFrame();
-        /* 
+
         g.setColor(new Color(230, 190, 70)); // Placeholder color for player if sprite fails to load
         g.fillRect((int)x, (int)y, (int)(WIDTH) , (int)(HEIGHT));
-        */
+
         if (direction == 1) {
-            g.drawImage(img, (int)x + DRAW_OFFSET_X, (int)y + DRAW_OFFSET_Y, FRAME_W * 2, FRAME_H * 2, null); //
+            g.drawImage(img, (int)x + DRAW_OFFSET_X, (int)y + DRAW_OFFSET_Y, (int) (FRAME_W * 2.4), (int) (FRAME_H * 2.4), null); //
         } else {
-            g.drawImage(img, (int)x + DRAW_OFFSET_X + FRAME_W * 2, (int)y + DRAW_OFFSET_Y,
-                    -FRAME_W * 2, FRAME_H * 2, null);
+            g.drawImage(img, (int)x + (int) (DRAW_OFFSET_X + FRAME_W * 2.4), (int)y + DRAW_OFFSET_Y,
+                    (int) (-FRAME_W * 2.4),  (int) (FRAME_H * 2.4), null);
         }
     }
 }
