@@ -6,6 +6,8 @@ import goldenroad.entity.Monster;
 import goldenroad.entity.Player;
 import goldenroad.input.KeyHandler;
 import goldenroad.input.MouseHandler;
+import goldenroad.map.CollisionHandler;
+import goldenroad.map.CollisionMap;
 import goldenroad.scene.SceneManager;
 import goldenroad.scene.Screen;
 
@@ -47,6 +49,8 @@ public class GamePanel extends JPanel implements Runnable {
     private final double DEADZONE_HEIGHT = 150;
     
     // MAP
+    private CollisionMap collisionMap;
+    private CollisionHandler collisionHandler;
     private BufferedImage mapImage;
     private final int WORLD_WIDTH = 4480;
     private final int WORLD_HEIGHT = 2560;
@@ -79,13 +83,13 @@ public class GamePanel extends JPanel implements Runnable {
     private Player player;
 
     public void initPlayer() {
-        player = new Player(1520, 4080); 
-        player.update(keyHandler, getCurrentSolidBlocks());
+        player = new Player(2220, 4680); 
+        player.update(keyHandler);
     }
 
     public void loadMap() {
     try {
-        var stream = getClass().getResourceAsStream("/assets/map/BIG_INTRO_ROOM_MIRAI.png");
+        var stream = getClass().getResourceAsStream("/assets/map/BIG_INTRO_ROOM.png");
 
         if (stream == null) {
             System.out.println("Không tìm thấy map!");
@@ -93,7 +97,16 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         mapImage = ImageIO.read(stream);
-        System.out.println("Load map thành công");
+       // 👉 load collision
+        collisionMap = new CollisionMap();
+        collisionMap.load("/assets/map/BIG_INTRO_ROOM_COLLISION.png");
+
+        collisionHandler = new CollisionHandler(collisionMap, SCALE);
+
+        System.out.println("Load map + collision OK");
+
+
+
     } catch (Exception e) {
         e.printStackTrace();
     }
@@ -152,7 +165,13 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void update() {
-        player.update(keyHandler, getCurrentSolidBlocks());
+        player.update(keyHandler);
+
+        collisionHandler.move(
+        player,
+        player.getVelocityX(),
+        player.getVelocityY()
+    );
 
         updateCamera();
 
@@ -204,7 +223,7 @@ private void updateCamera() {
     
     // ===== 4. LERP CAMERA =====
     cameraX += (targetX - cameraX) * 0.1;
-    cameraY += (targetY - cameraY) * 0.1;
+    cameraY += (targetY - cameraY) * 0.5;
 
     // ===== 5. CLAMP (optional) =====
     cameraX = Math.max(0, cameraX);
@@ -395,6 +414,7 @@ private void updateCamera() {
         
         g2.translate(-cameraX, -cameraY);
 
+        /* 
         g.setColor(new Color(70, 110, 160));
         g.fillRect(0, 0, (int)(SCREEN_WIDTH * SCREEN_SCALE), (int)(SCREEN_HEIGHT * SCREEN_SCALE));
 
@@ -402,6 +422,7 @@ private void updateCamera() {
         for (Rectangle block : getCurrentSolidBlocks()) {
             g.fillRect(block.x, block.y, block.width, block.height);
         }
+            */
 
         for (Item item : getCurrentItems()) {
             Rectangle itemBounds = item.getBounds();
@@ -425,6 +446,7 @@ private void updateCamera() {
         }
        
         // DRAW MAP
+        
         if (mapImage != null) {
             g2.drawImage(mapImage, -0, -0, worldWidth, worldHeight, null);
         }

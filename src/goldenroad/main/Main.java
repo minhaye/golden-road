@@ -12,7 +12,7 @@ public class Main {
             JFrame window = new JFrame("Golden Road Prototype");
             window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             window.setSize(1980, 1080);
-
+            
             GamePanel gamePanel = new GamePanel();
             window.add(gamePanel);
             window.pack();

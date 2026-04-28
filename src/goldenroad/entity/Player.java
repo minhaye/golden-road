@@ -1,6 +1,8 @@
 package goldenroad.entity;
     
 import goldenroad.input.KeyHandler;
+import goldenroad.map.CollisionMap;
+import goldenroad.map.CollisionHandler;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -52,6 +54,7 @@ public class Player extends Entity {
 
     // ====== MOVEMENT ======
     private double velocityY = 0;
+    private double velocityX = 0;
     private boolean onGround = true;
 
     private double direction = 1;
@@ -65,7 +68,7 @@ public class Player extends Entity {
     private static final int MAX_JUMPS = 2;
 
     // ====== DASH ======
-    private double DASH_SPEED = 10 * 3;
+    private double DASH_SPEED = 22;
     private int dashDuration = 0;
     private int dashCooldown = 0;
     private boolean dashUsed = false;
@@ -73,8 +76,8 @@ public class Player extends Entity {
     private static final int MAX_DASH_ON_AIR = 1;
 
 
-    private static final int DASH_DURATION = 15;
-    private static final int DASH_COOLDOWN = 35;
+    private static final int DASH_DURATION = 20;
+    private static final int DASH_COOLDOWN = 40;
 
     // ====== COYOTE + BUFFER ======
     private int coyoteTime = 0;
@@ -86,9 +89,37 @@ public class Player extends Entity {
     // ====== SIZE ======
     private double WIDTH = 20 * SCALE;
     private double HEIGHT = 45 * SCALE;
+    private double PLAYER_WIDTH = 25 * SCALE;
+    private double PLAYER_HEIGHT = 40 * SCALE;
 
     public float getX() { return x; }
     public float getY() { return y; }
+    public double getVelocityX() { return velocityX; }
+    public double getVelocityY() { return velocityY; }
+
+    public void setVelocityY(double v) { this.velocityY = v; }
+
+    public void setX(double x) { this.x = (float)x; }
+    public void setY(double y) { this.y = (float)y; }
+
+    public double getWidth() { return WIDTH; }
+    public double getHeight() { return HEIGHT; }
+
+    public void setOnGround(boolean val) {
+        if (val) {
+            coyoteTime = COYOTE_MAX;
+            jumpCount = 0;
+            dashOnAirCount = 0;
+        }
+        this.onGround = val;
+    }
+
+    public boolean isIdle() {
+        if (state == PlayerState.IDLE)
+        return true;
+        else return false; }
+
+    public double getDirection() { return direction; }
 
     public Player(float x, float y) {
         super(x, y);
@@ -114,7 +145,7 @@ public class Player extends Entity {
     }
 
     // ====== UPDATE ======
-    public void update(KeyHandler input, List<Rectangle> blocks) {
+    public void update(KeyHandler input) {
         double moveX = 0;
 
         // ===== INPUT =====
@@ -206,8 +237,9 @@ public class Player extends Entity {
         velocityY += GRAVITY;
         if (velocityY > MAX_FALL) velocityY = MAX_FALL;
 
-        applyHorizontal(moveX, blocks);
-        applyVertical(velocityY, blocks);
+        // 👉 QUAN TRỌNG: set velocityX
+        velocityX = moveX;
+        
 
         // ===== STATE =====
         updateState(moveX);
@@ -216,6 +248,7 @@ public class Player extends Entity {
         updateAnimation();
     }
 
+    
     // ====== MOVEMENT ======
     private void applyHorizontal(double dx, List<Rectangle> blocks) {
         double nextX = x + dx;
@@ -285,15 +318,7 @@ public class Player extends Entity {
         }
     }
 
-    public boolean isIdle() {
-        if (state == PlayerState.IDLE)
-        return true;
-        else return false;
-    }
-
-    public double getDirection() {
-    return direction;
-    }
+    
 
     // ====== ANIMATION ======
     private void updateAnimation() {
@@ -333,6 +358,8 @@ public class Player extends Entity {
         };
     }
 
+    
+
     private BufferedImage getFrame() {
         int x = currentFrame * FRAME_W;
         int y = getRow() * FRAME_H;
@@ -342,15 +369,16 @@ public class Player extends Entity {
     // ====== DRAW ======
     public void draw(Graphics2D g) {
         BufferedImage img = getFrame();
-
+        /* 
         g.setColor(new Color(230, 190, 70)); // Placeholder color for player if sprite fails to load
         g.fillRect((int)x, (int)y, (int)(WIDTH) , (int)(HEIGHT));
-
+        */
         if (direction == 1) {
             g.drawImage(img, (int)x + DRAW_OFFSET_X, (int)y + DRAW_OFFSET_Y, (int) (FRAME_W * 2.4), (int) (FRAME_H * 2.4), null); //
         } else {
             g.drawImage(img, (int)x + (int) (DRAW_OFFSET_X + FRAME_W * 2.4), (int)y + DRAW_OFFSET_Y,
                     (int) (-FRAME_W * 2.4),  (int) (FRAME_H * 2.4), null);
         }
+
     }
 }
