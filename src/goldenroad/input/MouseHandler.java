@@ -37,6 +37,14 @@ public class MouseHandler implements MouseListener, MouseMotionListener {
         return false;
     }
 
+    public boolean isLeftClickQueued() {
+        return leftClickQueued;
+    }
+
+    public boolean isRightClickQueued() {
+        return rightClickQueued;
+    }
+
     @Override
     public void mouseClicked(MouseEvent e) {
     }

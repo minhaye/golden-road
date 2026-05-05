@@ -10,6 +10,7 @@ import goldenroad.map.CollisionHandler;
 import goldenroad.map.CollisionMap;
 import goldenroad.scene.SceneManager;
 import goldenroad.scene.Screen;
+import goldenroad.scene.Menu;
 
 
 import java.awt.Color;
@@ -75,6 +76,7 @@ public class GamePanel extends JPanel implements Runnable {
     private final KeyHandler keyHandler = new KeyHandler();
     private final MouseHandler mouseHandler = new MouseHandler();
     private final SceneManager sceneManager = new SceneManager();
+    private final Menu menu = new Menu(this);
     private final List<Bullet> bullets = new ArrayList<>();
 
 
@@ -121,7 +123,8 @@ public class GamePanel extends JPanel implements Runnable {
         addMouseListener(mouseHandler);
         addMouseMotionListener(mouseHandler);
         initPlayer();
-        
+        // layout menu after component initialized size
+        menu.update(mouseHandler);
     }
 
 
@@ -165,13 +168,19 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void update() {
+        // If menu active, let it handle input and block gameplay updates
+        if (menu.isActive()) {
+            menu.update(mouseHandler);
+            return;
+        }
+
         player.update(keyHandler);
 
         collisionHandler.move(
-        player,
-        player.getVelocityX(),
-        player.getVelocityY()
-    );
+            player,
+            player.getVelocityX(),
+            player.getVelocityY()
+        );
 
         updateCamera();
 
@@ -411,7 +420,12 @@ private void updateCamera() {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
-        
+        // If menu active, render only the menu (modal) so game is hidden until 'Bắt đầu'
+        if (menu.isActive()) {
+            menu.render(g2);
+            return;
+        }
+
         g2.translate(-cameraX, -cameraY);
 
         /* 
@@ -457,5 +471,11 @@ private void updateCamera() {
             
         g.setColor(new Color(150, 110, 160));
         g.fillRect(0, 0, (int)(100), (int)(100));
+
+        // restore transform and draw UI (about button)
+        java.awt.geom.AffineTransform old = g2.getTransform();
+        g2.setTransform(new java.awt.geom.AffineTransform());
+        menu.render(g2);
+        g2.setTransform(old);
     }
 }
