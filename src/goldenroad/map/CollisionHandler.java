@@ -3,13 +3,12 @@ package goldenroad.map;
 import goldenroad.entity.Player;
 
 public class CollisionHandler {
-
+    
+    private static final int TILE_SIZE = 16;
     private CollisionMap map;
-    private double scale;
 
-    public CollisionHandler(CollisionMap map, double scale) {
+    public CollisionHandler(CollisionMap map) {
         this.map = map;
-        this.scale = scale;
     }
 
     public void move(Player player, double dx, double dy) {
@@ -36,73 +35,75 @@ public class CollisionHandler {
         }
     }
 
-private void moveVertical(Player player, double dy) {
+    private void moveVertical(Player player, double dy) {
 
-    player.setOnGround(false);
+        player.setOnGround(false);
 
-    double step = Math.signum(dy);
+        double step = Math.signum(dy);
 
-    for (int i = 0; i < Math.abs(dy); i++) {
+        for (int i = 0; i < Math.abs(dy); i++) {
 
-        double nextY = player.getY() + step;
+            double nextY = player.getY() + step;
 
-        // ===== SOLID =====
-        if (collides(player, player.getX(), nextY)) {
+            // ===== SOLID =====
+            if (collides(player, player.getX(), nextY)) {
 
-            if (step > 0) {
-                player.setOnGround(true);
-            }
+                if (step > 0) {
+                    player.setOnGround(true);
+                }
 
-            player.setVelocityY(0);
-            break;
-        }
-
-        // ===== ONE WAY =====
-        if (step > 0 && collidesOneWay(player, player.getX(), nextY)) {
-
-            double prevBottom = player.getY() + player.getHeight();
-            double nextBottom = nextY + player.getHeight();
-
-            // 🔥 CHỈ CHẶN KHI ĐI TỪ TRÊN XUỐNG
-            if (prevBottom <= nextBottom - step) {
-
-                player.setOnGround(true);
                 player.setVelocityY(0);
-
-                // snap lên platform
-                int tileY = (int)(nextBottom / scale);
-                player.setY(tileY * scale - player.getHeight());
-
                 break;
             }
-        }
 
-        // ===== MOVE =====
-        player.setY(nextY);
+            // ===== ONE WAY =====
+            if (step > 0 && collidesOneWay(player, player.getX(), nextY) && !player.isDroppingDown()) {
+
+                double prevBottom = player.getY() + player.getHeight();
+                double nextBottom = nextY + player.getHeight();
+
+                // chỉ chặn khi rơi từ trên xuống
+                if (prevBottom <= nextBottom - step) {
+                    // lấy tile chứa chân player
+                    int tileY = (int)(nextBottom / TILE_SIZE);
+
+                    // snap player lên mặt platform
+                    player.setY(tileY * TILE_SIZE - player.getHeight());
+
+                    player.setOnGround(true);
+                    player.setVelocityY(0);
+
+                    break;
+                }
+            }
+            // ===== MOVE =====
+            player.setY(nextY);
+
+        }
     }
-}
+    
     private boolean collidesOneWay(Player p, double x, double y) {
 
-    int left   = (int)(x / scale);
-    int right  = (int)((x + p.getWidth() - 1) / scale);
-    int bottom = (int)((y + p.getHeight() - 1) / scale);
+        int left   = (int)(x);
+        int right  = (int)((x + p.getWidth() - 1));
+        int bottom = (int)((y + p.getHeight() - 1));
 
-    for (int tx = left ; tx <= right; tx++) {
-        if (map.isOneWay(tx, bottom) ) {
-            return true;
+        for (int tx = left ; tx <= right; tx++) {
+            if (map.isOneWay(tx, bottom) ) {
+                return true;
+            }
         }
-    }
 
-    return false;
+        return false;
     }
 
     // ===== AABB CHECK =====
     private boolean collides(Player p, double x, double y) {
 
-        int left   = (int)(x / scale);
-        int right  = (int)((x + p.getWidth() - 1) / scale);
-        int top    = (int)(y / scale);
-        int bottom = (int)((y + p.getHeight() - 1) / scale);
+        int left   = (int)(x);
+        int right  = (int)((x + p.getWidth() - 1));
+        int top    = (int)(y);
+        int bottom = (int)((y + p.getHeight() - 1) );
 
         for (int tx = left; tx <= right; tx++) {
             for (int ty = top; ty <= bottom; ty++) {

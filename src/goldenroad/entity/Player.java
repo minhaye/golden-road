@@ -18,17 +18,10 @@ public class Player extends Entity {
 
     private static final int FRAME_W = 96;
     private static final int FRAME_H = 96;
-    private static final int DRAW_OFFSET_X = -85; 
-    private static final int DRAW_OFFSET_Y = -95;
-    private static final double SCREEN_SCALE = 3;
-    public double SCALE = 3; 
-    // Default to 720p, can be changed to 1080p or 1440p by adjusting the denominator 
-    // (example: for 1080p, use 1.25, for 1440p, use 1.25/1.5)
-    // x2 = 1280x720 = 720p
-    // x3 = 1920x1080 = 1080p
-    // x4 = 2560x1440 = 1440p
-    // x6 = 3840x2160 = 4K
+    private static final int DRAW_OFFSET_X = -38; 
+    private static final int DRAW_OFFSET_Y = -46;
 
+    // ====== ANIMATON ======
     private int currentFrame = 0;
     private int animationTick = 0;
     private static final int ANIMATION_SPEED = 5;
@@ -59,22 +52,24 @@ public class Player extends Entity {
 
     private double direction = 1;
 
-    private double MOVE_SPEED = 4 * SCALE;
+    private double MOVE_SPEED = 6;
     private double GRAVITY = 1.2;
-    private double JUMP_SPEED = -8.5 * SCALE;
-    private double MAX_FALL = 10.0 * SCALE;
-
+    private double FALL_GRAVITY = 0.7;
+    private double JUMP_SPEED = -17;
+    private double MAX_FALL = 12.0;
+    
     private int jumpCount = 0;
     private static final int MAX_JUMPS = 2;
+    private int dropDownTimer = 0;
+    private static final int DROP_DOWN_DURATION = 10;
 
     // ====== DASH ======
-    private double DASH_SPEED = 22;
+    private double DASH_SPEED = 10;
     private int dashDuration = 0;
     private int dashCooldown = 0;
     private boolean dashUsed = false;
     private int dashOnAirCount = 0;
     private static final int MAX_DASH_ON_AIR = 1;
-
 
     private static final int DASH_DURATION = 20;
     private static final int DASH_COOLDOWN = 40;
@@ -87,10 +82,8 @@ public class Player extends Entity {
     private static final int BUFFER_MAX = 12;
 
     // ====== SIZE ======
-    private double WIDTH = 20 * SCALE;
-    private double HEIGHT = 45 * SCALE;
-    private double PLAYER_WIDTH = 25 * SCALE;
-    private double PLAYER_HEIGHT = 40 * SCALE;
+    private double WIDTH = 20;
+    private double HEIGHT = 50;
 
     public float getX() { return x; }
     public float getY() { return y; }
@@ -105,6 +98,129 @@ public class Player extends Entity {
     public double getWidth() { return WIDTH; }
     public double getHeight() { return HEIGHT; }
 
+    // ====== UPDATE ======
+    public void update(KeyHandler input) {
+        double moveX = 0;
+
+        // ===== INPUT =====
+        if (input.leftPressed && dashDuration == 0) {
+            moveX = -MOVE_SPEED;
+            direction = -1;
+        }
+        if (input.rightPressed && dashDuration == 0) {
+            moveX = MOVE_SPEED;
+            direction = 1;
+        }
+
+        boolean jumpPressed = input.consumeJumpJustPressed();
+        boolean downPressed = input.downPressed;
+
+        // ===== DROP DOWN =====
+        if (downPressed && jumpPressed) {
+
+            dropDownTimer = DROP_DOWN_DURATION;
+
+            onGround = false;
+            coyoteTime = 0;
+            velocityY = 4;
+
+            return;
+        }
+
+        // ===== JUMP BUFFER =====
+        if (jumpPressed) {
+            jumpBuffer = BUFFER_MAX;
+        }
+
+        if (jumpBuffer > 0)     jumpBuffer--;
+        if (coyoteTime > 0)     coyoteTime--;
+        if (dropDownTimer > 0)  dropDownTimer--;
+
+
+        // ===== DASH =====
+        if (input.dashPressed && !dashUsed && dashOnAirCount < MAX_DASH_ON_AIR) {   
+            if(coyoteTime == 0)
+            dashOnAirCount++;                        // Increment dash on air count if not on ground ( if you dash off from a high ground into air, you cannot dash again until you land, but if you dash on ground, you can dash again in air - Nhat)
+            dashUsed = true;
+            dashDuration = DASH_DURATION;                       // SET DASH DURATION (example value, adjust as needed)
+            dashCooldown = DASH_COOLDOWN;     
+            FALL_GRAVITY = 0;                    // SET DASH COOLDOWN (example value, adjust as needed)
+        }
+
+        if(dashDuration > 0 && dashUsed) {
+            moveX = DASH_SPEED * direction;
+            velocityY = 0;                                      // Cancel vertical velocity during dash but allow upward momentum to persist (you can still jump higher if you dash while moving upwards, but if you dash while falling, your fall will be stopped during the dash )
+            FALL_GRAVITY = 0;                                        //Disable gravity during dash
+        }
+        
+        // Update dash timers
+        if (dashDuration > 0)  dashDuration--;
+        if (dashCooldown > 0)  dashCooldown--;
+
+        if (dashUsed && dashDuration == 0 )  {
+                if(dashCooldown == 0) 
+                    dashUsed = false;               // Allow dash again after cooldown
+                FALL_GRAVITY = 0.7;                      // Reset gravity after dash
+        }
+
+        
+        // ===== JUMP =====
+        if (jumpBuffer > 0 && (coyoteTime > 0 || jumpCount < MAX_JUMPS)) {
+            velocityY = JUMP_SPEED;
+            if (onGround == false && coyoteTime == 0) {
+            jumpCount++;
+            }
+            onGround = false;
+            jumpCount++;
+            dashDuration = 0;                       // Cancel dash if you jump
+            GRAVITY = 1.2; 
+
+            jumpBuffer = 0;
+            coyoteTime = 0;
+        }
+         
+        //      GOD MODE
+        /*
+        if (jumpBuffer > 0 ) {
+            velocityY = JUMP_SPEED;
+
+            onGround = false;
+            jumpCount++;
+            dashDuration = 0;                       // Cancel dash if you jump
+            GRAVITY = 1.2; 
+
+            jumpBuffer = 0;
+            coyoteTime = 0;
+        }
+        if (input.dashPressed && !dashUsed && dashOnAirCount < MAX_DASH_ON_AIR) {                 
+            dashUsed = true;
+            dashDuration = DASH_DURATION;  
+            dashCooldown = DASH_COOLDOWN;   
+        }
+        */
+        //END GOD MODE
+ 
+        // ===== PHYSICS =====
+        if (velocityY < 0) {
+            // đang nhảy lên
+            velocityY += GRAVITY;
+        } else {
+            // đang rơi
+            velocityY += FALL_GRAVITY;
+        }
+
+        if (velocityY > MAX_FALL) velocityY = MAX_FALL;
+
+        // set velocityX
+        velocityX = moveX;
+        
+        // ===== STATE =====
+        updateState(moveX);
+
+        // ===== ANIMATION =====
+        updateAnimation();
+    }
+
     public void setOnGround(boolean val) {
         if (val) {
             coyoteTime = COYOTE_MAX;
@@ -114,12 +230,18 @@ public class Player extends Entity {
         this.onGround = val;
     }
 
+    public boolean isDroppingDown() {
+        return dropDownTimer > 0;
+    }
+
     public boolean isIdle() {
         if (state == PlayerState.IDLE)
         return true;
         else return false; }
 
-    public double getDirection() { return direction; }
+    public double getDirection() {
+        return direction; 
+    }
 
     public Player(float x, float y) {
         super(x, y);
@@ -142,156 +264,6 @@ public class Player extends Entity {
             e.printStackTrace();
         }
         
-    }
-
-    // ====== UPDATE ======
-    public void update(KeyHandler input) {
-        double moveX = 0;
-
-        // ===== INPUT =====
-        if (input.leftPressed && dashDuration == 0) {
-            moveX = -MOVE_SPEED;
-            direction = -1;
-        }
-        if (input.rightPressed && dashDuration == 0) {
-            moveX = MOVE_SPEED;
-            direction = 1;
-        }
-
-        // ===== JUMP BUFFER =====
-        if (input.consumeJumpJustPressed()) {
-            jumpBuffer = BUFFER_MAX;
-        }
-
-        if (jumpBuffer > 0) jumpBuffer--;
-        if (coyoteTime > 0) coyoteTime--;
-
-        // ===== DASH =====
-       /*
-        if (input.dashPressed && !dashUsed && dashOnAirCount < MAX_DASH_ON_AIR) {
-            if(coyoteTime == 0)
-            dashOnAirCount++;                                   // Increment dash on air count if not on ground ( if you dash off from a high ground into air, you cannot dash again until you land, but if you dash on ground, you can dash again in air - Nhat)
-            dashUsed = true;
-            dashDuration = DASH_DURATION;                       // SET DASH DURATION (example value, adjust as needed)
-            dashCooldown = DASH_COOLDOWN;                       // SET DASH COOLDOWN (example value, adjust as needed)
-        }
-          */
-        if(dashDuration > 0 && dashUsed) {
-            moveX = DASH_SPEED * direction;
-            velocityY = 0;                                      // Cancel vertical velocity during dash but allow upward momentum to persist (you can still jump higher if you dash while moving upwards, but if you dash while falling, your fall will be stopped during the dash )
-            GRAVITY = 0;                                        //Disable gravity during dash
-        }
-        
-        // Update dash timers
-        if (dashDuration > 0)  dashDuration--;
-        if (dashCooldown > 0)  dashCooldown--;
-
-        if (dashUsed && dashDuration == 0 )  {
-                if(dashCooldown == 0) 
-                    dashUsed = false;               // Allow dash again after cooldown
-                GRAVITY = 1.2;                      // Reset gravity after dash
-        }
-
-        // ===== JUMP =====
-        /*
-        if (jumpBuffer > 0 && (coyoteTime > 0 || jumpCount < MAX_JUMPS)) {
-            velocityY = JUMP_SPEED;
-            if (onGround == false && coyoteTime == 0) {
-            jumpCount++;
-            }
-            onGround = false;
-            jumpCount++;
-            dashDuration = 0;                       // Cancel dash if you jump
-            GRAVITY = 1.2; 
-
-            jumpBuffer = 0;
-            coyoteTime = 0;
-        }
-         */
-
-        
-        //      GOD MODE
-        if (jumpBuffer > 0 ) {
-            velocityY = JUMP_SPEED;
-
-            onGround = false;
-            jumpCount++;
-            dashDuration = 0;                       // Cancel dash if you jump
-            GRAVITY = 1.2; 
-
-            jumpBuffer = 0;
-            coyoteTime = 0;
-        }
-        if (input.dashPressed && !dashUsed && dashOnAirCount < MAX_DASH_ON_AIR) {   
-                                 // Increment dash on air count if not on ground ( if you dash off from a high ground into air, you cannot dash again until you land, but if you dash on ground, you can dash again in air - Nhat)
-            dashUsed = true;
-            dashDuration = DASH_DURATION;                       // SET DASH DURATION (example value, adjust as needed)
-            dashCooldown = DASH_COOLDOWN;     
-            GRAVITY = 0;                    // SET DASH COOLDOWN (example value, adjust as needed)
-        }
-
-        //END GOD MODE
-        /**/
-
-        // ===== PHYSICS =====
-        velocityY += GRAVITY;
-        if (velocityY > MAX_FALL) velocityY = MAX_FALL;
-
-        // 👉 QUAN TRỌNG: set velocityX
-        velocityX = moveX;
-        
-
-        // ===== STATE =====
-        updateState(moveX);
-
-        // ===== ANIMATION =====
-        updateAnimation();
-    }
-
-    
-    // ====== MOVEMENT ======
-    private void applyHorizontal(double dx, List<Rectangle> blocks) {
-        double nextX = x + dx;
-        Rectangle next = getBounds(nextX, y);
-
-        for (Rectangle r : blocks) {
-            if (next.intersects(r)) {
-                if (dx > 0) nextX = r.x - WIDTH;
-                else nextX = r.x + r.width;
-            }
-        }
-        x = (float) nextX;
-    }
-
-    private void applyVertical(double dy, List<Rectangle> blocks) {
-        double nextY = y + dy;
-        Rectangle next = getBounds(x, nextY);
-
-        onGround = false;
-
-        for (Rectangle r : blocks) {
-            if (next.intersects(r)) {
-                if (dy > 0) {
-                    nextY = r.y - HEIGHT;
-                    onGround = true;
-                    coyoteTime = COYOTE_MAX;
-                    jumpCount = 0;
-                } else {
-                    nextY = r.y + r.height;
-                }
-                velocityY = 0;
-            }
-        }
-        y = (float) nextY;                                      // Update playerY after handling vertical collisions
-        if (onGround) {
-            jumpCount = 0;
-            dashOnAirCount = 0;                                 // Reset dash on air count when landing
-        }
-    }
-
-    // Hit box
-    private Rectangle getBounds(double x, double y) {
-        return new Rectangle((int)x, (int)y, (int)WIDTH, (int)HEIGHT);
     }
 
     // ====== STATE ======
@@ -317,8 +289,6 @@ public class Player extends Entity {
             }
         }
     }
-
-    
 
     // ====== ANIMATION ======
     private void updateAnimation() {
@@ -369,15 +339,17 @@ public class Player extends Entity {
     // ====== DRAW ======
     public void draw(Graphics2D g) {
         BufferedImage img = getFrame();
-        /* 
+
+        /*  DEBUG YELLOW BOX OF DOOM AND DESPAIR 
         g.setColor(new Color(230, 190, 70)); // Placeholder color for player if sprite fails to load
         g.fillRect((int)x, (int)y, (int)(WIDTH) , (int)(HEIGHT));
         */
+       
         if (direction == 1) {
-            g.drawImage(img, (int)x + DRAW_OFFSET_X, (int)y + DRAW_OFFSET_Y, (int) (FRAME_W * 2.4), (int) (FRAME_H * 2.4), null); //
+            g.drawImage(img, (int)x + DRAW_OFFSET_X, (int)y + DRAW_OFFSET_Y, FRAME_W , FRAME_H , null); //
         } else {
-            g.drawImage(img, (int)x + (int) (DRAW_OFFSET_X + FRAME_W * 2.4), (int)y + DRAW_OFFSET_Y,
-                    (int) (-FRAME_W * 2.4),  (int) (FRAME_H * 2.4), null);
+            g.drawImage(img, (int)x + DRAW_OFFSET_X + FRAME_W , (int)y + DRAW_OFFSET_Y,
+                    -FRAME_W ,FRAME_H, null);
         }
 
     }

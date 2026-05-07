@@ -9,9 +9,11 @@ import javax.swing.SwingUtilities;
 public class MouseHandler implements MouseListener, MouseMotionListener {
     private int mouseX;
     private int mouseY;
+    private boolean leftJustPressed;
+    private boolean leftPressed;
+    private boolean rightPressed;
 
-    private boolean leftClickQueued;
-    private boolean rightClickQueued;
+    
 
     public int getMouseX() {
         return mouseX;
@@ -21,28 +23,12 @@ public class MouseHandler implements MouseListener, MouseMotionListener {
         return mouseY;
     }
 
-    public boolean consumeLeftClick() {
-        if (leftClickQueued) {
-            leftClickQueued = false;
-            return true;
-        }
-        return false;
+    public boolean isLeftPressed() {
+        return leftPressed;
     }
 
-    public boolean consumeRightClick() {
-        if (rightClickQueued) {
-            rightClickQueued = false;
-            return true;
-        }
-        return false;
-    }
-
-    public boolean isLeftClickQueued() {
-        return leftClickQueued;
-    }
-
-    public boolean isRightClickQueued() {
-        return rightClickQueued;
+    public boolean isRightPressed() {
+        return rightPressed;
     }
 
     @Override
@@ -51,19 +37,35 @@ public class MouseHandler implements MouseListener, MouseMotionListener {
 
     @Override
     public void mousePressed(MouseEvent e) {
+
         updateMousePosition(e);
 
         if (SwingUtilities.isLeftMouseButton(e)) {
-            leftClickQueued = true;
+
+           if (!leftPressed) {
+                leftJustPressed = true;
+            }
+
+            leftPressed = true;
         }
 
         if (SwingUtilities.isRightMouseButton(e)) {
-            rightClickQueued = true;
+            rightPressed = true;
         }
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
+
+        updateMousePosition(e);
+
+        if (SwingUtilities.isLeftMouseButton(e)) {
+            leftPressed = false;
+        }
+
+        if (SwingUtilities.isRightMouseButton(e)) {
+            rightPressed = false;
+        }
     }
 
     @Override
@@ -83,6 +85,15 @@ public class MouseHandler implements MouseListener, MouseMotionListener {
     @Override
     public void mouseMoved(MouseEvent e) {
         updateMousePosition(e);
+    }
+
+    public boolean consumeLeftJustPressed() {
+
+        if (leftJustPressed) {
+            leftJustPressed = false;
+            return true;
+        }
+        return false;
     }
 
     private void updateMousePosition(MouseEvent e) {
