@@ -2,6 +2,12 @@
 
 Mô tả ngắn: trò chơi 2D theo phong cách metroidvania, phát triển bằng Java cho môn Lập trình Hướng đối tượng. Người chơi khám phá một cơ sở nghiên cứu, chiến đấu với robot, thu thập vật phẩm và mở khóa kỹ năng để tiến sâu vào các tầng tiếp theo.
 
+Link báo cáo tiến độ
+https://docs.google.com/document/d/1UuNXtMHy_4ewUpr_JN-LcqvNzZqqJhtlUja23kPz9RQ/edit?tab=t.0#heading=h.orhg72i9j0dq
+
+Link plot + đề xuất 
+https://docs.google.com/document/d/138VPqWpEGtzm8KxrY4FCCdarLBsm77eg-wRZ5wo0ONM/edit?tab=t.0
+
 ---
 
 **Thông tin về game**
