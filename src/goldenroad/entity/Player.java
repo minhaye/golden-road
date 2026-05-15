@@ -1,14 +1,9 @@
 package goldenroad.entity;
-    
-import goldenroad.input.KeyHandler;
-import goldenroad.map.CollisionMap;
-import goldenroad.map.CollisionHandler;
 
+import goldenroad.input.KeyHandler;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.util.List;
-
 import javax.imageio.ImageIO;
 
 public class Player extends Entity {
@@ -18,7 +13,7 @@ public class Player extends Entity {
 
     private static final int FRAME_W = 96;
     private static final int FRAME_H = 96;
-    private static final int DRAW_OFFSET_X = -38; 
+    private static final int DRAW_OFFSET_X = -38;
     private static final int DRAW_OFFSET_Y = -46;
 
     // ====== ANIMATON ======
@@ -57,7 +52,7 @@ public class Player extends Entity {
     private double FALL_GRAVITY = 0.7;
     private double JUMP_SPEED = -17;
     private double MAX_FALL = 12.0;
-    
+
     private int jumpCount = 0;
     private static final int MAX_JUMPS = 2;
     private int dropDownTimer = 0;
@@ -74,6 +69,10 @@ public class Player extends Entity {
     private static final int DASH_DURATION = 20;
     private static final int DASH_COOLDOWN = 40;
 
+    // ====== HEALTH ======
+    private int health = 10;
+    private static final int MAX_HEALTH = 10;
+
     // ====== COYOTE + BUFFER ======
     private int coyoteTime = 0;
     private int jumpBuffer = 0;
@@ -85,18 +84,41 @@ public class Player extends Entity {
     private double WIDTH = 20;
     private double HEIGHT = 50;
 
-    public float getX() { return x; }
-    public float getY() { return y; }
-    public double getVelocityX() { return velocityX; }
-    public double getVelocityY() { return velocityY; }
+    public float getX() {
+        return x;
+    }
 
-    public void setVelocityY(double v) { this.velocityY = v; }
+    public float getY() {
+        return y;
+    }
 
-    public void setX(double x) { this.x = (float)x; }
-    public void setY(double y) { this.y = (float)y; }
+    public double getVelocityX() {
+        return velocityX;
+    }
 
-    public double getWidth() { return WIDTH; }
-    public double getHeight() { return HEIGHT; }
+    public double getVelocityY() {
+        return velocityY;
+    }
+
+    public void setVelocityY(double v) {
+        this.velocityY = v;
+    }
+
+    public void setX(double x) {
+        this.x = (float) x;
+    }
+
+    public void setY(double y) {
+        this.y = (float) y;
+    }
+
+    public double getWidth() {
+        return WIDTH;
+    }
+
+    public double getHeight() {
+        return HEIGHT;
+    }
 
     // ====== UPDATE ======
     public void update(KeyHandler input) {
@@ -132,74 +154,81 @@ public class Player extends Entity {
             jumpBuffer = BUFFER_MAX;
         }
 
-        if (jumpBuffer > 0)     jumpBuffer--;
-        if (coyoteTime > 0)     coyoteTime--;
-        if (dropDownTimer > 0)  dropDownTimer--;
-
+        if (jumpBuffer > 0)
+            jumpBuffer--;
+        if (coyoteTime > 0)
+            coyoteTime--;
+        if (dropDownTimer > 0)
+            dropDownTimer--;
 
         // ===== DASH =====
-        if (input.dashPressed && !dashUsed && dashOnAirCount < MAX_DASH_ON_AIR) {   
-            if(coyoteTime == 0)
-            dashOnAirCount++;                        // Increment dash on air count if not on ground ( if you dash off from a high ground into air, you cannot dash again until you land, but if you dash on ground, you can dash again in air - Nhat)
+        if (input.dashPressed && !dashUsed && dashOnAirCount < MAX_DASH_ON_AIR) {
+            if (coyoteTime == 0)
+                dashOnAirCount++; // Increment dash on air count if not on ground ( if you dash off from a high
+                                  // ground into air, you cannot dash again until you land, but if you dash on
+                                  // ground, you can dash again in air - Nhat)
             dashUsed = true;
-            dashDuration = DASH_DURATION;                       // SET DASH DURATION (example value, adjust as needed)
-            dashCooldown = DASH_COOLDOWN;     
-            FALL_GRAVITY = 0;                    // SET DASH COOLDOWN (example value, adjust as needed)
+            dashDuration = DASH_DURATION; // SET DASH DURATION (example value, adjust as needed)
+            dashCooldown = DASH_COOLDOWN;
+            FALL_GRAVITY = 0; // SET DASH COOLDOWN (example value, adjust as needed)
         }
 
-        if(dashDuration > 0 && dashUsed) {
+        if (dashDuration > 0 && dashUsed) {
             moveX = DASH_SPEED * direction;
-            velocityY = 0;                                      // Cancel vertical velocity during dash but allow upward momentum to persist (you can still jump higher if you dash while moving upwards, but if you dash while falling, your fall will be stopped during the dash )
-            FALL_GRAVITY = 0;                                        //Disable gravity during dash
+            velocityY = 0; // Cancel vertical velocity during dash but allow upward momentum to persist
+                           // (you can still jump higher if you dash while moving upwards, but if you dash
+                           // while falling, your fall will be stopped during the dash )
+            FALL_GRAVITY = 0; // Disable gravity during dash
         }
-        
+
         // Update dash timers
-        if (dashDuration > 0)  dashDuration--;
-        if (dashCooldown > 0)  dashCooldown--;
+        if (dashDuration > 0)
+            dashDuration--;
+        if (dashCooldown > 0)
+            dashCooldown--;
 
-        if (dashUsed && dashDuration == 0 )  {
-                if(dashCooldown == 0) 
-                    dashUsed = false;               // Allow dash again after cooldown
-                FALL_GRAVITY = 0.7;                      // Reset gravity after dash
+        if (dashUsed && dashDuration == 0) {
+            if (dashCooldown == 0)
+                dashUsed = false; // Allow dash again after cooldown
+            FALL_GRAVITY = 0.7; // Reset gravity after dash
         }
 
-        
         // ===== JUMP =====
         if (jumpBuffer > 0 && (coyoteTime > 0 || jumpCount < MAX_JUMPS)) {
             velocityY = JUMP_SPEED;
             if (onGround == false && coyoteTime == 0) {
-            jumpCount++;
+                jumpCount++;
             }
             onGround = false;
             jumpCount++;
-            dashDuration = 0;                       // Cancel dash if you jump
-            GRAVITY = 1.2; 
+            dashDuration = 0; // Cancel dash if you jump
+            GRAVITY = 1.2;
 
             jumpBuffer = 0;
             coyoteTime = 0;
         }
-         
-        //      GOD MODE
+
+        // GOD MODE
         /*
-        if (jumpBuffer > 0 ) {
-            velocityY = JUMP_SPEED;
+         * if (jumpBuffer > 0 ) {
+         * velocityY = JUMP_SPEED;
+         * 
+         * onGround = false;
+         * jumpCount++;
+         * dashDuration = 0; // Cancel dash if you jump
+         * GRAVITY = 1.2;
+         * 
+         * jumpBuffer = 0;
+         * coyoteTime = 0;
+         * }
+         * if (input.dashPressed && !dashUsed && dashOnAirCount < MAX_DASH_ON_AIR) {
+         * dashUsed = true;
+         * dashDuration = DASH_DURATION;
+         * dashCooldown = DASH_COOLDOWN;
+         * }
+         */
+        // END GOD MODE
 
-            onGround = false;
-            jumpCount++;
-            dashDuration = 0;                       // Cancel dash if you jump
-            GRAVITY = 1.2; 
-
-            jumpBuffer = 0;
-            coyoteTime = 0;
-        }
-        if (input.dashPressed && !dashUsed && dashOnAirCount < MAX_DASH_ON_AIR) {                 
-            dashUsed = true;
-            dashDuration = DASH_DURATION;  
-            dashCooldown = DASH_COOLDOWN;   
-        }
-        */
-        //END GOD MODE
- 
         // ===== PHYSICS =====
         if (velocityY < 0) {
             // đang nhảy lên
@@ -209,11 +238,12 @@ public class Player extends Entity {
             velocityY += FALL_GRAVITY;
         }
 
-        if (velocityY > MAX_FALL) velocityY = MAX_FALL;
+        if (velocityY > MAX_FALL)
+            velocityY = MAX_FALL;
 
         // set velocityX
         velocityX = moveX;
-        
+
         // ===== STATE =====
         updateState(moveX);
 
@@ -236,11 +266,13 @@ public class Player extends Entity {
 
     public boolean isIdle() {
         if (state == PlayerState.IDLE)
-        return true;
-        else return false; }
+            return true;
+        else
+            return false;
+    }
 
     public double getDirection() {
-        return direction; 
+        return direction;
     }
 
     public Player(float x, float y) {
@@ -263,30 +295,32 @@ public class Player extends Entity {
             System.out.println("Lỗi khi load sprite.");
             e.printStackTrace();
         }
-        
+
     }
 
     // ====== STATE ======
     private void updateState(double moveX) {
         switch (state) {
-        case DASH:
-        if (dashDuration <= 0) {
-            // chỉ chuyển khi dash kết thúc
-            state = (moveX != 0) ? PlayerState.RUN : PlayerState.IDLE;
-        }
-        break;
+            case DASH:
+                if (dashDuration <= 0) {
+                    // chỉ chuyển khi dash kết thúc
+                    state = (moveX != 0) ? PlayerState.RUN : PlayerState.IDLE;
+                }
+                break;
 
-        default:
-            if (dashDuration > 0) {
-                state = PlayerState.DASH;
-            } else if (!onGround) {
-                if (velocityY < 0) state =  PlayerState.JUMP ;
-                if (velocityY > 0 && coyoteTime < COYOTE_MAX/2) state =  PlayerState.FALL;
-            } else if (moveX != 0) {
-                state = PlayerState.RUN;
-            } else {
-            state = PlayerState.IDLE;
-            }
+            default:
+                if (dashDuration > 0) {
+                    state = PlayerState.DASH;
+                } else if (!onGround) {
+                    if (velocityY < 0)
+                        state = PlayerState.JUMP;
+                    if (velocityY > 0 && coyoteTime < COYOTE_MAX / 2)
+                        state = PlayerState.FALL;
+                } else if (moveX != 0) {
+                    state = PlayerState.RUN;
+                } else {
+                    state = PlayerState.IDLE;
+                }
         }
     }
 
@@ -304,7 +338,8 @@ public class Player extends Entity {
             currentFrame++;
 
             int max = getFrameCount();
-            if (currentFrame >= max) currentFrame = 0;
+            if (currentFrame >= max)
+                currentFrame = 0;
         }
     }
 
@@ -328,8 +363,6 @@ public class Player extends Entity {
         };
     }
 
-    
-
     private BufferedImage getFrame() {
         int x = currentFrame * FRAME_W;
         int y = getRow() * FRAME_H;
@@ -340,17 +373,46 @@ public class Player extends Entity {
     public void draw(Graphics2D g) {
         BufferedImage img = getFrame();
 
-        /*  DEBUG YELLOW BOX OF DOOM AND DESPAIR 
-        g.setColor(new Color(230, 190, 70)); // Placeholder color for player if sprite fails to load
-        g.fillRect((int)x, (int)y, (int)(WIDTH) , (int)(HEIGHT));
-        */
-       
+        /*
+         * DEBUG YELLOW BOX OF DOOM AND DESPAIR
+         * g.setColor(new Color(230, 190, 70)); // Placeholder color for player if
+         * sprite fails to load
+         * g.fillRect((int)x, (int)y, (int)(WIDTH) , (int)(HEIGHT));
+         */
+
         if (direction == 1) {
-            g.drawImage(img, (int)x + DRAW_OFFSET_X, (int)y + DRAW_OFFSET_Y, FRAME_W , FRAME_H , null); //
+            g.drawImage(img, (int) x + DRAW_OFFSET_X, (int) y + DRAW_OFFSET_Y, FRAME_W, FRAME_H, null); //
         } else {
-            g.drawImage(img, (int)x + DRAW_OFFSET_X + FRAME_W , (int)y + DRAW_OFFSET_Y,
-                    -FRAME_W ,FRAME_H, null);
+            g.drawImage(img, (int) x + DRAW_OFFSET_X + FRAME_W, (int) y + DRAW_OFFSET_Y,
+                    -FRAME_W, FRAME_H, null);
         }
 
+    }
+
+    // ====== COMBAT ======
+    /**
+     * Nhận sát thương từ monster.
+     * 
+     * @param damage lượng damage nhận
+     * @return true nếu player chết (health <= 0)
+     */
+    public boolean takeDamage(int damage) {
+        if (damage <= 0 || health <= 0)
+            return false;
+        health -= damage;
+        System.out.println("Player took " + damage + " damage! Health: " + health + "/" + MAX_HEALTH);
+        return health <= 0;
+    }
+
+    public int getHealth() {
+        return health;
+    }
+
+    public int getMaxHealth() {
+        return MAX_HEALTH;
+    }
+
+    public void heal(int amount) {
+        health = Math.min(health + amount, MAX_HEALTH);
     }
 }

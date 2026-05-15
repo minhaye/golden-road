@@ -1,12 +1,11 @@
 package goldenroad.scene;
 
+import goldenroad.entity.Item;
+import goldenroad.entity.Monster;
 import java.awt.Color;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
-
-import goldenroad.entity.Item;
-import goldenroad.entity.Monster;
 
 public class SceneManager {
     private final List<Floor> floors = new ArrayList<>();
@@ -22,18 +21,21 @@ public class SceneManager {
         List<Screen> floor1Screens = new ArrayList<>();
 
         floor1Screens.add(new Screen(
-            List.of(
-                new Rectangle(0, 5378, 10920, 70),
-                new Rectangle(220, 390, 180, 20),
-                new Rectangle(560, 340, 170, 20) 
-            ),
-            List.of(
-                new Monster(640, 300, 36, 40, new Color(200, 70, 70), 6)
-            ),
-            List.of(
-                new Item(280, 355, 18, 18, new Color(80, 210, 120), Item.Shape.OVAL)
-            )
-        ));
+                List.of(
+                        new Rectangle(0, 5378, 10920, 70),
+                        new Rectangle(220, 390, 180, 20),
+                        new Rectangle(560, 340, 170, 20)),
+                List.of(
+                        new Monster(450, 1960, 36, 40, new Color(200, 70, 70), 6),
+                        new Monster(550, 1960, 36, 40, new Color(200, 70, 70), 5),
+                        new Monster(650, 1960, 36, 40, new Color(200, 70, 70), 5),
+                        new Monster(750, 1960, 36, 40, new Color(200, 70, 70), 6),
+                        new Monster(300, 1960, 36, 40, new Color(200, 70, 70), 4),
+                        new Monster(900, 1960, 36, 40, new Color(200, 70, 70), 5),
+                        new Monster(200, 1960, 36, 40, new Color(200, 70, 70), 6),
+                        new Monster(1000, 1960, 36, 40, new Color(200, 70, 70), 5)),
+                List.of(
+                        new Item(280, 355, 18, 18, new Color(80, 210, 120), Item.Shape.OVAL))));
 
         floors.add(new Floor(floor1Screens));
     }

@@ -8,36 +8,32 @@ import goldenroad.input.KeyHandler;
 import goldenroad.input.MouseHandler;
 import goldenroad.map.CollisionHandler;
 import goldenroad.map.CollisionMap;
+import goldenroad.map.MonsterCollisionHandler;
+import goldenroad.scene.Menu;
 import goldenroad.scene.SceneManager;
 import goldenroad.scene.Screen;
-import goldenroad.scene.Menu;
-
-
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
-import java.awt.image.BufferedImage;
 import java.awt.RenderingHints;
-
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
-
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 
-
 public class GamePanel extends JPanel implements Runnable {
-    //public static final int SCREEN_WIDTH = 960;
-    //public static final int SCREEN_HEIGHT = 540;
+    // public static final int SCREEN_WIDTH = 960;
+    // public static final int SCREEN_HEIGHT = 540;
     public static final int SCREEN_WIDTH = 640;
     public static final int SCREEN_HEIGHT = 360;
     public static final int TILE_SIZE = 16;
     private static final int WINDOW_SCALE = 3;
-    // Default to 720p, can be changed to 1080p or 1440p by adjusting the denominator 
+    // Default to 720p, can be changed to 1080p or 1440p by adjusting the
+    // denominator
     // (example: for 1080p, use 1.25, for 1440p, use 1.25/1.5)
     // x2 = 1280x720 = 720p
     // x3 = 1920x1080 = 1080p
@@ -53,14 +49,15 @@ public class GamePanel extends JPanel implements Runnable {
     // MAP
     private CollisionMap collisionMap;
     private CollisionHandler collisionHandler;
-    private BufferedImage mapImage,hiddenImage,gameBuffer;
+    private MonsterCollisionHandler monsterCollisionHandler;
+    private BufferedImage mapImage, hiddenImage, gameBuffer;
     private Graphics2D bufferG;
 
-    private  int WORLD_WIDTH = 330 * TILE_SIZE;
+    private int WORLD_WIDTH = 330 * TILE_SIZE;
     private int WORLD_HEIGHT = 140 * TILE_SIZE;
-        
-    int worldWidth  =   WORLD_WIDTH;
-    int worldHeight =   WORLD_HEIGHT;
+
+    int worldWidth = WORLD_WIDTH;
+    int worldHeight = WORLD_HEIGHT;
 
     // GUN + AIM
     private double renderScale;
@@ -72,7 +69,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     private static final int LEFT_SHOOT_DELAY = 15;
     private static final int RIGHT_SHOOT_DELAY = 60;
-    
+
     private double LASER_SPEED = 15;
     private static final int LASER_DIAMETER = 10;
     private static final int LASER_DAMAGE = 4;
@@ -93,13 +90,12 @@ public class GamePanel extends JPanel implements Runnable {
     private final Menu menu = new Menu(this);
     private final List<Bullet> bullets = new ArrayList<>();
 
-
     private Thread gameThread;
 
     private Player player;
 
     public void initPlayer() {
-        player = new Player(400, 1995); 
+        player = new Player(400, 1995);
         player.update(keyHandler);
     }
 
@@ -115,36 +111,35 @@ public class GamePanel extends JPanel implements Runnable {
             if (stream1 == null) {
                 System.out.println("Không tìm thấy hidden map!");
                 return;
-        }
-   
-        mapImage = ImageIO.read(stream);
-        hiddenImage = ImageIO.read(stream1);
+            }
 
-        // load collision
-        collisionMap = new CollisionMap();
-        collisionMap.load("/assets/map/ROOM_1_COLLISION.png");
+            mapImage = ImageIO.read(stream);
+            hiddenImage = ImageIO.read(stream1);
 
-        collisionHandler = new CollisionHandler(collisionMap);
+            // load collision
+            collisionMap = new CollisionMap();
+            collisionMap.load("/assets/map/ROOM_1_COLLISION.png");
 
-        System.out.println("Load map + collision OK");
+            collisionHandler = new CollisionHandler(collisionMap);
+            monsterCollisionHandler = new MonsterCollisionHandler(collisionMap);
+
+            System.out.println("Load map + collision OK");
 
         } catch (Exception e) {
             e.printStackTrace();
         }
-}
+    }
 
     public GamePanel() {
         gameBuffer = new BufferedImage(
-        SCREEN_WIDTH,
-        SCREEN_HEIGHT,
-        BufferedImage.TYPE_INT_ARGB
-        );
+                SCREEN_WIDTH,
+                SCREEN_HEIGHT,
+                BufferedImage.TYPE_INT_ARGB);
 
         bufferG = gameBuffer.createGraphics();
         bufferG.setRenderingHint(
-        RenderingHints.KEY_INTERPOLATION,
-        RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
-        );
+                RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 
         setPanelSize();
         setBackground(new Color(20, 26, 38));
@@ -160,13 +155,10 @@ public class GamePanel extends JPanel implements Runnable {
         menu.update(mouseHandler);
     }
 
-
-
     private void setPanelSize() {
         Dimension size = new Dimension(
-        SCREEN_WIDTH * WINDOW_SCALE,
-        SCREEN_HEIGHT * WINDOW_SCALE
-        );
+                SCREEN_WIDTH * WINDOW_SCALE,
+                SCREEN_HEIGHT * WINDOW_SCALE);
 
         setPreferredSize(size);
     }
@@ -208,26 +200,28 @@ public class GamePanel extends JPanel implements Runnable {
         player.update(keyHandler);
 
         collisionHandler.move(
-            player,
-            player.getVelocityX(),
-            player.getVelocityY()
-        );
+                player,
+                player.getVelocityX(),
+                player.getVelocityY());
 
         updateCamera();
         handleShootingInput();
         updateBullets();
+        updateMonsters();
 
-        if (leftShootCooldown > 0)      leftShootCooldown--;
-        if (rightShootCooldown > 0)     rightShootCooldown--;
-        
+        if (leftShootCooldown > 0)
+            leftShootCooldown--;
+        if (rightShootCooldown > 0)
+            rightShootCooldown--;
+
     }
 
- 
     private static final double LOOK_AHEAD_DISTANCE = 120;
+
     private void updateCamera() {
 
         double halfW = SCREEN_WIDTH / 2;
-        double halfH = SCREEN_HEIGHT  / 2;
+        double halfH = SCREEN_HEIGHT / 2;
 
         // ===== LOOK AHEAD =====
 
@@ -235,8 +229,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         if (player.getVelocityX() > 0) {
             targetLookAhead = LOOK_AHEAD_DISTANCE;
-        }
-        else if (player.getVelocityX() < 0) {
+        } else if (player.getVelocityX() < 0) {
             targetLookAhead = -LOOK_AHEAD_DISTANCE;
         }
 
@@ -262,31 +255,29 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         // ===== IDLE → kéo về center =====
-   
+
         double centerX = player.getX() - halfW;
         targetX += (centerX - targetX) * 0.5; // Thấp hơn = mượt và chậm hơn
-    
-    
+
         // ===== LERP CAMERA =====
         cameraX += (targetX - cameraX) * 0.1;
         cameraY += (targetY - cameraY) * 0.5;
 
-        // ===== CLAMP  =====
+        // ===== CLAMP =====
         cameraX = Math.max(0, cameraX);
         cameraY = Math.max(0, cameraY);
 
-        cameraX = Math.min(cameraX, worldWidth - SCREEN_WIDTH );
+        cameraX = Math.min(cameraX, worldWidth - SCREEN_WIDTH);
         cameraY = Math.min(cameraY, worldHeight - SCREEN_HEIGHT);
-}
+    }
 
-
-// Handle shooting input and bullet spawning
+    // Handle shooting input and bullet spawning
     private void handleShootingInput() {
 
         // ===== LEFT CLICK =====
         if (mouseHandler.isLeftPressed() && leftShootCooldown <= 0) {
-           spawnLaserShot();
-           leftShootCooldown = LEFT_SHOOT_DELAY;
+            spawnLaserShot();
+            leftShootCooldown = LEFT_SHOOT_DELAY;
         }
 
         // ===== RIGHT CLICK =====
@@ -300,25 +291,24 @@ public class GamePanel extends JPanel implements Runnable {
         double originX = player.getX() + 25;
         double originY = player.getY() + 15;
 
-        //  convert mouse sang world space
+        // convert mouse sang world space
         double worldMouseX = getMouseWorldX();
         double worldMouseY = getMouseWorldY();
 
-        //  dùng world space để tính direction
+        // dùng world space để tính direction
         double directionX = worldMouseX - originX;
         double directionY = worldMouseY - originY;
 
         spawnBullet(
-            originX,
-            originY,
-            directionX,
-            directionY,
-            LASER_SPEED,
-            LASER_DIAMETER,
-            LASER_COLOR,
-            LASER_DAMAGE
-        );
-}
+                originX,
+                originY,
+                directionX,
+                directionY,
+                LASER_SPEED,
+                LASER_DIAMETER,
+                LASER_COLOR,
+                LASER_DAMAGE);
+    }
 
     private void spawnClusterShot() {
 
@@ -338,13 +328,12 @@ public class GamePanel extends JPanel implements Runnable {
         for (int i = 0; i < CLUSTER_BULLET_COUNT; i++) {
 
             // ===== RANDOM SPREAD =====
-            double randomAngle = Math.toRadians( (Math.random() - 0.5) * CLUSTER_SPREAD_DEGREES);
+            double randomAngle = Math.toRadians((Math.random() - 0.5) * CLUSTER_SPREAD_DEGREES);
 
             double[] dir = rotateVector(
-                baseDirectionX,
-                baseDirectionY,
-                randomAngle
-            );
+                    baseDirectionX,
+                    baseDirectionY,
+                    randomAngle);
 
             // ===== RANDOM SPEED =====
             double speed = CLUSTER_BULLET_SPEED + (Math.random() * 4 - 2);
@@ -354,28 +343,26 @@ public class GamePanel extends JPanel implements Runnable {
             double spawnOffsetY = (Math.random() - 0.5) * 8;
 
             spawnBullet(
-                originX + spawnOffsetX,
-                originY + spawnOffsetY,
-                dir[0],
-                dir[1],
-                speed,
-                CLUSTER_BULLET_DIAMETER,
-                CLUSTER_COLOR,
-                CLUSTER_BULLET_DAMAGE
-            );
+                    originX + spawnOffsetX,
+                    originY + spawnOffsetY,
+                    dir[0],
+                    dir[1],
+                    speed,
+                    CLUSTER_BULLET_DIAMETER,
+                    CLUSTER_COLOR,
+                    CLUSTER_BULLET_DAMAGE);
         }
-}
+    }
 
     private void spawnBullet(
-        double originX,
-        double originY,
-        double directionX,
-        double directionY,
-        double speed,
-        int diameter,
-        Color color,
-        int damage
-    ) {
+            double originX,
+            double originY,
+            double directionX,
+            double directionY,
+            double speed,
+            int diameter,
+            Color color,
+            int damage) {
 
         double length = Math.sqrt(directionX * directionX + directionY * directionY);
 
@@ -385,17 +372,15 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         bullets.add(new Bullet(
-            originX - (diameter / 2.0),
-            originY - (diameter / 2.0),
-            directionX,
-            directionY,
-            speed,
-            diameter,
-            color,
-            damage,
-            collisionMap
-        )
-        );
+                originX - (diameter / 2.0),
+                originY - (diameter / 2.0),
+                directionX,
+                directionY,
+                speed,
+                diameter,
+                color,
+                damage,
+                collisionMap));
     }
 
     private double[] rotateVector(double x, double y, double angleRadians) {
@@ -403,13 +388,13 @@ public class GamePanel extends JPanel implements Runnable {
         double sin = Math.sin(angleRadians);
 
         return new double[] {
-            (x * cos) - (y * sin),
-            (x * sin) + (y * cos)
+                (x * cos) - (y * sin),
+                (x * sin) + (y * cos)
         };
     }
 
     private double getMouseWorldX() {
-        double mouseX = (mouseHandler.getMouseX() - renderOffsetX)/ renderScale;
+        double mouseX = (mouseHandler.getMouseX() - renderOffsetX) / renderScale;
         return mouseX + cameraX;
     }
 
@@ -428,14 +413,14 @@ public class GamePanel extends JPanel implements Runnable {
             if (bullet.isDestroyed()) {
                 bulletIterator.remove();
                 continue;
-            }   
+            }
 
             Rectangle bulletBounds = bullet.getBounds();
             if (isOutOfScreen(bulletBounds) || collidesWithSolidBlock(bulletBounds)) {
                 bulletIterator.remove();
                 continue;
             }
-  
+
             boolean hitMonster = false;
             for (Monster monster : currentScreen.getMonsters()) {
                 if (bulletBounds.intersects(monster.getBounds())) {
@@ -456,6 +441,52 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
+    private void updateMonsters() {
+        for (Monster monster : getCurrentMonsters()) {
+            // ===== INITIALIZE AI (lazy) =====
+            if (monster.getMonsterAI() == null) {
+                monster.initializeAI(collisionMap);
+
+                // Đặt AttackListener để xử lý damage player
+                if (monster.getMonsterAI() != null) {
+                    monster.getMonsterAI().setAttackListener((m, damage) -> {
+                        player.takeDamage(damage);
+                    });
+                }
+            }
+
+            // ===== UPDATE AI =====
+            if (monster.getMonsterAI() != null) {
+                double playerCenterX = player.getX() + player.getWidth() / 2.0;
+                double playerCenterY = player.getY() + player.getHeight() / 2.0;
+
+                monster.getMonsterAI().update(
+                        monster,
+                        player.getX(),
+                        player.getY(),
+                        (int) player.getWidth(),
+                        (int) player.getHeight());
+            } else {
+                // Fallback: simple patrol nếu không có AI
+                monster.applyGravity();
+                if (monster.getState() == Monster.State.IDLE) {
+                    monster.incrementIdleTimer();
+                    if (monster.getIdleTimer() >= monster.getIdleTimeoutMax()) {
+                        monster.setState(Monster.State.PATROL);
+                        monster.resetIdleTimer();
+                    }
+                } else if (monster.getState() == Monster.State.PATROL) {
+                    double patrolVx = monster.computePatrolVelocity();
+                    monster.setVelocityX(patrolVx);
+                }
+                monsterCollisionHandler.move(monster, monster.getVelocityX(), monster.getVelocityY());
+            }
+
+            // ===== UPDATE ANIMATION =====
+            monster.updateAnimation();
+        }
+    }
+
     private boolean collidesWithSolidBlock(Rectangle bounds) {
         for (Rectangle block : getCurrentSolidBlocks()) {
             if (bounds.intersects(block)) {
@@ -468,11 +499,10 @@ public class GamePanel extends JPanel implements Runnable {
     private boolean isOutOfScreen(Rectangle bounds) {
 
         return bounds.x + bounds.width < cameraX
-        || bounds.x > cameraX + SCREEN_WIDTH
-        || bounds.y + bounds.height < cameraY
-        || bounds.y > cameraY + SCREEN_HEIGHT;
+                || bounds.x > cameraX + SCREEN_WIDTH
+                || bounds.y + bounds.height < cameraY
+                || bounds.y > cameraY + SCREEN_HEIGHT;
     }
-
 
     private List<Rectangle> getCurrentSolidBlocks() {
         return sceneManager.getCurrentScreen().getSolidBlocks();
@@ -505,15 +535,14 @@ public class GamePanel extends JPanel implements Runnable {
 
             // ===== CAMERA =====
             bufferG.translate(
-                -(int)cameraX,
-                -(int)cameraY
-            );
+                    -(int) cameraX,
+                    -(int) cameraY);
 
             // ===== MAP =====
             if (mapImage != null) {
                 bufferG.drawImage(mapImage, 0, 0, null);
             }
-            
+
             // ===== ITEMS =====
             for (Item item : getCurrentItems()) {
 
@@ -529,11 +558,7 @@ public class GamePanel extends JPanel implements Runnable {
 
             // ===== MONSTERS =====
             for (Monster monster : getCurrentMonsters()) {
-
-                Rectangle r = monster.getBounds();
-
-                bufferG.setColor(monster.getColor());
-                bufferG.fillRect(r.x, r.y, r.width, r.height);
+                monster.draw(bufferG);
             }
 
             // ===== BULLETS =====
@@ -542,11 +567,10 @@ public class GamePanel extends JPanel implements Runnable {
                 bufferG.setColor(bullet.getColor());
 
                 bufferG.fillOval(
-                    bullet.getRenderX(),
-                    bullet.getRenderY(),
-                    bullet.getDiameter(),
-                    bullet.getDiameter()
-                );
+                        bullet.getRenderX(),
+                        bullet.getRenderY(),
+                        bullet.getDiameter(),
+                        bullet.getDiameter());
             }
 
             // ===== PLAYER =====
@@ -568,9 +592,8 @@ public class GamePanel extends JPanel implements Runnable {
         Graphics2D g2 = (Graphics2D) g;
 
         g2.setRenderingHint(
-            RenderingHints.KEY_INTERPOLATION,
-            RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
-        );
+                RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 
         int panelWidth = getWidth();
         int panelHeight = getHeight();
@@ -582,13 +605,12 @@ public class GamePanel extends JPanel implements Runnable {
         double scale = Math.min(scaleX, scaleY);
 
         // ===== SIZE SAU SCALE =====
-        int renderWidth = (int)(SCREEN_WIDTH * scale);
-        int renderHeight = (int)(SCREEN_HEIGHT * scale);
+        int renderWidth = (int) (SCREEN_WIDTH * scale);
+        int renderHeight = (int) (SCREEN_HEIGHT * scale);
 
         // ===== CENTER =====
         int x = (panelWidth - renderWidth) / 2;
         int y = (panelHeight - renderHeight) / 2;
-
 
         renderScale = scale;
         renderOffsetX = x;
@@ -600,14 +622,13 @@ public class GamePanel extends JPanel implements Runnable {
 
         // ===== DRAW GAME =====
         g2.drawImage(
-            gameBuffer,
-            x,
-            y,
-            renderWidth,
-            renderHeight,
-            null
-        );
+                gameBuffer,
+                x,
+                y,
+                renderWidth,
+                renderHeight,
+                null);
     }
 
-    // CAWL AND BAWLS 
+    // CAWL AND BAWLS
 }

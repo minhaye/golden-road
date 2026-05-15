@@ -1,9 +1,14 @@
 package goldenroad.entity;
 
+import goldenroad.map.CollisionMap;
 import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import javax.imageio.ImageIO;
 
 /**
  * Monster với hệ thống AI đầy đủ:
@@ -80,12 +85,43 @@ public class Monster {
     private float retreatHealthRatio = 0.25f;
 
     // =========================================================
+    // SPRITE & ANIMATION
+    // =========================================================
+
+    private BufferedImage spriteSheet;
+    private static final int FRAME_W = 48;
+    private static final int FRAME_H = 48;
+    private static final int DRAW_OFFSET_X = -12;
+    private static final int DRAW_OFFSET_Y = -12;
+
+    private int currentFrame = 0;
+    private int animationTick = 0;
+    private static final int ANIMATION_SPEED = 3;
+
+    // Animation frame counts cho từng state
+    private static final int IDLE_FRAMES = 4;
+    private static final int WALK_FRAMES = 8;
+    private static final int ATTACK_FRAMES = 3;
+    private static final int HURT_FRAMES = 2;
+    private static final int DEATH_FRAMES = 2;
+
+    // Animation rows
+    private static final int IDLE_ROW = 0;
+    private static final int WALK_ROW = 1;
+    private static final int HURT_ROW = 2;
+    private static final int DEATH_ROW = 3;
+    private static final int ATTACK_ROW = 4;
+
+    // =========================================================
     // AI STATE MACHINE
     // =========================================================
 
     private State state = State.IDLE;
     private int idleTimer = 0;
     private int attackCooldown = 0;
+
+    /** MonsterAI instance cho state machine 5 trạng thái (lazy init). */
+    private MonsterAI monsterAI = null;
 
     // =========================================================
     // PATROL
@@ -127,6 +163,9 @@ public class Monster {
         // Patrol mặc định ±64px xung quanh vị trí spawn
         this.patrolStartX = x - 64;
         this.patrolEndX = x + 64;
+
+        // Load sprite
+        loadSprite();
     }
 
     // =========================================================
@@ -310,6 +349,104 @@ public class Monster {
     }
 
     // =========================================================
+    // SPRITE & ANIMATION
+    // =========================================================
+
+    private void loadSprite() {
+        try {
+            var stream = getClass().getResourceAsStream("/assets/monster/Zombie_free.png");
+            if (stream == null) {
+                System.out.println("Không tìm thấy sprite: /assets/monster/Zombie_free.png");
+                return;
+            }
+            spriteSheet = ImageIO.read(stream);
+            System.out.println("Load sprite Monster thành công.");
+        } catch (IOException e) {
+            System.out.println("Lỗi khi load sprite Monster.");
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Update animation mỗi frame.
+     */
+    public void updateAnimation() {
+        if (spriteSheet == null)
+            return;
+
+        animationTick++;
+        if (animationTick >= ANIMATION_SPEED) {
+            animationTick = 0;
+            currentFrame++;
+
+            int maxFrames = getAnimationFrameCount();
+            if (currentFrame >= maxFrames) {
+                currentFrame = 0;
+            }
+        }
+    }
+
+    private int getAnimationFrameCount() {
+        return switch (state) {
+            case IDLE -> IDLE_FRAMES;
+            case PATROL -> WALK_FRAMES;
+            case CHASE -> WALK_FRAMES;
+            case ATTACK -> ATTACK_FRAMES;
+            case RETREAT -> WALK_FRAMES;
+        };
+    }
+
+    private int getAnimationRow() {
+        return switch (state) {
+            case IDLE -> IDLE_ROW;
+            case PATROL -> WALK_ROW;
+            case CHASE -> WALK_ROW;
+            case ATTACK -> ATTACK_ROW;
+            case RETREAT -> WALK_ROW;
+        };
+    }
+
+    private BufferedImage getCurrentFrame() {
+        if (spriteSheet == null)
+            return null;
+
+        int frameX = currentFrame * FRAME_W;
+        int frameY = getAnimationRow() * FRAME_H;
+
+        if (frameX + FRAME_W > spriteSheet.getWidth() ||
+                frameY + FRAME_H > spriteSheet.getHeight()) {
+            return null;
+        }
+
+        return spriteSheet.getSubimage(frameX, frameY, FRAME_W, FRAME_H);
+    }
+
+    /**
+     * Vẽ monster với sprite animation.
+     */
+    public void draw(Graphics2D g) {
+        if (spriteSheet == null) {
+            // Fallback: vẽ hình chữ nhật màu nếu sprite không load được
+            g.setColor(color);
+            g.fillRect((int) x, (int) y, width, height);
+            return;
+        }
+
+        BufferedImage frame = getCurrentFrame();
+        if (frame == null)
+            return;
+
+        // Vẽ sprite, xoay nếu đang hướng trái
+        if (facingRight) {
+            g.drawImage(frame, (int) x + DRAW_OFFSET_X, (int) y + DRAW_OFFSET_Y,
+                    FRAME_W, FRAME_H, null);
+        } else {
+            g.drawImage(frame, (int) x + DRAW_OFFSET_X + FRAME_W, (int) y + DRAW_OFFSET_Y,
+                    -FRAME_W, FRAME_H, null);
+        }
+    }
+
+    // =========================================================
     // GETTERS / SETTERS
     // =========================================================
 
@@ -428,5 +565,23 @@ public class Monster {
     public void setPatrolBounds(double startX, double endX) {
         this.patrolStartX = startX;
         this.patrolEndX = endX;
+    }
+
+    // =========================================================
+    // MONSTER AI
+    // =========================================================
+
+    /**
+     * Lazy init: tạo MonsterAI nếu chưa có.
+     * (Cần CollisionMap, nên khởi tạo trong GamePanel khi đã load map)
+     */
+    public void initializeAI(CollisionMap collisionMap) {
+        if (this.monsterAI == null) {
+            this.monsterAI = new MonsterAI(collisionMap);
+        }
+    }
+
+    public MonsterAI getMonsterAI() {
+        return monsterAI;
     }
 }
