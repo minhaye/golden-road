@@ -33,8 +33,8 @@ import javax.swing.JPanel;
 public class GamePanel extends JPanel implements Runnable {
     //public static final int SCREEN_WIDTH = 960;
     //public static final int SCREEN_HEIGHT = 540;
-    public static final int SCREEN_WIDTH = 640;
-    public static final int SCREEN_HEIGHT = 360;
+    public static final int SCREEN_WIDTH = 800;
+    public static final int SCREEN_HEIGHT = 440;
     public static final int TILE_SIZE = 16;
     private static final int WINDOW_SCALE = 3;
     // Default to 720p, can be changed to 1080p or 1440p by adjusting the denominator 
@@ -49,6 +49,9 @@ public class GamePanel extends JPanel implements Runnable {
     private double cameraX = 0;
     private double cameraY = 0;
     private double lookAheadX = 0;
+    
+    //PARALLAX
+    private BufferedImage[] parallaxLayers;
 
     // MAP
     private CollisionMap collisionMap;
@@ -131,6 +134,69 @@ public class GamePanel extends JPanel implements Runnable {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public void loadParallax() {
+    try {
+
+        parallaxLayers = new BufferedImage[4];
+
+        parallaxLayers[0] = ImageIO.read(
+            getClass().getResourceAsStream(
+                "/assets/background/parallax_layer1.png"
+            )
+        );
+
+        parallaxLayers[1] = ImageIO.read(
+            getClass().getResourceAsStream(
+                "/assets/background/parallax_layer2.png"
+            )
+        );
+
+        parallaxLayers[2] = ImageIO.read(
+            getClass().getResourceAsStream(
+                "/assets/background/parallax_layer3.png"
+            )
+        );
+
+        parallaxLayers[3] = ImageIO.read(
+            getClass().getResourceAsStream(
+                "/assets/background/parallax_layer4.png"
+            )
+        );
+
+        System.out.println("Loaded parallax layers");
+
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+
+private void drawParallax(Graphics2D g2) {
+
+    double[] speeds = {
+        0.05,
+        0.2,
+        0.4,
+        0.8 // foreground layer, moves almost with the camera
+    };
+
+    for (int i = 0; i < parallaxLayers.length; i++) {
+
+        BufferedImage layer = parallaxLayers[i];
+
+        if (layer == null) continue;
+
+        int x = (int)(-cameraX * speeds[i]);
+        int y = (int)(-cameraY * speeds[i]);
+
+        g2.drawImage(
+            layer,
+            x,
+            y,
+            null
+        );
+    }
 }
 
     public GamePanel() {
@@ -492,6 +558,8 @@ public class GamePanel extends JPanel implements Runnable {
 
         // ===== RESET =====
         bufferG.setTransform(new java.awt.geom.AffineTransform());
+        
+        
 
         // ===== CLEAR =====
         bufferG.setColor(getBackground());
@@ -502,6 +570,8 @@ public class GamePanel extends JPanel implements Runnable {
             menu.render(bufferG);
 
         } else {
+            // ===== PARALLAX =====
+            drawParallax(bufferG); 
 
             // ===== CAMERA =====
             bufferG.translate(

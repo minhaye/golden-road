@@ -23,6 +23,7 @@ public class Main {
             window.setResizable(false);
             window.setVisible(true);
             gamePanel.loadMap();
+            gamePanel.loadParallax();
             gamePanel.startGameLoop();
         });
     }
