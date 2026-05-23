@@ -34,6 +34,7 @@ public class InventoryPanel {
     private volatile boolean open = false;
     private final Inventory inventory;
     private final Player player;
+    private int selectedIndex = 0;
 
     public InventoryPanel(Inventory inventory, Player player) {
         this.inventory = inventory;
@@ -46,10 +47,91 @@ public class InventoryPanel {
 
     public void toggle() {
         open = !open;
+        if (open) {
+            normalizeSelection();
+        }
     }
 
     public void close() {
         open = false;
+    }
+
+    public int getSelectedSlotIndex() {
+        return selectedIndex;
+    }
+
+    public void selectSlot(int index) {
+        if (index < 0 || index >= SLOT_TYPES.length) {
+            return;
+        }
+        selectedIndex = index;
+    }
+
+    private Item.ItemType getSelectedType() {
+        if (selectedIndex < 0 || selectedIndex >= SLOT_TYPES.length) {
+            return null;
+        }
+        return SLOT_TYPES[selectedIndex];
+    }
+
+    private void normalizeSelection() {
+        if (inventory.getTotalCount() <= 0) {
+            selectedIndex = -1;
+            return;
+        }
+
+        if (selectedIndex < 0 || selectedIndex >= SLOT_TYPES.length || inventory.getCount(getSelectedType()) <= 0) {
+            selectedIndex = findNextAvailableSlot(0, 1);
+        }
+    }
+
+    private int findNextAvailableSlot(int startIndex, int direction) {
+        int index = startIndex;
+
+        for (int i = 0; i < SLOT_TYPES.length; i++) {
+            if (inventory.getCount(SLOT_TYPES[index]) > 0) {
+                return index;
+            }
+
+            index = (index + direction + SLOT_TYPES.length) % SLOT_TYPES.length;
+        }
+
+        return -1;
+    }
+
+    private int findNextSelectedIndex(int fromIndex, int direction) {
+        if (inventory.getTotalCount() <= 0) {
+            return -1;
+        }
+
+        int index = fromIndex;
+        for (int i = 0; i < SLOT_TYPES.length; i++) {
+            index = (index + direction + SLOT_TYPES.length) % SLOT_TYPES.length;
+            if (inventory.getCount(SLOT_TYPES[index]) > 0) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private boolean useSelectedItem(GamePanel panel) {
+        if (selectedIndex < 0 || selectedIndex >= SLOT_TYPES.length) {
+            return false;
+        }
+
+        Item.ItemType type = SLOT_TYPES[selectedIndex];
+        boolean used = inventory.useItem(type, player);
+        if (!used) {
+            return false;
+        }
+
+        panel.showToast("Ban da dung " + getShortLabel(type));
+
+        if (inventory.getCount(type) <= 0) {
+            selectedIndex = findNextSelectedIndex(selectedIndex, 1);
+        }
+
+        return true;
     }
 
     public void update(KeyHandler keyHandler, MouseHandler mouse, GamePanel panel) {
@@ -62,9 +144,22 @@ public class InventoryPanel {
             return;
         }
 
+        if (keyHandler.consumeJumpJustPressed()) {
+            selectedIndex = findNextSelectedIndex(selectedIndex < 0 ? 0 : selectedIndex, 1);
+        }
+
+        if (keyHandler.consumeEnterJustPressed()) {
+            useSelectedItem(panel);
+        }
+
         for (int i = 0; i < SLOT_TYPES.length; i++) {
             if (keyHandler.consumeQuickUseJustPressed(i)) {
-                inventory.useItem(SLOT_TYPES[i], player);
+                if (inventory.useItem(SLOT_TYPES[i], player)) {
+                    panel.showToast("Ban da dung " + getShortLabel(SLOT_TYPES[i]));
+                    if (inventory.getCount(SLOT_TYPES[i]) <= 0 && i == selectedIndex) {
+                        selectedIndex = findNextSelectedIndex(selectedIndex, 1);
+                    }
+                }
             }
         }
 
@@ -84,7 +179,7 @@ public class InventoryPanel {
         for (int i = 0; i < SLOT_TYPES.length; i++) {
             Rectangle slot = getSlotBounds(i);
             if (slot.contains(mx, my)) {
-                inventory.useItem(SLOT_TYPES[i], player);
+                selectSlot(i);
                 return;
             }
         }
@@ -116,19 +211,27 @@ public class InventoryPanel {
         Item.ItemType type = SLOT_TYPES[index];
         Rectangle slot = getSlotBounds(index);
         int count = inventory.getCount(type);
+        boolean selected = index == selectedIndex;
 
         g2.setColor(UiTheme.BUTTON_BG);
         g2.fillRoundRect(slot.x, slot.y, slot.width, slot.height, 10, 10);
-        g2.setColor(getItemColor(type));
-        g2.fillRoundRect(slot.x + 6, slot.y + 6, slot.width - 12, slot.height - 12, 8, 8);
-        g2.setColor(UiTheme.ACCENT);
+        if (count > 0) {
+            g2.setColor(getItemColor(type));
+            g2.fillRoundRect(slot.x + 6, slot.y + 6, slot.width - 12, slot.height - 12, 8, 8);
+        } else {
+            g2.setColor(new Color(40, 44, 56));
+            g2.fillRoundRect(slot.x + 6, slot.y + 6, slot.width - 12, slot.height - 12, 8, 8);
+        }
+        g2.setColor(selected ? UiTheme.HP_FILL : UiTheme.ACCENT);
         g2.drawRoundRect(slot.x, slot.y, slot.width, slot.height, 10, 10);
 
-        g2.setFont(UiTheme.FONT_HUD);
-        g2.setColor(UiTheme.TEXT);
-        String countText = "x" + count;
-        int countW = g2.getFontMetrics().stringWidth(countText);
-        g2.drawString(countText, slot.x + slot.width - countW - 4, slot.y + 14);
+        if (count > 0) {
+            g2.setFont(UiTheme.FONT_HUD);
+            g2.setColor(UiTheme.TEXT);
+            String countText = "x" + count;
+            int countW = g2.getFontMetrics().stringWidth(countText);
+            g2.drawString(countText, slot.x + slot.width - countW - 4, slot.y + 14);
+        }
 
         g2.setFont(UiTheme.FONT_SKILL);
         g2.setColor(UiTheme.TEXT_DIM);

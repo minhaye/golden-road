@@ -50,7 +50,7 @@ public class Inventory {
                 player.restoreMp(MP_POTION_RESTORE);
             }
             case KEY -> {
-                return false;
+                // key currently has no gameplay effect, but it is still consumable
             }
             default -> {
                 return false;

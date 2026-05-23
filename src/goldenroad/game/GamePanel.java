@@ -62,6 +62,11 @@ public class GamePanel extends JPanel implements Runnable {
     private CollisionHandler collisionHandler;
     private BufferedImage mapImage,hiddenImage,gameBuffer;
     private Graphics2D bufferG;
+    private BufferedImage hpItemSprite;
+    private BufferedImage mpItemSprite;
+    private BufferedImage keyItemSprite;
+    private String toastMessage = null;
+    private long toastExpireAtNanos = 0L;
 
     private  int WORLD_WIDTH = 330 * TILE_SIZE;
     private int WORLD_HEIGHT = 140 * TILE_SIZE;
@@ -117,6 +122,73 @@ public class GamePanel extends JPanel implements Runnable {
         inventoryPanel = new InventoryPanel(inventory, player);
     }
 
+    private BufferedImage loadSprite(String resourcePath) {
+        try {
+            var stream = getClass().getResourceAsStream(resourcePath);
+            if (stream == null) {
+                System.out.println("Không tìm thấy resource: " + resourcePath);
+                return null;
+            }
+            return ImageIO.read(stream);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private void loadItemSprites() {
+        hpItemSprite = loadSprite("/assets/item/hp.png");
+        mpItemSprite = loadSprite("/assets/item/mp item.png");
+        keyItemSprite = loadSprite("/assets/item/key.png");
+    }
+
+    private BufferedImage getItemSprite(Item.ItemType type) {
+        return switch (type) {
+            case HP_POTION -> hpItemSprite;
+            case MP_POTION -> mpItemSprite;
+            case KEY -> keyItemSprite;
+        };
+    }
+
+    public void showToast(String message) {
+        if (message == null || message.isBlank()) {
+            return;
+        }
+
+        toastMessage = message;
+        toastExpireAtNanos = System.nanoTime() + 2_000_000_000L;
+    }
+
+    private void renderToast(Graphics2D g2) {
+        if (toastMessage == null) {
+            return;
+        }
+
+        if (System.nanoTime() >= toastExpireAtNanos) {
+            toastMessage = null;
+            return;
+        }
+
+        UiTheme.enableTextAntialiasing(g2);
+        g2.setComposite(AlphaComposite.SrcOver);
+
+        int panelWidth = UiTheme.BASE_W;
+        int panelHeight = UiTheme.BASE_H;
+
+        g2.setFont(UiTheme.FONT_BODY);
+        int textWidth = g2.getFontMetrics().stringWidth(toastMessage);
+        int boxWidth = Math.max(180, textWidth + 24);
+        int boxHeight = 28;
+        int x = (panelWidth - boxWidth) / 2;
+        int y = panelHeight - 42;
+
+        g2.setColor(new Color(0, 0, 0, 180));
+        g2.fillRoundRect(x, y, boxWidth, boxHeight, 12, 12);
+
+        g2.setColor(UiTheme.TEXT);
+        g2.drawString(toastMessage, x + (boxWidth - textWidth) / 2, y + 19);
+    }
+
     public void loadMap() {
         try {
             var stream = getClass().getResourceAsStream("/assets/map/ROOM_1.png");
@@ -141,6 +213,9 @@ public class GamePanel extends JPanel implements Runnable {
         collisionHandler = new CollisionHandler(collisionMap);
 
         System.out.println("Load map + collision OK");
+
+        // Spawn many random items on the current screen so player can pick them up
+        sceneManager.spawnRandomItems(120, worldWidth, worldHeight);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -178,6 +253,7 @@ public class GamePanel extends JPanel implements Runnable {
         addMouseMotionListener(mouseHandler);
 
         initPlayer();
+        loadItemSprites();
 
         menu.update(mouseHandler);
     }
@@ -257,13 +333,19 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         if (keyHandler.consumeQuickUseJustPressed(0)) {
-            inventory.useItem(Item.ItemType.HP_POTION, player);
+            if (inventory.useItem(Item.ItemType.HP_POTION, player)) {
+                showToast("Ban da dung HP Potion");
+            }
         }
         if (keyHandler.consumeQuickUseJustPressed(1)) {
-            inventory.useItem(Item.ItemType.MP_POTION, player);
+            if (inventory.useItem(Item.ItemType.MP_POTION, player)) {
+                showToast("Ban da dung MP Potion");
+            }
         }
         if (keyHandler.consumeQuickUseJustPressed(2)) {
-            inventory.useItem(Item.ItemType.KEY, player);
+            if (inventory.useItem(Item.ItemType.KEY, player)) {
+                showToast("Ban da dung Key");
+            }
         }
 
         player.update(keyHandler);
@@ -327,6 +409,7 @@ public class GamePanel extends JPanel implements Runnable {
                 inventory.addItem(item.getType(), 1);
                 item.collect();
                 currentScreen.removeItem(item);
+                showToast("Ban da nhat " + inventory.getDescription(item.getType()).split(" — ")[0]);
             }
         }
     }
@@ -647,12 +730,18 @@ public class GamePanel extends JPanel implements Runnable {
                 }
 
                 Rectangle r = item.getBounds();
-                bufferG.setColor(item.getColor());
+                BufferedImage sprite = getItemSprite(item.getType());
 
-                if (item.getShape() == Item.Shape.OVAL) {
-                    bufferG.fillOval(r.x, r.y, r.width, r.height);
+                if (sprite != null) {
+                    bufferG.drawImage(sprite, r.x, r.y, r.width, r.height, null);
                 } else {
-                    bufferG.fillRect(r.x, r.y, r.width, r.height);
+                    bufferG.setColor(item.getColor());
+
+                    if (item.getShape() == Item.Shape.OVAL) {
+                        bufferG.fillOval(r.x, r.y, r.width, r.height);
+                    } else {
+                        bufferG.fillRect(r.x, r.y, r.width, r.height);
+                    }
                 }
             }
 
@@ -690,6 +779,7 @@ public class GamePanel extends JPanel implements Runnable {
             bufferG.setTransform(new java.awt.geom.AffineTransform());
 
             hud.render(bufferG);
+            renderToast(bufferG);
             if (!menu.isPaused()) {
                 inventoryPanel.render(bufferG);
             }

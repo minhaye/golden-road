@@ -14,6 +14,7 @@ public class KeyHandler implements KeyListener {
     private boolean jumpJustPressed;
     private boolean inventoryJustPressed;
     private boolean escapeJustPressed;
+    private boolean enterJustPressed;
     private final boolean[] quickUseJustPressed = new boolean[3];
 
 
@@ -44,6 +45,14 @@ public class KeyHandler implements KeyListener {
     public boolean consumeEscapeJustPressed() {
         if (escapeJustPressed) {
             escapeJustPressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean consumeEnterJustPressed() {
+        if (enterJustPressed) {
+            enterJustPressed = false;
             return true;
         }
         return false;
@@ -104,6 +113,11 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_ESCAPE) {
             e.consume();
             escapeJustPressed = true;
+        }
+
+        if (code == KeyEvent.VK_ENTER) {
+            e.consume();
+            enterJustPressed = true;
         }
 
         if (code >= KeyEvent.VK_1 && code <= KeyEvent.VK_3) {

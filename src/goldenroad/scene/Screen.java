@@ -42,4 +42,9 @@ public class Screen {
     public boolean removeItem(Item item) {
         return items.remove(item);
     }
+
+    public void addItem(Item item) {
+        if (item == null) return;
+        items.add(item);
+    }
 }
