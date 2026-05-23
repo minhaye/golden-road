@@ -22,6 +22,7 @@ public class Main {
             window.setFocusable(true);
             window.setResizable(false);
             window.setVisible(true);
+            gamePanel.requestFocusInWindow();
             gamePanel.loadMap();
             gamePanel.startGameLoop();
         });

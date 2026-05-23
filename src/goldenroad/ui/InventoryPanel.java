@@ -1,0 +1,178 @@
+package goldenroad.ui;
+
+import java.awt.AlphaComposite;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
+
+import goldenroad.entity.Inventory;
+import goldenroad.entity.Item;
+import goldenroad.entity.Player;
+import goldenroad.game.GamePanel;
+import goldenroad.input.KeyHandler;
+import goldenroad.input.MouseHandler;
+
+public class InventoryPanel {
+
+    private static final int PANEL_X = 160;
+    private static final int PANEL_Y = 40;
+    private static final int PANEL_W = 320;
+    private static final int PANEL_H = 280;
+    private static final int COLS = 4;
+    private static final int ROWS = 3;
+    private static final int SLOT_SIZE = 48;
+    private static final int SLOT_GAP = 10;
+    private static final int GRID_X = PANEL_X + 20;
+    private static final int GRID_Y = PANEL_Y + 48;
+
+    private static final Item.ItemType[] SLOT_TYPES = {
+        Item.ItemType.HP_POTION,
+        Item.ItemType.MP_POTION,
+        Item.ItemType.KEY
+    };
+
+    private volatile boolean open = false;
+    private final Inventory inventory;
+    private final Player player;
+
+    public InventoryPanel(Inventory inventory, Player player) {
+        this.inventory = inventory;
+        this.player = player;
+    }
+
+    public boolean isOpen() {
+        return open;
+    }
+
+    public void toggle() {
+        open = !open;
+    }
+
+    public void close() {
+        open = false;
+    }
+
+    public void update(KeyHandler keyHandler, MouseHandler mouse, GamePanel panel) {
+        if (!open) {
+            return;
+        }
+
+        if (keyHandler.consumeEscapeJustPressed()) {
+            close();
+            return;
+        }
+
+        for (int i = 0; i < SLOT_TYPES.length; i++) {
+            if (keyHandler.consumeQuickUseJustPressed(i)) {
+                inventory.useItem(SLOT_TYPES[i], player);
+            }
+        }
+
+        if (!mouse.consumeLeftJustPressed()) {
+            return;
+        }
+
+        int[] bufferCoords = UiTheme.screenToBuffer(
+            mouse.getMouseX(),
+            mouse.getMouseY(),
+            panel.getWidth(),
+            panel.getHeight()
+        );
+        int mx = bufferCoords[0];
+        int my = bufferCoords[1];
+
+        for (int i = 0; i < SLOT_TYPES.length; i++) {
+            Rectangle slot = getSlotBounds(i);
+            if (slot.contains(mx, my)) {
+                inventory.useItem(SLOT_TYPES[i], player);
+                return;
+            }
+        }
+    }
+
+    public void render(Graphics2D g2) {
+        if (!open) {
+            return;
+        }
+
+        UiTheme.enableTextAntialiasing(g2);
+        g2.setComposite(AlphaComposite.SrcOver);
+
+        g2.setColor(new Color(0, 0, 0, 160));
+        g2.fillRect(0, 0, UiTheme.BASE_W, UiTheme.BASE_H);
+
+        UiTheme.drawRoundPanel(g2, PANEL_X, PANEL_Y, PANEL_W, PANEL_H, 18);
+
+        g2.setFont(UiTheme.FONT_TITLE);
+        g2.setColor(UiTheme.TEXT);
+        g2.drawString("Inventory", PANEL_X + 16, PANEL_Y + 28);
+
+        for (int i = 0; i < SLOT_TYPES.length; i++) {
+            renderSlot(g2, i);
+        }
+    }
+
+    private void renderSlot(Graphics2D g2, int index) {
+        Item.ItemType type = SLOT_TYPES[index];
+        Rectangle slot = getSlotBounds(index);
+        int count = inventory.getCount(type);
+
+        g2.setColor(UiTheme.BUTTON_BG);
+        g2.fillRoundRect(slot.x, slot.y, slot.width, slot.height, 10, 10);
+        g2.setColor(getItemColor(type));
+        g2.fillRoundRect(slot.x + 6, slot.y + 6, slot.width - 12, slot.height - 12, 8, 8);
+        g2.setColor(UiTheme.ACCENT);
+        g2.drawRoundRect(slot.x, slot.y, slot.width, slot.height, 10, 10);
+
+        g2.setFont(UiTheme.FONT_HUD);
+        g2.setColor(UiTheme.TEXT);
+        String countText = "x" + count;
+        int countW = g2.getFontMetrics().stringWidth(countText);
+        g2.drawString(countText, slot.x + slot.width - countW - 4, slot.y + 14);
+
+        g2.setFont(UiTheme.FONT_SKILL);
+        g2.setColor(UiTheme.TEXT_DIM);
+        g2.drawString(getShortLabel(type), slot.x + 4, slot.y + slot.height - 4);
+
+        g2.setFont(UiTheme.FONT_HUD_SMALL);
+        g2.setColor(UiTheme.TEXT);
+        g2.drawString(String.valueOf(index + 1), slot.x + 4, slot.y + 12);
+
+        int descY = GRID_Y + ROWS * (SLOT_SIZE + SLOT_GAP) + 8;
+        if (index == 0) {
+            g2.setFont(UiTheme.FONT_BODY);
+            g2.setColor(UiTheme.TEXT_DIM);
+            for (int i = 0; i < SLOT_TYPES.length; i++) {
+                g2.drawString(
+                    inventory.getDescription(SLOT_TYPES[i]) + " (x" + inventory.getCount(SLOT_TYPES[i]) + ")",
+                    GRID_X,
+                    descY + i * 16
+                );
+            }
+        }
+    }
+
+    private Rectangle getSlotBounds(int index) {
+        int col = index % COLS;
+        int row = index / COLS;
+        int x = GRID_X + col * (SLOT_SIZE + SLOT_GAP);
+        int y = GRID_Y + row * (SLOT_SIZE + SLOT_GAP);
+        return new Rectangle(x, y, SLOT_SIZE, SLOT_SIZE);
+    }
+
+    private Color getItemColor(Item.ItemType type) {
+        return switch (type) {
+            case HP_POTION -> UiTheme.ITEM_HP;
+            case MP_POTION -> UiTheme.ITEM_MP;
+            case KEY -> UiTheme.ITEM_KEY;
+        };
+    }
+
+    private String getShortLabel(Item.ItemType type) {
+        return switch (type) {
+            case HP_POTION -> "HP";
+            case MP_POTION -> "MP";
+            case KEY -> "Key";
+        };
+    }
+}

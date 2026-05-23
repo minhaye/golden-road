@@ -74,6 +74,14 @@ public class Player extends Entity {
     private static final int DASH_DURATION = 20;
     private static final int DASH_COOLDOWN = 40;
 
+    // ====== RESOURCES ======
+    private int hp = 100;
+    private int maxHp = 100;
+    private int mp = 100;
+    private int maxMp = 100;
+    private double mpRegenAccumulator = 0;
+    private static final double MP_REGEN_PER_FRAME = 5.0 / 60.0;
+
     // ====== COYOTE + BUFFER ======
     private int coyoteTime = 0;
     private int jumpBuffer = 0;
@@ -241,6 +249,82 @@ public class Player extends Entity {
 
     public double getDirection() {
         return direction; 
+    }
+
+    public int getHp() {
+        return hp;
+    }
+
+    public int getMaxHp() {
+        return maxHp;
+    }
+
+    public int getMp() {
+        return mp;
+    }
+
+    public int getMaxMp() {
+        return maxMp;
+    }
+
+    public int getDashCooldown() {
+        return dashCooldown;
+    }
+
+    public int getDashCooldownMax() {
+        return DASH_COOLDOWN;
+    }
+
+    public float getDashCooldownRatio() {
+        if (DASH_COOLDOWN <= 0) {
+            return 0f;
+        }
+        return (float) dashCooldown / DASH_COOLDOWN;
+    }
+
+    public void updateResources() {
+        if (mp >= maxMp) {
+            mpRegenAccumulator = 0;
+            return;
+        }
+
+        mpRegenAccumulator += MP_REGEN_PER_FRAME;
+        while (mpRegenAccumulator >= 1 && mp < maxMp) {
+            mp++;
+            mpRegenAccumulator -= 1;
+        }
+    }
+
+    public boolean spendMp(int cost) {
+        if (cost <= 0) {
+            return true;
+        }
+        if (mp < cost) {
+            return false;
+        }
+        mp -= cost;
+        return true;
+    }
+
+    public void heal(int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        hp = Math.min(maxHp, hp + amount);
+    }
+
+    public void restoreMp(int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        mp = Math.min(maxMp, mp + amount);
+    }
+
+    public void takeDamage(int damage) {
+        if (damage <= 0) {
+            return;
+        }
+        hp = Math.max(0, hp - damage);
     }
 
     public Player(float x, float y) {

@@ -31,7 +31,9 @@ public class SceneManager {
                 new Monster(640, 300, 36, 40, new Color(200, 70, 70), 6)
             ),
             List.of(
-                new Item(280, 355, 18, 18, new Color(80, 210, 120), Item.Shape.OVAL)
+                new Item(280, 355, 18, 18, new Color(80, 210, 120), Item.Shape.OVAL, Item.ItemType.HP_POTION),
+                new Item(320, 355, 18, 18, new Color(80, 140, 220), Item.Shape.OVAL, Item.ItemType.MP_POTION),
+                new Item(360, 355, 16, 16, new Color(230, 190, 70), Item.Shape.RECTANGLE, Item.ItemType.KEY)
             )
         ));
 

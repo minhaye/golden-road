@@ -38,4 +38,8 @@ public class Screen {
     public List<Item> getItems() {
         return Collections.unmodifiableList(items);
     }
+
+    public boolean removeItem(Item item) {
+        return items.remove(item);
+    }
 }
