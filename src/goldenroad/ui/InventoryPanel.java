@@ -4,6 +4,9 @@ import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.image.BufferedImage;
+
+import javax.imageio.ImageIO;
 
 import goldenroad.entity.Inventory;
 import goldenroad.entity.Item;
@@ -36,9 +39,30 @@ public class InventoryPanel {
     private final Player player;
     private int selectedIndex = 0;
 
+    private final BufferedImage hpItemSprite;
+    private final BufferedImage mpItemSprite;
+    private final BufferedImage keyItemSprite;
+
     public InventoryPanel(Inventory inventory, Player player) {
         this.inventory = inventory;
         this.player = player;
+        hpItemSprite = loadSprite("/assets/item/hp.png");
+        mpItemSprite = loadSprite("/assets/item/mp item.png");
+        keyItemSprite = loadSprite("/assets/item/key.png");
+    }
+
+    private BufferedImage loadSprite(String resourcePath) {
+        try {
+            var stream = getClass().getResourceAsStream(resourcePath);
+            if (stream == null) {
+                System.out.println("Khong tim thay resource: " + resourcePath);
+                return null;
+            }
+            return ImageIO.read(stream);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     public boolean isOpen() {
@@ -67,36 +91,15 @@ public class InventoryPanel {
         selectedIndex = index;
     }
 
-    private Item.ItemType getSelectedType() {
-        if (selectedIndex < 0 || selectedIndex >= SLOT_TYPES.length) {
-            return null;
-        }
-        return SLOT_TYPES[selectedIndex];
-    }
-
     private void normalizeSelection() {
         if (inventory.getTotalCount() <= 0) {
             selectedIndex = -1;
             return;
         }
 
-        if (selectedIndex < 0 || selectedIndex >= SLOT_TYPES.length || inventory.getCount(getSelectedType()) <= 0) {
-            selectedIndex = findNextAvailableSlot(0, 1);
+        if (selectedIndex < 0 || selectedIndex >= SLOT_TYPES.length || inventory.getCount(SLOT_TYPES[selectedIndex]) <= 0) {
+            selectedIndex = findNextSelectedIndex(0, 1);
         }
-    }
-
-    private int findNextAvailableSlot(int startIndex, int direction) {
-        int index = startIndex;
-
-        for (int i = 0; i < SLOT_TYPES.length; i++) {
-            if (inventory.getCount(SLOT_TYPES[index]) > 0) {
-                return index;
-            }
-
-            index = (index + direction + SLOT_TYPES.length) % SLOT_TYPES.length;
-        }
-
-        return -1;
     }
 
     private int findNextSelectedIndex(int fromIndex, int direction) {
@@ -106,12 +109,36 @@ public class InventoryPanel {
 
         int index = fromIndex;
         for (int i = 0; i < SLOT_TYPES.length; i++) {
-            index = (index + direction + SLOT_TYPES.length) % SLOT_TYPES.length;
             if (inventory.getCount(SLOT_TYPES[index]) > 0) {
                 return index;
             }
+            index = (index + direction + SLOT_TYPES.length) % SLOT_TYPES.length;
         }
         return -1;
+    }
+
+    private BufferedImage getItemSprite(Item.ItemType type) {
+        return switch (type) {
+            case HP_POTION -> hpItemSprite;
+            case MP_POTION -> mpItemSprite;
+            case KEY -> keyItemSprite;
+        };
+    }
+
+    private Color getItemColor(Item.ItemType type) {
+        return switch (type) {
+            case HP_POTION -> UiTheme.ITEM_HP;
+            case MP_POTION -> UiTheme.ITEM_MP;
+            case KEY -> UiTheme.ITEM_KEY;
+        };
+    }
+
+    private String getShortLabel(Item.ItemType type) {
+        return switch (type) {
+            case HP_POTION -> "HP";
+            case MP_POTION -> "MP";
+            case KEY -> "Key";
+        };
     }
 
     private boolean useSelectedItem(GamePanel panel) {
@@ -120,15 +147,14 @@ public class InventoryPanel {
         }
 
         Item.ItemType type = SLOT_TYPES[selectedIndex];
-        boolean used = inventory.useItem(type, player);
-        if (!used) {
+        if (!inventory.useItem(type, player)) {
             return false;
         }
 
         panel.showToast("Ban da dung " + getShortLabel(type));
 
         if (inventory.getCount(type) <= 0) {
-            selectedIndex = findNextSelectedIndex(selectedIndex, 1);
+            selectedIndex = findNextSelectedIndex((selectedIndex + 1) % SLOT_TYPES.length, 1);
         }
 
         return true;
@@ -145,7 +171,9 @@ public class InventoryPanel {
         }
 
         if (keyHandler.consumeJumpJustPressed()) {
-            selectedIndex = findNextSelectedIndex(selectedIndex < 0 ? 0 : selectedIndex, 1);
+            if (inventory.getTotalCount() > 0) {
+                selectedIndex = findNextSelectedIndex((selectedIndex + 1) % SLOT_TYPES.length, 1);
+            }
         }
 
         if (keyHandler.consumeEnterJustPressed()) {
@@ -157,7 +185,7 @@ public class InventoryPanel {
                 if (inventory.useItem(SLOT_TYPES[i], player)) {
                     panel.showToast("Ban da dung " + getShortLabel(SLOT_TYPES[i]));
                     if (inventory.getCount(SLOT_TYPES[i]) <= 0 && i == selectedIndex) {
-                        selectedIndex = findNextSelectedIndex(selectedIndex, 1);
+                        selectedIndex = findNextSelectedIndex((i + 1) % SLOT_TYPES.length, 1);
                     }
                 }
             }
@@ -215,13 +243,18 @@ public class InventoryPanel {
 
         g2.setColor(UiTheme.BUTTON_BG);
         g2.fillRoundRect(slot.x, slot.y, slot.width, slot.height, 10, 10);
-        if (count > 0) {
+
+        g2.setColor(new Color(40, 44, 56));
+        g2.fillRoundRect(slot.x + 6, slot.y + 6, slot.width - 12, slot.height - 12, 8, 8);
+
+        BufferedImage sprite = getItemSprite(type);
+        if (sprite != null) {
+            g2.drawImage(sprite, slot.x + 8, slot.y + 8, slot.width - 16, slot.height - 16, null);
+        } else if (count > 0) {
             g2.setColor(getItemColor(type));
-            g2.fillRoundRect(slot.x + 6, slot.y + 6, slot.width - 12, slot.height - 12, 8, 8);
-        } else {
-            g2.setColor(new Color(40, 44, 56));
-            g2.fillRoundRect(slot.x + 6, slot.y + 6, slot.width - 12, slot.height - 12, 8, 8);
+            g2.fillRoundRect(slot.x + 10, slot.y + 10, slot.width - 20, slot.height - 20, 8, 8);
         }
+
         g2.setColor(selected ? UiTheme.HP_FILL : UiTheme.ACCENT);
         g2.drawRoundRect(slot.x, slot.y, slot.width, slot.height, 10, 10);
 
@@ -261,21 +294,5 @@ public class InventoryPanel {
         int x = GRID_X + col * (SLOT_SIZE + SLOT_GAP);
         int y = GRID_Y + row * (SLOT_SIZE + SLOT_GAP);
         return new Rectangle(x, y, SLOT_SIZE, SLOT_SIZE);
-    }
-
-    private Color getItemColor(Item.ItemType type) {
-        return switch (type) {
-            case HP_POTION -> UiTheme.ITEM_HP;
-            case MP_POTION -> UiTheme.ITEM_MP;
-            case KEY -> UiTheme.ITEM_KEY;
-        };
-    }
-
-    private String getShortLabel(Item.ItemType type) {
-        return switch (type) {
-            case HP_POTION -> "HP";
-            case MP_POTION -> "MP";
-            case KEY -> "Key";
-        };
     }
 }

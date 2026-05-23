@@ -173,13 +173,9 @@ public class Player extends Entity {
 
         
         // ===== JUMP =====
-        if (jumpBuffer > 0 && (coyoteTime > 0 || jumpCount < MAX_JUMPS)) {
+        if (jumpBuffer > 0) {
             velocityY = JUMP_SPEED;
-            if (onGround == false && coyoteTime == 0) {
-            jumpCount++;
-            }
             onGround = false;
-            jumpCount++;
             dashDuration = 0;                       // Cancel dash if you jump
             GRAVITY = 1.2; 
 
