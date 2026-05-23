@@ -1,6 +1,7 @@
 package goldenroad.game;
 
 import goldenroad.entity.Bullet;
+import goldenroad.entity.Inventory;
 import goldenroad.entity.Item;
 import goldenroad.entity.Monster;
 import goldenroad.entity.Player;
@@ -11,13 +12,19 @@ import goldenroad.map.CollisionMap;
 import goldenroad.scene.SceneManager;
 import goldenroad.scene.Screen;
 import goldenroad.scene.Menu;
+import goldenroad.ui.Hud;
+import goldenroad.ui.InventoryPanel;
+import goldenroad.ui.UiTheme;
 
 
+import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.KeyboardFocusManager;
 import java.awt.Rectangle;
+import java.util.Collections;
 import java.awt.image.BufferedImage;
 import java.awt.RenderingHints;
 
@@ -70,8 +77,10 @@ public class GamePanel extends JPanel implements Runnable {
     private int leftShootCooldown = 0;
     private int rightShootCooldown = 0;
 
-    private static final int LEFT_SHOOT_DELAY = 15;
-    private static final int RIGHT_SHOOT_DELAY = 60;
+    private static final int LEFT_SHOOT_DELAY = 30;
+    private static final int RIGHT_SHOOT_DELAY = 120;
+    private static final int LEFT_SHOOT_MP_COST = 5;
+    private static final int RIGHT_SHOOT_MP_COST = 30;
     
     private double LASER_SPEED = 15;
     private static final int LASER_DIAMETER = 10;
@@ -92,6 +101,9 @@ public class GamePanel extends JPanel implements Runnable {
     private final SceneManager sceneManager = new SceneManager();
     private final Menu menu = new Menu(this);
     private final List<Bullet> bullets = new ArrayList<>();
+    private final Inventory inventory = new Inventory();
+    private Hud hud;
+    private InventoryPanel inventoryPanel;
 
 
     private Thread gameThread;
@@ -99,8 +111,10 @@ public class GamePanel extends JPanel implements Runnable {
     private Player player;
 
     public void initPlayer() {
-        player = new Player(400, 1995); 
+        player = new Player(400, 1995);
         player.update(keyHandler);
+        hud = new Hud(this, player, inventory);
+        inventoryPanel = new InventoryPanel(inventory, player);
     }
 
     public void loadMap() {
@@ -150,6 +164,14 @@ public class GamePanel extends JPanel implements Runnable {
         setBackground(new Color(20, 26, 38));
         setDoubleBuffered(true);
         setFocusable(true);
+        setFocusTraversalKeys(
+            KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS,
+            Collections.emptySet()
+        );
+        setFocusTraversalKeys(
+            KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS,
+            Collections.emptySet()
+        );
 
         addKeyListener(keyHandler);
         addMouseListener(mouseHandler);
@@ -199,13 +221,53 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void update() {
-        // If menu active, let it handle input and block gameplay updates
         if (menu.isActive()) {
             menu.update(mouseHandler);
             return;
         }
 
+        if (menu.isPaused()) {
+            menu.update(mouseHandler);
+            if (keyHandler.consumeEscapeJustPressed()) {
+                menu.setPaused(false);
+                requestFocusInWindow();
+            }
+            return;
+        }
+
+        menu.update(mouseHandler);
+
+        handleHudMouseInput();
+
+        if (keyHandler.consumeInventoryJustPressed()) {
+            inventoryPanel.toggle();
+            requestFocusInWindow();
+        }
+
+        if (inventoryPanel.isOpen()) {
+            inventoryPanel.update(keyHandler, mouseHandler, this);
+            return;
+        }
+
+        if (keyHandler.consumeEscapeJustPressed()) {
+            menu.setPaused(true);
+            inventoryPanel.close();
+            requestFocusInWindow();
+            return;
+        }
+
+        if (keyHandler.consumeQuickUseJustPressed(0)) {
+            inventory.useItem(Item.ItemType.HP_POTION, player);
+        }
+        if (keyHandler.consumeQuickUseJustPressed(1)) {
+            inventory.useItem(Item.ItemType.MP_POTION, player);
+        }
+        if (keyHandler.consumeQuickUseJustPressed(2)) {
+            inventory.useItem(Item.ItemType.KEY, player);
+        }
+
         player.update(keyHandler);
+        player.updateResources();
 
         collisionHandler.move(
             player,
@@ -213,13 +275,76 @@ public class GamePanel extends JPanel implements Runnable {
             player.getVelocityY()
         );
 
+        handleItemPickup();
         updateCamera();
         handleShootingInput();
         updateBullets();
 
-        if (leftShootCooldown > 0)      leftShootCooldown--;
-        if (rightShootCooldown > 0)     rightShootCooldown--;
-        
+        if (leftShootCooldown > 0) {
+            leftShootCooldown--;
+        }
+        if (rightShootCooldown > 0) {
+            rightShootCooldown--;
+        }
+    }
+
+    private void handleHudMouseInput() {
+        if (!mouseHandler.isLeftJustPressed()) {
+            return;
+        }
+
+        int[] coords = UiTheme.screenToBuffer(
+            mouseHandler.getMouseX(),
+            mouseHandler.getMouseY(),
+            getWidth(),
+            getHeight()
+        );
+
+        if (!Hud.containsBagButton(coords[0], coords[1])) {
+            return;
+        }
+
+        mouseHandler.consumeLeftJustPressed();
+        inventoryPanel.toggle();
+        requestFocusInWindow();
+    }
+
+    private void handleItemPickup() {
+        Screen currentScreen = sceneManager.getCurrentScreen();
+        Rectangle playerBounds = new Rectangle(
+            (int) player.getX(),
+            (int) player.getY(),
+            (int) player.getWidth(),
+            (int) player.getHeight()
+        );
+
+        List<Item> items = new ArrayList<>(currentScreen.getItems());
+        for (Item item : items) {
+            if (item.isCollected()) {
+                continue;
+            }
+            if (playerBounds.intersects(item.getBounds())) {
+                inventory.addItem(item.getType(), 1);
+                item.collect();
+                currentScreen.removeItem(item);
+            }
+        }
+    }
+
+    public int getLeftShootCooldown() {
+        return leftShootCooldown;
+    }
+
+    public int getLeftShootCooldownMax() {
+        return LEFT_SHOOT_DELAY;
+    }
+
+    public int getRightShootCooldown() {
+        return rightShootCooldown;
+    }
+
+    public int getRightShootCooldownMax() {
+        return RIGHT_SHOOT_DELAY;
     }
 
  
@@ -282,17 +407,18 @@ public class GamePanel extends JPanel implements Runnable {
 
 // Handle shooting input and bullet spawning
     private void handleShootingInput() {
-
-        // ===== LEFT CLICK =====
         if (mouseHandler.isLeftPressed() && leftShootCooldown <= 0) {
-           spawnLaserShot();
-           leftShootCooldown = LEFT_SHOOT_DELAY;
+            if (player.spendMp(LEFT_SHOOT_MP_COST)) {
+                spawnLaserShot();
+                leftShootCooldown = LEFT_SHOOT_DELAY;
+            }
         }
 
-        // ===== RIGHT CLICK =====
         if (mouseHandler.isRightPressed() && rightShootCooldown <= 0) {
-            spawnClusterShot();
-            rightShootCooldown = RIGHT_SHOOT_DELAY;
+            if (player.spendMp(RIGHT_SHOOT_MP_COST)) {
+                spawnClusterShot();
+                rightShootCooldown = RIGHT_SHOOT_DELAY;
+            }
         }
     }
 
@@ -516,6 +642,9 @@ public class GamePanel extends JPanel implements Runnable {
             
             // ===== ITEMS =====
             for (Item item : getCurrentItems()) {
+                if (item.isCollected()) {
+                    continue;
+                }
 
                 Rectangle r = item.getBounds();
                 bufferG.setColor(item.getColor());
@@ -560,7 +689,13 @@ public class GamePanel extends JPanel implements Runnable {
             // reset transform
             bufferG.setTransform(new java.awt.geom.AffineTransform());
 
-            menu.render(bufferG);
+            hud.render(bufferG);
+            if (!menu.isPaused()) {
+                inventoryPanel.render(bufferG);
+            }
+            if (menu.isPaused()) {
+                menu.render(bufferG);
+            }
         }
 
         // ===== DRAW BUFFER TO SCREEN =====
