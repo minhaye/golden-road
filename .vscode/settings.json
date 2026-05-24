@@ -1,8 +1,0 @@
-{
-    "java.debug.settings.onBuildFailureProceed": true,
-    "java.configuration.enablePreview": false,
-    "java.project.sourcePaths": [
-        "src"
-    ],
-    "java.project.outputPath": "bin"
-}

@@ -96,6 +96,10 @@ public class MouseHandler implements MouseListener, MouseMotionListener {
         return false;
     }
 
+    public boolean isLeftJustPressed() {
+        return leftJustPressed;
+    }
+
     private void updateMousePosition(MouseEvent e) {
         mouseX = e.getX();
         mouseY = e.getY();

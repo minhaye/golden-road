@@ -1,245 +1,81 @@
 # SCIENTIFIC WITCHERY
 
-A simple 2D metroidvania exploration game developed in **Java** for the **Object-Oriented Programming course**.
+Mô tả ngắn: trò chơi 2D theo phong cách metroidvania, phát triển bằng Java cho môn Lập trình Hướng đối tượng. Người chơi khám phá một cơ sở nghiên cứu, chiến đấu với robot, thu thập vật phẩm và mở khóa kỹ năng để tiến sâu vào các tầng tiếp theo.
 
-The player explores a giant research facility , fights robots, collects items, and unlock skills to progress to the next level.
-All in the name of science
+Link báo cáo tiến độ
+https://docs.google.com/document/d/1UuNXtMHy_4ewUpr_JN-LcqvNzZqqJhtlUja23kPz9RQ/edit?tab=t.0#heading=h.orhg72i9j0dq
 
----
-
-# Game Overview
-
-SCIENTIFIC WITCHERY is a small metroidvania game where the player traverse through multiple research floors filled with combat robots and challenges.
-
-The game combines:
-
-- Exploration
-- Combat
-- Item collection
-- Finding secrets
-
-At the end of the facility, the player must defeat the **Appraiser**.
+Link plot + đề xuất 
+https://docs.google.com/document/d/138VPqWpEGtzm8KxrY4FCCdarLBsm77eg-wRZ5wo0ONM/edit?tab=t.0
 
 ---
 
-# Gameplay Mechanics
+**Thông tin về game**
 
-## Player
-
-The player has the following attributes:
-
-- HP (Health Points)
-- MP (Mana Points)
-- MP regeneration slowly over time
-- Skills
-- Inventory
-
-Player abilities:
-
-- Move
-- Attack: 3 attack modes: blaster, shotgun, laser
-- Use skill: block
-- Use item: HP healer
+- Thể loại: Metroidvania / Platformer 2D
+- Ngôn ngữ: Java (Swing cho rendering)
+- Entry point: [src/goldenroad/main/Main.java](src/goldenroad/main/Main.java)
+- Thư mục assets: `src/assets/` và `src/assets/player/`
 
 ---
 
-## Enemies
+**Những gì đã hoàn thành hiện tại**
 
-There are **Three types of enemies** in the game.
-
-### Ground Driod
-
-- Moves within a fixed area
-- Close-range attacks
-
-### Flying Drone
-
-- Moves freely in the air
-- Ranged attacks
-
-### Boss Monster
-
-- Large HP
-- Multiple skills
-- Guards the final floor
-
-Monster behavior:
-
-- Attacks the player automatically when in range
-- Uses skills every few seconds
+- Hệ thống thực thể cơ bản: [src/goldenroad/entity/Entity.java](src/goldenroad/entity/Entity.java), [src/goldenroad/entity/Player.java](src/goldenroad/entity/Player.java), [src/goldenroad/entity/Monster.java](src/goldenroad/entity/Monster.java), [src/goldenroad/entity/Bullet.java](src/goldenroad/entity/Bullet.java), [src/goldenroad/entity/Item.java](src/goldenroad/entity/Item.java)
+- Giao diện game và panel: [src/goldenroad/game/GamePanel.java](src/goldenroad/game/GamePanel.java)
+- Xử lý input: [src/goldenroad/input/KeyHandler.java](src/goldenroad/input/KeyHandler.java), [src/goldenroad/input/MouseHandler.java](src/goldenroad/input/MouseHandler.java)
+- Hệ thống map & va chạm: [src/goldenroad/map/CollisionMap.java](src/goldenroad/map/CollisionMap.java), [src/goldenroad/map/CollisionHandler.java](src/goldenroad/map/CollisionHandler.java)
+- Hệ thống render & camera: [src/goldenroad/render/RenderSystem.java](src/goldenroad/render/RenderSystem.java), [src/goldenroad/render/Camera.java](src/goldenroad/render/Camera.java)
+- Quản lý scene/menu: [src/goldenroad/scene/SceneManager.java](src/goldenroad/scene/SceneManager.java), [src/goldenroad/scene/Floor.java](src/goldenroad/scene/Floor.java), [src/goldenroad/scene/Menu.java](src/goldenroad/scene/Menu.java)
 
 ---
 
-## Map System
+**Các công việc cần triển khai tiếp**
 
-Each map contains:
-
-- Terrain
-- Hidden paths
-- Enemies zones
-- Traps
-- Items
-- Elevators
-
-### Items
-
-Items available in the game:
-
-- HP Potion
-- MP Potion
-- Key
-- Treasure Chest
+1. Hoàn thiện AI kẻ địch (pathfinding, trạng thái tấn công/tuần tra)
+2. Cơ chế nhặt vật phẩm, cập nhật inventory và hiệu ứng dùng item
+3. Thêm animation cho nhân vật, kẻ địch và vật phẩm
+4. Âm thanh: hiệu ứng va chạm, nhạc nền, hiệu ứng kỹ năng
+5. Giao diện HUD (HP/MP/skill cooldown/inventory)
+6. Thiết kế level/maps bổ sung và cân bằng gameplay
+7. Lưu/Load trạng thái người chơi
+8. Tối ưu va chạm và render để giảm lag
+9. Kiểm thử (unit/integration) và sửa lỗi
+10. Đóng gói thành file JAR để chạy độc lập
 
 ---
 
-# Level Design
+**Dự định phân chia công việc (gợi ý)**
 
-The facility has **4 floors**.
+- Game Logic & Entities: phát triển các lớp entity, hệ thống skill, inventory
+- AI & Enemy Behavior: thiết kế trạng thái và hành vi kẻ địch
+- Map & Collisions: xây dựng công cụ thiết kế map, tối ưu hệ va chạm
+- Rendering & Camera: cải thiện hệ render, animation, camera theo nhân vật
+- Input & Controls: hoàn thiện điều khiển, mapping phím, chuột
+- UI & Scenes: menu, HUD, màn hình tạm dừng, màn hình kết thúc
+- Assets & Sound: quản lý sprites, tilesets, âm thanh
+- Testing & Build: test, CI, đóng gói release
 
-Floor 1: Introduction floor: show the player basic movements, mechanics  
-
-Floor 2: Unlock the 1st ability: shotgun shot
-
-Floor 3: Unlock the 2nd ability: double jump
-
-Floor 4: Unlock the 3rd ability: laser shot
-
-Floor 5: Boss fight
-
----
-
-# Floor Progression
-
-To advance to the next floor, the player must:
-
-1. Reach the exit area
-2. Unlock the skills/Collect key required to open some doors
-
-
-
-# Technology Stack
-
-Language
-
-Java
-
-Graphics
-
-Java Swing (2D rendering)
-
-Programming Paradigm
-
-Object-Oriented Programming
-
-Concepts used:
-
-- Inheritance
-- Polymorphism
-- Encapsulation
-- Composition
+Gợi ý phân công: mỗi mục giao cho 1 dev (hoặc nhóm nhỏ) tùy quy mô. Giao việc bằng issue/branch theo `feature/<tên>`.
 
 ---
 
-# Project Architecture
+**Hướng dẫn đóng góp nhanh**
 
-The project follows a simple **game engine architecture suitable for a small Java game project**.
+- Tạo branch mới từ `main`: `feature/<mô-tả-ngắn>`
+- Mỗi PR kèm mô tả, checklist các bước kiểm thử
+- Kiểm tra build bằng IDE hoặc dòng lệnh trước khi gửi PR
 
+Ví dụ chạy nhanh (từ IDE hoặc terminal):
 
-Game
-│
-├── engine
-│ ├── GameLoop
-│ ├── Renderer
-│ └── InputHandler
-│
-├── entity
-│ ├── Entity
-│ ├── Player
-│ └── Monster
-│ ├── GroundMonster
-│ ├── FlyingMonster
-│ └── Boss
-│
-├── item
-│ ├── Item
-│ ├── HpPotion
-│ ├── MpPotion
-│ ├── Key
-│ └── Chest
-│
-├── map
-│ ├── GameMap
-│ ├── Tile
-│ └── Door
-│
-├── skill
-│ ├── Skill
-│ └── AttackSkill
-│
-└── main
-└── Game
+```bash
+# Biên dịch (tham khảo cấu trúc project)
+javac -d bin src/goldenroad/main/Main.java src/goldenroad/**/**/*.java
 
+# Chạy (điều chỉnh classpath nếu cần)
+java -cp bin goldenroad.main.Main
+```
 
 ---
 
-# Core System Design
-
-## Entity System
-
-All objects in the game inherit from the base class:
-
-
-Entity
-
-
-Examples:
-
-
-Player extends Entity
-
-Monster extends Entity
-
-Boss extends Monster
-
-
-This design allows:
-
-- code reuse
-- polymorphism
-- easy extension
-
----
-
-## Game Loop
-
-The game runs using a **main game loop**.
-
-
-while (gameRunning) {
-
-update();
-
-render();
-
-sleep(16ms);
-
-}
-
-
-This loop controls:
-
-- game logic
-- entity updates
-- rendering
-
----
-
-## Rendering System
-
-The game uses **Java Swing rendering** with:
-
-- JFrame
-- JPanel
-- paintComponent()
-
-Sprites and objects are drawn inside the render function.
+Nếu muốn, tôi có thể mở thêm các issue/tickets tương ứng cho từng công việc trên để phân công cụ thể.

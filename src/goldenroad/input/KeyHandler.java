@@ -12,6 +12,10 @@ public class KeyHandler implements KeyListener {
     public boolean dashPressed;
     private boolean dashJustPressed;
     private boolean jumpJustPressed;
+    private boolean inventoryJustPressed;
+    private boolean escapeJustPressed;
+    private boolean enterJustPressed;
+    private final boolean[] quickUseJustPressed = new boolean[3];
 
 
     public boolean consumeJumpJustPressed() {
@@ -21,9 +25,45 @@ public class KeyHandler implements KeyListener {
         }
         return false;
     }
+
     public boolean consumeDashJustPressed() {
         if (dashJustPressed) {
             dashJustPressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean consumeInventoryJustPressed() {
+        if (inventoryJustPressed) {
+            inventoryJustPressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean consumeEscapeJustPressed() {
+        if (escapeJustPressed) {
+            escapeJustPressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean consumeEnterJustPressed() {
+        if (enterJustPressed) {
+            enterJustPressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean consumeQuickUseJustPressed(int index) {
+        if (index < 0 || index >= quickUseJustPressed.length) {
+            return false;
+        }
+        if (quickUseJustPressed[index]) {
+            quickUseJustPressed[index] = false;
             return true;
         }
         return false;
@@ -59,7 +99,29 @@ public class KeyHandler implements KeyListener {
             sprintPressed = true;
         }
         if (code == KeyEvent.VK_SHIFT) {
+            if (!dashPressed) {
+                dashJustPressed = true;
+            }
             dashPressed = true;
+        }
+
+        if (code == KeyEvent.VK_TAB || code == KeyEvent.VK_I) {
+            e.consume();
+            inventoryJustPressed = true;
+        }
+
+        if (code == KeyEvent.VK_ESCAPE) {
+            e.consume();
+            escapeJustPressed = true;
+        }
+
+        if (code == KeyEvent.VK_ENTER) {
+            e.consume();
+            enterJustPressed = true;
+        }
+
+        if (code >= KeyEvent.VK_1 && code <= KeyEvent.VK_3) {
+            quickUseJustPressed[code - KeyEvent.VK_1] = true;
         }
     }
 
