@@ -14,6 +14,7 @@ public class Main {
             
             
             GamePanel gamePanel = new GamePanel();
+            gamePanel.loadMap();
             window.setExtendedState(JFrame.MAXIMIZED_BOTH);
             window.add(gamePanel);
             window.pack();
@@ -23,7 +24,6 @@ public class Main {
             window.setResizable(false);
             window.setVisible(true);
             gamePanel.requestFocusInWindow();
-            gamePanel.loadMap();
             gamePanel.startGameLoop();
         });
     }

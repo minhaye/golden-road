@@ -16,6 +16,7 @@ import goldenroad.scene.Menu;
 import goldenroad.ui.Hud;
 import goldenroad.ui.InventoryPanel;
 import goldenroad.ui.UiTheme;
+import goldenroad.util.AssetLoader;
 
 
 import java.awt.AlphaComposite;
@@ -34,7 +35,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 
 
@@ -125,17 +125,7 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private BufferedImage loadSprite(String resourcePath) {
-        try {
-            var stream = getClass().getResourceAsStream(resourcePath);
-            if (stream == null) {
-                System.out.println("Không tìm thấy resource: " + resourcePath);
-                return null;
-            }
-            return ImageIO.read(stream);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        return AssetLoader.loadImage(resourcePath);
     }
 
     private void loadItemSprites() {
@@ -193,20 +183,8 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void loadMap() {
         try {
-            var stream = getClass().getResourceAsStream("/assets/map/ROOM_1.png");
-            var stream1 = getClass().getResourceAsStream("/assets/map/ROOM_1_HIDDEN.png");
-
-            if (stream == null) {
-                System.out.println("Không tìm thấy map!");
-                return;
-            }
-            if (stream1 == null) {
-                System.out.println("Không tìm thấy hidden map!");
-                return;
-        }
-   
-        mapImage = ImageIO.read(stream);
-        hiddenImage = ImageIO.read(stream1);
+        mapImage = AssetLoader.loadImage("/assets/map/ROOM_1.png");
+        hiddenImage = AssetLoader.loadImage("/assets/map/ROOM_1_HIDDEN.png");
 
         // load collision
         collisionMap = new CollisionMap();

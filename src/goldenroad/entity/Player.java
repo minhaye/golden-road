@@ -1,15 +1,10 @@
 package goldenroad.entity;
     
 import goldenroad.input.KeyHandler;
-import goldenroad.map.CollisionMap;
-import goldenroad.map.CollisionHandler;
+import goldenroad.util.AssetLoader;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.util.List;
-
-import javax.imageio.ImageIO;
 
 public class Player extends Entity {
 
@@ -329,21 +324,10 @@ public class Player extends Entity {
     }
 
     private void loadSprite() {
-        try {
-            var stream = getClass().getResourceAsStream("/assets/player/MIRAI_WITH_FRONT_ARM.png");
-
-            if (stream == null) {
-                System.out.println("KHoNG tim thay resource: /MIRAI_WITH_FRONT_ARM.png");
-                return;
-            }
-
-            spriteSheet = ImageIO.read(stream);
-            System.out.println("Load sprite thành công.");
-        } catch (IOException e) {
-            System.out.println("Lỗi khi load sprite.");
-            e.printStackTrace();
+        spriteSheet = AssetLoader.loadImage("/assets/player/MIRAI_WITH_FRONT_ARM.png");
+        if (spriteSheet != null) {
+            System.out.println("Load sprite thanh cong.");
         }
-        
     }
 
     // ====== STATE ======
@@ -411,8 +395,16 @@ public class Player extends Entity {
     
 
     private BufferedImage getFrame() {
+        if (spriteSheet == null) {
+            return null;
+        }
+
         int x = currentFrame * FRAME_W;
         int y = getRow() * FRAME_H;
+        if (x + FRAME_W > spriteSheet.getWidth() || y + FRAME_H > spriteSheet.getHeight()) {
+            return null;
+        }
+
         return spriteSheet.getSubimage(x, y, FRAME_W, FRAME_H);
     }
 
@@ -420,10 +412,11 @@ public class Player extends Entity {
     public void draw(Graphics2D g) {
         BufferedImage img = getFrame();
 
-        /*  DEBUG YELLOW BOX OF DOOM AND DESPAIR 
-        g.setColor(new Color(230, 190, 70)); // Placeholder color for player if sprite fails to load
-        g.fillRect((int)x, (int)y, (int)(WIDTH) , (int)(HEIGHT));
-        */
+        if (img == null) {
+            g.setColor(new Color(230, 190, 70));
+            g.fillRect((int) x, (int) y, (int) WIDTH, (int) HEIGHT);
+            return;
+        }
        
         if (direction == 1) {
             g.drawImage(img, (int)x + DRAW_OFFSET_X, (int)y + DRAW_OFFSET_Y, FRAME_W , FRAME_H , null); //

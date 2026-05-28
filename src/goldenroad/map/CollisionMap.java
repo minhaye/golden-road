@@ -1,6 +1,7 @@
 package goldenroad.map;
 
-import javax.imageio.ImageIO;
+import goldenroad.util.AssetLoader;
+
 import java.awt.image.BufferedImage;
 
 public class CollisionMap {
@@ -13,7 +14,13 @@ public class CollisionMap {
 
 public void load(String path) {
     try {
-        this.img = ImageIO.read( getClass().getResourceAsStream(path) );
+        this.img = AssetLoader.loadImage(path);
+        if (img == null) {
+            width = 0;
+            height = 0;
+            solid = null;
+            return;
+        }
 
         width = img.getWidth();
         height = img.getHeight();
@@ -35,12 +42,13 @@ public void load(String path) {
             }
         }
 
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
         e.printStackTrace();
     }
 }
 
     public boolean isSolid(int x, int y) {
+        if (solid == null) return false;
         if (x < 0 || y < 0 || x >= width || y >= height) return false;
         return solid[x][y];
     }
@@ -103,6 +111,7 @@ public void load(String path) {
     }
 
     public boolean isOneWay(int x, int y) {
+    if (img == null) return false;
     if (x < 0 || y < 0 || x >= width || y >= height) return false;
 
     int pixel = img.getRGB(x, y);
