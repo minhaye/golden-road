@@ -1,5 +1,6 @@
 package goldenroad.game;
 
+import goldenroad.audio.AudioManager;
 import goldenroad.entity.Bullet;
 import goldenroad.entity.Item;
 import goldenroad.entity.Monster;
@@ -52,6 +53,7 @@ public class GamePanel extends JPanel implements Runnable {
     private MonsterCollisionHandler monsterCollisionHandler;
     private BufferedImage mapImage, hiddenImage, gameBuffer;
     private Graphics2D bufferG;
+    private boolean mapLoaded = false;
 
     private int WORLD_WIDTH = 330 * TILE_SIZE;
     private int WORLD_HEIGHT = 140 * TILE_SIZE;
@@ -90,6 +92,10 @@ public class GamePanel extends JPanel implements Runnable {
     private final Menu menu = new Menu(this);
     private final List<Bullet> bullets = new ArrayList<>();
 
+    // Audio
+    private final AudioManager audio = new AudioManager();
+    private boolean musicStarted = false;
+
     private Thread gameThread;
 
     private Player player;
@@ -101,6 +107,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void loadMap() {
         try {
+            mapLoaded = false;
             var stream = getClass().getResourceAsStream("/assets/map/ROOM_1.png");
             var stream1 = getClass().getResourceAsStream("/assets/map/ROOM_1_HIDDEN.png");
 
@@ -122,12 +129,21 @@ public class GamePanel extends JPanel implements Runnable {
 
             collisionHandler = new CollisionHandler(collisionMap);
             monsterCollisionHandler = new MonsterCollisionHandler(collisionMap);
+            mapLoaded = true;
 
             System.out.println("Load map + collision OK");
 
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private boolean ensureMapLoaded() {
+        if (!mapLoaded || collisionHandler == null || monsterCollisionHandler == null || mapImage == null) {
+            loadMap();
+        }
+
+        return mapLoaded && collisionHandler != null && monsterCollisionHandler != null && mapImage != null;
     }
 
     public GamePanel() {
@@ -152,6 +168,13 @@ public class GamePanel extends JPanel implements Runnable {
 
         initPlayer();
 
+        audio.loadMusic("main", "/assets/audio/Pixel 1.wav");
+
+        audio.loadSfx("shoot", "/assets/audio/Pixel 2.wav");
+        audio.loadSfx("shotgun", "/assets/audio/Pixel 3.wav");
+        audio.loadSfx("hit", "/assets/audio/Pixel 4.wav");
+        audio.loadSfx("player_hurt", "/assets/audio/Pixel 5.wav");
+        audio.loadSfx("menu_click", "/assets/audio/Pixel 6.wav");
         menu.update(mouseHandler);
     }
 
@@ -197,6 +220,14 @@ public class GamePanel extends JPanel implements Runnable {
             return;
         }
 
+        if (!ensureMapLoaded()) {
+            return;
+        }
+
+        if (!musicStarted) {
+            audio.playMusic("main");
+            musicStarted = true;
+        }
         player.update(keyHandler);
 
         collisionHandler.move(
@@ -299,6 +330,7 @@ public class GamePanel extends JPanel implements Runnable {
         double directionX = worldMouseX - originX;
         double directionY = worldMouseY - originY;
 
+        audio.playSfx("shoot");
         spawnBullet(
                 originX,
                 originY,
@@ -324,6 +356,8 @@ public class GamePanel extends JPanel implements Runnable {
         if (baseDirectionX == 0 && baseDirectionY == 0) {
             baseDirectionX = 1;
         }
+
+        audio.playSfx("shotgun");
 
         for (int i = 0; i < CLUSTER_BULLET_COUNT; i++) {
 
@@ -424,6 +458,7 @@ public class GamePanel extends JPanel implements Runnable {
             boolean hitMonster = false;
             for (Monster monster : currentScreen.getMonsters()) {
                 if (bulletBounds.intersects(monster.getBounds())) {
+                    audio.playSfx("hit");
                     if (monster.takeDamage(bullet.getDamage())) {
                         currentScreen.removeMonster(monster);
                     }
@@ -436,7 +471,6 @@ public class GamePanel extends JPanel implements Runnable {
             if (hitMonster) {
                 continue;
             }
-
             bullet.update();
         }
     }
@@ -450,6 +484,7 @@ public class GamePanel extends JPanel implements Runnable {
                 // Đặt AttackListener để xử lý damage player
                 if (monster.getMonsterAI() != null) {
                     monster.getMonsterAI().setAttackListener((m, damage) -> {
+                        audio.playSfx("player_hurt");
                         player.takeDamage(damage);
                     });
                 }
@@ -481,7 +516,6 @@ public class GamePanel extends JPanel implements Runnable {
                 }
                 monsterCollisionHandler.move(monster, monster.getVelocityX(), monster.getVelocityY());
             }
-
             // ===== UPDATE ANIMATION =====
             monster.updateAnimation();
         }
@@ -631,4 +665,24 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     // CAWL AND BAWLS
+    // Click sound effect for menu interactions
+    public void playMenuClickSound() {
+        audio.playSfx("menu_click");
+    }
+
+    public void setMusicVolume(float volume) {
+        audio.setMusicVolume(volume);
+    }
+
+    public float getMusicVolume() {
+        return audio.getMusicVolume();
+    }
+
+    public void setSfxVolume(float volume) {
+        audio.setSfxVolume(volume);
+    }
+
+    public float getSfxVolume() {
+        return audio.getSfxVolume();
+    }
 }
