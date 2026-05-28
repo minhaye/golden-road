@@ -22,7 +22,7 @@ public class Item {
     private boolean collected = false;
 
     public Item(int x, int y, int width, int height, Color color, Shape shape, ItemType type) {
-        this.bounds = new Rectangle(x, y, width, height);
+        this.bounds = new Rectangle(x, y, 60, 48);
         this.color = color;
         this.shape = shape;
         this.type = type;

@@ -24,6 +24,7 @@ public class Main {
             window.setVisible(true);
             gamePanel.requestFocusInWindow();
             gamePanel.loadMap();
+            gamePanel.loadParallax();
             gamePanel.startGameLoop();
         });
     }

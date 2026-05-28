@@ -1,6 +1,7 @@
 package goldenroad.game;
 
 import goldenroad.entity.Bullet;
+import goldenroad.entity.Bullet.BulletType;
 import goldenroad.entity.Inventory;
 import goldenroad.entity.Item;
 import goldenroad.entity.Monster;
@@ -40,8 +41,8 @@ import javax.swing.JPanel;
 public class GamePanel extends JPanel implements Runnable {
     //public static final int SCREEN_WIDTH = 960;
     //public static final int SCREEN_HEIGHT = 540;
-    public static final int SCREEN_WIDTH = 640;
-    public static final int SCREEN_HEIGHT = 360;
+    public static final int SCREEN_WIDTH = 800;
+    public static final int SCREEN_HEIGHT = 440;
     public static final int TILE_SIZE = 16;
     private static final int WINDOW_SCALE = 3;
     // Default to 720p, can be changed to 1080p or 1440p by adjusting the denominator 
@@ -56,6 +57,9 @@ public class GamePanel extends JPanel implements Runnable {
     private double cameraX = 0;
     private double cameraY = 0;
     private double lookAheadX = 0;
+    
+    //PARALLAX
+    private BufferedImage[] parallaxLayers;
 
     // MAP
     private CollisionMap collisionMap;
@@ -65,11 +69,16 @@ public class GamePanel extends JPanel implements Runnable {
     private BufferedImage hpItemSprite;
     private BufferedImage mpItemSprite;
     private BufferedImage keyItemSprite;
+
     private String toastMessage = null;
     private long toastExpireAtNanos = 0L;
 
-    private  int WORLD_WIDTH = 330 * TILE_SIZE;
-    private int WORLD_HEIGHT = 140 * TILE_SIZE;
+    private  int WORLD_WIDTH = 180 * TILE_SIZE;
+    private  int WORLD_HEIGHT = 300 * TILE_SIZE;
+    // Size: 
+    // Map 00: 280 x 160 
+    // Map 01: 330 x 140 
+    // Map 02: 180 x 300 
         
     int worldWidth  =   WORLD_WIDTH;
     int worldHeight =   WORLD_HEIGHT;
@@ -82,7 +91,7 @@ public class GamePanel extends JPanel implements Runnable {
     private int leftShootCooldown = 0;
     private int rightShootCooldown = 0;
 
-    private static final int LEFT_SHOOT_DELAY = 30;
+    private static final int LEFT_SHOOT_DELAY = 18;     // 0.5s at 60fps = 30 frames
     private static final int RIGHT_SHOOT_DELAY = 120;
     private static final int LEFT_SHOOT_MP_COST = 5;
     private static final int RIGHT_SHOOT_MP_COST = 30;
@@ -93,9 +102,9 @@ public class GamePanel extends JPanel implements Runnable {
     private static final Color LASER_COLOR = new Color(255, 90, 80);
 
     private static final double CLUSTER_BULLET_SPEED = 15;
-    private static final int CLUSTER_BULLET_DIAMETER = 7;
+    private static final int CLUSTER_BULLET_DIAMETER = 6;
     private static final int CLUSTER_BULLET_DAMAGE = 1;
-    private static final int CLUSTER_BULLET_COUNT = 6;
+    private static final int CLUSTER_BULLET_COUNT = 10;
     private static final double CLUSTER_SPREAD_DEGREES = 30.0;
     private static final Color CLUSTER_COLOR = new Color(255, 235, 160);
     // END OF PLAYER VARIABLES
@@ -138,7 +147,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     private void loadItemSprites() {
         hpItemSprite = loadSprite("/assets/item/hp.png");
-        mpItemSprite = loadSprite("/assets/item/mp item.png");
+        mpItemSprite = loadSprite("/assets/item/mp.png");
         keyItemSprite = loadSprite("/assets/item/key.png");
     }
 
@@ -149,6 +158,7 @@ public class GamePanel extends JPanel implements Runnable {
             case KEY -> keyItemSprite;
         };
     }
+
 
     public void showToast(String message) {
         if (message == null || message.isBlank()) {
@@ -191,8 +201,8 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void loadMap() {
         try {
-            var stream = getClass().getResourceAsStream("/assets/map/ROOM_1.png");
-            var stream1 = getClass().getResourceAsStream("/assets/map/ROOM_1_HIDDEN.png");
+            var stream = getClass().getResourceAsStream("/assets/map/ROOM_2.png");
+            var stream1 = getClass().getResourceAsStream("/assets/map/ROOM_2_HIDDEN.png");
 
             if (stream == null) {
                 System.out.println("Không tìm thấy map!");
@@ -208,7 +218,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         // load collision
         collisionMap = new CollisionMap();
-        collisionMap.load("/assets/map/ROOM_1_COLLISION.png");
+        collisionMap.load("/assets/map/ROOM_2_COLLISION.png");
 
         collisionHandler = new CollisionHandler(collisionMap);
 
@@ -220,6 +230,69 @@ public class GamePanel extends JPanel implements Runnable {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public void loadParallax() {
+    try {
+
+        parallaxLayers = new BufferedImage[4];
+
+        parallaxLayers[0] = ImageIO.read(
+            getClass().getResourceAsStream(
+                "/assets/background/parallax_layer1.png"
+            )
+        );
+
+        parallaxLayers[1] = ImageIO.read(
+            getClass().getResourceAsStream(
+                "/assets/background/parallax_layer2.png"
+            )
+        );
+
+        parallaxLayers[2] = ImageIO.read(
+            getClass().getResourceAsStream(
+                "/assets/background/parallax_layer3.png"
+            )
+        );
+
+        parallaxLayers[3] = ImageIO.read(
+            getClass().getResourceAsStream(
+                "/assets/background/parallax_layer4.png"
+            )
+        );
+
+        System.out.println("Loaded parallax layers");
+
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+
+private void drawParallax(Graphics2D g2) {
+
+    double[] speeds = {
+        0.05,
+        0.2,
+        0.4,
+        0.8 // foreground layer, moves almost with the camera
+    };
+
+    for (int i = 0; i < parallaxLayers.length; i++) {
+
+        BufferedImage layer = parallaxLayers[i];
+
+        if (layer == null) continue;
+
+        int x = (int)(-cameraX * speeds[i]);
+        int y = (int)(-cameraY * speeds[i]);
+
+        g2.drawImage(
+            layer,
+            x,
+            y,
+            null
+        );
+    }
 }
 
     public GamePanel() {
@@ -254,6 +327,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         initPlayer();
         loadItemSprites();
+
 
         menu.update(mouseHandler);
     }
@@ -506,7 +580,7 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void spawnLaserShot() {
-        double originX = player.getX() + 25;
+        double originX = player.getX() + 10;
         double originY = player.getY() + 15;
 
         //  convert mouse sang world space
@@ -525,7 +599,8 @@ public class GamePanel extends JPanel implements Runnable {
             LASER_SPEED,
             LASER_DIAMETER,
             LASER_COLOR,
-            LASER_DAMAGE
+            LASER_DAMAGE,
+            Bullet.BulletType.LASER
         );
 }
 
@@ -570,7 +645,8 @@ public class GamePanel extends JPanel implements Runnable {
                 speed,
                 CLUSTER_BULLET_DIAMETER,
                 CLUSTER_COLOR,
-                CLUSTER_BULLET_DAMAGE
+                CLUSTER_BULLET_DAMAGE,
+                Bullet.BulletType.SHOTGUN
             );
         }
 }
@@ -583,7 +659,8 @@ public class GamePanel extends JPanel implements Runnable {
         double speed,
         int diameter,
         Color color,
-        int damage
+        int damage,
+        Bullet.BulletType type
     ) {
 
         double length = Math.sqrt(directionX * directionX + directionY * directionY);
@@ -602,7 +679,8 @@ public class GamePanel extends JPanel implements Runnable {
             diameter,
             color,
             damage,
-            collisionMap
+            collisionMap,
+            type
         )
         );
     }
@@ -701,6 +779,8 @@ public class GamePanel extends JPanel implements Runnable {
 
         // ===== RESET =====
         bufferG.setTransform(new java.awt.geom.AffineTransform());
+        
+        
 
         // ===== CLEAR =====
         bufferG.setColor(getBackground());
@@ -711,6 +791,8 @@ public class GamePanel extends JPanel implements Runnable {
             menu.render(bufferG);
 
         } else {
+            // ===== PARALLAX =====
+            drawParallax(bufferG); 
 
             // ===== CAMERA =====
             bufferG.translate(
@@ -733,7 +815,7 @@ public class GamePanel extends JPanel implements Runnable {
                 BufferedImage sprite = getItemSprite(item.getType());
 
                 if (sprite != null) {
-                    bufferG.drawImage(sprite, r.x, r.y, r.width, r.height, null);
+                    bufferG.drawImage(sprite, r.x, r.y, 64, 64, null);
                 } else {
                     bufferG.setColor(item.getColor());
 
@@ -752,19 +834,49 @@ public class GamePanel extends JPanel implements Runnable {
 
                 bufferG.setColor(monster.getColor());
                 bufferG.fillRect(r.x, r.y, r.width, r.height);
+
+                
             }
 
             // ===== BULLETS =====
             for (Bullet bullet : bullets) {
 
-                bufferG.setColor(bullet.getColor());
+         BufferedImage sprite = bullet.getSprite();
 
-                bufferG.fillOval(
-                    bullet.getRenderX(),
-                    bullet.getRenderY(),
-                    bullet.getDiameter(),
-                    bullet.getDiameter()
-                );
+    if (sprite == null) {
+        continue;
+    }
+
+    int width = sprite.getWidth();
+    int height = sprite.getHeight();
+
+    Graphics2D bulletG = (Graphics2D) bufferG.create();
+
+int drawX =
+    bullet.getRenderX() - (width / 2);
+
+int drawY =
+    bullet.getRenderY() - (height / 2);
+
+bulletG.translate(
+    drawX,
+    drawY
+);
+
+    bulletG.rotate(
+        bullet.getAngle(),
+        width / 2.0,
+        height / 2.0
+    );
+
+    bulletG.drawImage(
+        sprite,
+        0,
+        0,
+        null
+    );
+
+    bulletG.dispose();            
             }
 
             // ===== PLAYER =====

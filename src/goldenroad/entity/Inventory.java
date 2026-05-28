@@ -6,7 +6,7 @@ import java.util.Map;
 public class Inventory {
 
     private static final int HP_POTION_HEAL = 30;
-    private static final int MP_POTION_RESTORE = 40;
+    private static final int MP_POTION_RESTORE = 50;
 
     private final Map<Item.ItemType, Integer> counts = new EnumMap<>(Item.ItemType.class);
 
@@ -64,7 +64,7 @@ public class Inventory {
     public String getDescription(Item.ItemType type) {
         return switch (type) {
             case HP_POTION -> "HP Potion — Hoi 30 HP";
-            case MP_POTION -> "MP Potion — Hoi 40 MP";
+            case MP_POTION -> "MP Potion — Hoi 50 MP";
             case KEY -> "Key — Mo cua khoa";
         };
     }
