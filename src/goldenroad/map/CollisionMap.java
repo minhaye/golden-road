@@ -45,6 +45,63 @@ public void load(String path) {
         return solid[x][y];
     }
 
+    public boolean isLoaded() {
+        return solid != null;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public boolean isAreaSolid(int x, int y, int areaWidth, int areaHeight) {
+        if (solid == null || areaWidth <= 0 || areaHeight <= 0) {
+            return false;
+        }
+
+        if (x < 0 || y < 0 || x + areaWidth > width || y + areaHeight > height) {
+            return true;
+        }
+
+        int right = x + areaWidth;
+        int bottom = y + areaHeight;
+
+        for (int tx = x; tx < right; tx++) {
+            for (int ty = y; ty < bottom; ty++) {
+                if (solid[tx][ty]) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public boolean isSegmentBlocked(double startX, double startY, double endX, double endY, int areaWidth, int areaHeight) {
+        if (solid == null) {
+            return false;
+        }
+
+        double dx = endX - startX;
+        double dy = endY - startY;
+        int steps = Math.max(1, (int) Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / 8.0));
+
+        for (int i = 0; i <= steps; i++) {
+            double t = (double) i / steps;
+            int x = (int) Math.round(startX + dx * t - areaWidth / 2.0);
+            int y = (int) Math.round(startY + dy * t - areaHeight / 2.0);
+
+            if (isAreaSolid(x, y, areaWidth, areaHeight)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public boolean isOneWay(int x, int y) {
     if (x < 0 || y < 0 || x >= width || y >= height) return false;
 

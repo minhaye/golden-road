@@ -9,6 +9,7 @@ import goldenroad.input.KeyHandler;
 import goldenroad.input.MouseHandler;
 import goldenroad.map.CollisionHandler;
 import goldenroad.map.CollisionMap;
+import goldenroad.map.GridPathfinder;
 import goldenroad.scene.SceneManager;
 import goldenroad.scene.Screen;
 import goldenroad.scene.Menu;
@@ -105,6 +106,7 @@ public class GamePanel extends JPanel implements Runnable {
     private final MouseHandler mouseHandler = new MouseHandler();
     private final SceneManager sceneManager = new SceneManager();
     private final Menu menu = new Menu(this);
+    private final GridPathfinder enemyPathfinder = new GridPathfinder(TILE_SIZE);
     private final List<Bullet> bullets = new ArrayList<>();
     private final Inventory inventory = new Inventory();
     private Hud hud;
@@ -358,6 +360,7 @@ public class GamePanel extends JPanel implements Runnable {
         );
 
         handleItemPickup();
+        updateMonsters();
         updateCamera();
         handleShootingInput();
         updateBullets();
@@ -410,6 +413,15 @@ public class GamePanel extends JPanel implements Runnable {
                 item.collect();
                 currentScreen.removeItem(item);
                 showToast("Ban da nhat " + inventory.getDescription(item.getType()).split(" — ")[0]);
+            }
+        }
+    }
+
+    private void updateMonsters() {
+        for (Monster monster : getCurrentMonsters()) {
+            int damage = monster.update(player, collisionMap, enemyPathfinder);
+            if (damage > 0) {
+                player.takeDamage(damage);
             }
         }
     }
@@ -747,11 +759,7 @@ public class GamePanel extends JPanel implements Runnable {
 
             // ===== MONSTERS =====
             for (Monster monster : getCurrentMonsters()) {
-
-                Rectangle r = monster.getBounds();
-
-                bufferG.setColor(monster.getColor());
-                bufferG.fillRect(r.x, r.y, r.width, r.height);
+                monster.draw(bufferG);
             }
 
             // ===== BULLETS =====
