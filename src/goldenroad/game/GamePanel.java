@@ -80,6 +80,8 @@ public class GamePanel extends JPanel implements Runnable {
     private String toastMessage = null;
     private long toastExpireAtNanos = 0L;
 
+    private boolean minimapVisible = true;
+
     int worldWidth;
     int worldHeight;
 
@@ -250,6 +252,12 @@ public class GamePanel extends JPanel implements Runnable {
         requestFocusInWindow();
     }
 
+    private void toggleMinimap() {
+        minimapVisible = !minimapVisible;
+        showToast(minimapVisible ? "Minimap bat" : "Minimap tat");
+        requestFocusInWindow();
+    }
+
     public void loadParallax() {
     try {
 
@@ -389,6 +397,10 @@ private void drawParallax(Graphics2D g2) {
     }
 
     private void update() {
+        if (keyHandler.consumeMinimapToggleJustPressed()) {
+            toggleMinimap();
+        }
+
         if (keyHandler.consumeMapSwitchJustPressed()) {
             switchMap();
             return;
@@ -995,7 +1007,7 @@ bulletG.translate(
                 menu.render(bufferG);
             }
 
-            if (!menu.isPaused()) {
+            if (!menu.isPaused() && minimapVisible) {
                 drawMinimap(bufferG);
             }
         }
