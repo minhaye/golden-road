@@ -73,8 +73,8 @@ public class GamePanel extends JPanel implements Runnable {
     private String toastMessage = null;
     private long toastExpireAtNanos = 0L;
 
-    private  int WORLD_WIDTH = 180 * TILE_SIZE;
-    private  int WORLD_HEIGHT = 300 * TILE_SIZE;
+    private  int WORLD_WIDTH = 330 * TILE_SIZE;
+    private  int WORLD_HEIGHT = 180 * TILE_SIZE;
     // Size: 
     // Map 00: 280 x 160 
     // Map 01: 330 x 140 
@@ -124,8 +124,13 @@ public class GamePanel extends JPanel implements Runnable {
 
     private Player player;
 
+    //Spawn: 
+    // Map 00: 
+    // Map 01:
+    // Map 02: 400, 4000
+
     public void initPlayer() {
-        player = new Player(400, 1995);
+        player = new Player(400, 2000);
         player.update(keyHandler);
         hud = new Hud(this, player, inventory);
         inventoryPanel = new InventoryPanel(inventory, player);
@@ -201,8 +206,8 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void loadMap() {
         try {
-            var stream = getClass().getResourceAsStream("/assets/map/ROOM_2.png");
-            var stream1 = getClass().getResourceAsStream("/assets/map/ROOM_2_HIDDEN.png");
+            var stream = getClass().getResourceAsStream("/assets/map/ROOM_1.png");
+            var stream1 = getClass().getResourceAsStream("/assets/map/ROOM_1_HIDDEN.png");
 
             if (stream == null) {
                 System.out.println("Không tìm thấy map!");
@@ -218,7 +223,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         // load collision
         collisionMap = new CollisionMap();
-        collisionMap.load("/assets/map/ROOM_2_COLLISION.png");
+        collisionMap.load("/assets/map/ROOM_1_COLLISION.png");
 
         collisionHandler = new CollisionHandler(collisionMap);
 
