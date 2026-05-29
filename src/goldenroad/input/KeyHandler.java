@@ -15,6 +15,10 @@ public class KeyHandler implements KeyListener {
     private boolean inventoryJustPressed;
     private boolean escapeJustPressed;
     private boolean enterJustPressed;
+    private boolean mapSwitchJustPressed;
+    private boolean mapSwitchArmed;
+    private boolean minimapToggleJustPressed;
+    private boolean minimapToggleArmed;
     private final boolean[] quickUseJustPressed = new boolean[3];
 
 
@@ -53,6 +57,22 @@ public class KeyHandler implements KeyListener {
     public boolean consumeEnterJustPressed() {
         if (enterJustPressed) {
             enterJustPressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean consumeMapSwitchJustPressed() {
+        if (mapSwitchJustPressed) {
+            mapSwitchJustPressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean consumeMinimapToggleJustPressed() {
+        if (minimapToggleJustPressed) {
+            minimapToggleJustPressed = false;
             return true;
         }
         return false;
@@ -120,6 +140,18 @@ public class KeyHandler implements KeyListener {
             enterJustPressed = true;
         }
 
+        if (code == KeyEvent.VK_M && e.isAltDown() && !mapSwitchArmed) {
+            e.consume();
+            mapSwitchJustPressed = true;
+            mapSwitchArmed = true;
+        }
+
+        if (code == KeyEvent.VK_N && e.isAltDown() && !minimapToggleArmed) {
+            e.consume();
+            minimapToggleJustPressed = true;
+            minimapToggleArmed = true;
+        }
+
         if (code >= KeyEvent.VK_1 && code <= KeyEvent.VK_3) {
             quickUseJustPressed[code - KeyEvent.VK_1] = true;
         }
@@ -150,6 +182,14 @@ public class KeyHandler implements KeyListener {
         }
         if (code == KeyEvent.VK_SHIFT) {
             dashPressed = false;
+        }
+
+        if (code == KeyEvent.VK_ALT || code == KeyEvent.VK_M) {
+            mapSwitchArmed = false;
+        }
+
+        if (code == KeyEvent.VK_ALT || code == KeyEvent.VK_N) {
+            minimapToggleArmed = false;
         }
     }
 

@@ -10,12 +10,17 @@ import goldenroad.input.KeyHandler;
 import goldenroad.input.MouseHandler;
 import goldenroad.map.CollisionHandler;
 import goldenroad.map.CollisionMap;
+import goldenroad.map.GridPathfinder;
+import goldenroad.map.MapCatalog;
+import goldenroad.map.MapDefinition;
+import goldenroad.map.MapId;
 import goldenroad.scene.SceneManager;
 import goldenroad.scene.Screen;
 import goldenroad.scene.Menu;
 import goldenroad.ui.Hud;
 import goldenroad.ui.InventoryPanel;
 import goldenroad.ui.UiTheme;
+import goldenroad.util.AssetLoader;
 
 
 import java.awt.AlphaComposite;
@@ -23,18 +28,19 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.BasicStroke;
 import java.awt.KeyboardFocusManager;
 import java.awt.Rectangle;
 import java.util.Collections;
 import java.awt.image.BufferedImage;
 import java.awt.RenderingHints;
+import javax.imageio.ImageIO;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 
 
@@ -62,6 +68,7 @@ public class GamePanel extends JPanel implements Runnable {
     private BufferedImage[] parallaxLayers;
 
     // MAP
+    private MapId currentMapId = MapId.MAP_2;
     private CollisionMap collisionMap;
     private CollisionHandler collisionHandler;
     private BufferedImage mapImage,hiddenImage,gameBuffer;
@@ -114,6 +121,7 @@ public class GamePanel extends JPanel implements Runnable {
     private final MouseHandler mouseHandler = new MouseHandler();
     private final SceneManager sceneManager = new SceneManager();
     private final Menu menu = new Menu(this);
+    private final GridPathfinder enemyPathfinder = new GridPathfinder(TILE_SIZE);
     private final List<Bullet> bullets = new ArrayList<>();
     private final Inventory inventory = new Inventory();
     private Hud hud;
@@ -137,17 +145,7 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private BufferedImage loadSprite(String resourcePath) {
-        try {
-            var stream = getClass().getResourceAsStream(resourcePath);
-            if (stream == null) {
-                System.out.println("Không tìm thấy resource: " + resourcePath);
-                return null;
-            }
-            return ImageIO.read(stream);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        return AssetLoader.loadImage(resourcePath);
     }
 
     private void loadItemSprites() {
@@ -162,6 +160,48 @@ public class GamePanel extends JPanel implements Runnable {
             case MP_POTION -> mpItemSprite;
             case KEY -> keyItemSprite;
         };
+    }
+
+    private void applyMap(MapDefinition mapDefinition, boolean spawnInitialItems) {
+        mapImage = AssetLoader.loadImage(mapDefinition.getBackgroundPath());
+        hiddenImage = AssetLoader.loadImage(mapDefinition.getHiddenPath());
+
+        collisionMap = new CollisionMap();
+        collisionMap.load(mapDefinition.getCollisionPath());
+        collisionHandler = new CollisionHandler(collisionMap);
+
+        worldWidth = mapDefinition.getWorldWidth();
+        worldHeight = mapDefinition.getWorldHeight();
+
+        if (player != null) {
+            player.setX(clamp(mapDefinition.getSpawnX(), 0, Math.max(0, worldWidth - 1)));
+            player.setY(clamp(mapDefinition.getSpawnY(), 0, Math.max(0, worldHeight - 1)));
+            player.setVelocityY(0);
+            player.setOnGround(true);
+        }
+
+        cameraX = 0;
+        cameraY = 0;
+        lookAheadX = 0;
+        leftShootCooldown = 0;
+        rightShootCooldown = 0;
+        bullets.clear();
+
+        if (spawnInitialItems) {
+            sceneManager.spawnRandomItems(120, worldWidth, worldHeight);
+        }
+    }
+
+    private int clamp(int value, int min, int max) {
+        if (max < min) {
+            return min;
+        }
+        return Math.max(min, Math.min(value, max));
+    }
+
+    private void loadMap(MapId mapId, boolean spawnInitialItems) {
+        currentMapId = mapId;
+        applyMap(MapCatalog.get(mapId), spawnInitialItems);
     }
 
 
@@ -235,6 +275,21 @@ public class GamePanel extends JPanel implements Runnable {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void switchMap() {
+        MapId nextMapId = currentMapId == MapId.MAP_1 ? MapId.MAP_2 : MapId.MAP_1;
+        loadMap(nextMapId, false);
+        menu.setPaused(false);
+        inventoryPanel.close();
+        showToast(nextMapId == MapId.MAP_1 ? "Da chuyen sang map 1" : "Da chuyen sang map 2");
+        requestFocusInWindow();
+    }
+
+    private void toggleMinimap() {
+        minimapVisible = !minimapVisible;
+        showToast(minimapVisible ? "Minimap bat" : "Minimap tat");
+        requestFocusInWindow();
     }
 
     public void loadParallax() {
@@ -376,6 +431,15 @@ private void drawParallax(Graphics2D g2) {
     }
 
     private void update() {
+        if (keyHandler.consumeMinimapToggleJustPressed()) {
+            toggleMinimap();
+        }
+
+        if (keyHandler.consumeMapSwitchJustPressed()) {
+            switchMap();
+            return;
+        }
+
         if (menu.isActive()) {
             menu.update(mouseHandler);
             return;
@@ -437,6 +501,7 @@ private void drawParallax(Graphics2D g2) {
         );
 
         handleItemPickup();
+        updateMonsters();
         updateCamera();
         handleShootingInput();
         updateBullets();
@@ -489,6 +554,15 @@ private void drawParallax(Graphics2D g2) {
                 item.collect();
                 currentScreen.removeItem(item);
                 showToast("Ban da nhat " + inventory.getDescription(item.getType()).split(" — ")[0]);
+            }
+        }
+    }
+
+    private void updateMonsters() {
+        for (Monster monster : getCurrentMonsters()) {
+            int damage = monster.update(player, collisionMap, enemyPathfinder);
+            if (damage > 0) {
+                player.takeDamage(damage);
             }
         }
     }
@@ -778,6 +852,75 @@ private void drawParallax(Graphics2D g2) {
         return sceneManager.getCurrentScreen().getItems();
     }
 
+    private void drawMinimap(Graphics2D g2) {
+        if (worldWidth <= 0 || worldHeight <= 0) {
+            return;
+        }
+
+        int panelWidth = UiTheme.BASE_W;
+        int mapMaxWidth = 160;
+        int mapMaxHeight = 110;
+        int padding = 12;
+        int miniX = panelWidth - mapMaxWidth - padding;
+        int miniY = padding;
+
+        double scale = Math.min(
+            (double) mapMaxWidth / worldWidth,
+            (double) mapMaxHeight / worldHeight
+        );
+        scale = Math.max(0.02, Math.min(scale, 1.0));
+
+        int miniW = Math.max(1, (int) Math.round(worldWidth * scale));
+        int miniH = Math.max(1, (int) Math.round(worldHeight * scale));
+
+        g2.setComposite(AlphaComposite.SrcOver);
+        g2.setColor(new Color(10, 14, 18, 210));
+        g2.fillRoundRect(miniX - 4, miniY - 4, miniW + 8, miniH + 28, 12, 12);
+
+        g2.setColor(new Color(255, 255, 255, 40));
+        g2.fillRoundRect(miniX, miniY, miniW, miniH, 8, 8);
+
+        g2.setColor(new Color(120, 140, 180, 180));
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawRoundRect(miniX, miniY, miniW, miniH, 8, 8);
+
+        if (mapImage != null) {
+            g2.drawImage(mapImage, miniX, miniY, miniW, miniH, null);
+        }
+
+        double playerRatioX = clampDouble(player.getX() / Math.max(1.0, worldWidth), 0.0, 1.0);
+        double playerRatioY = clampDouble(player.getY() / Math.max(1.0, worldHeight), 0.0, 1.0);
+        int playerX = miniX + (int) Math.round(playerRatioX * miniW);
+        int playerY = miniY + (int) Math.round(playerRatioY * miniH);
+
+        int viewX = miniX + (int) Math.round((cameraX / Math.max(1.0, worldWidth)) * miniW);
+        int viewY = miniY + (int) Math.round((cameraY / Math.max(1.0, worldHeight)) * miniH);
+        int viewW = (int) Math.round((SCREEN_WIDTH / Math.max(1.0, worldWidth)) * miniW);
+        int viewH = (int) Math.round((SCREEN_HEIGHT / Math.max(1.0, worldHeight)) * miniH);
+        viewW = Math.max(2, Math.min(viewW, miniW));
+        viewH = Math.max(2, Math.min(viewH, miniH));
+
+        viewX = Math.max(miniX, Math.min(viewX, miniX + miniW - viewW));
+        viewY = Math.max(miniY, Math.min(viewY, miniY + miniH - viewH));
+
+        g2.setColor(new Color(255, 255, 255, 120));
+        g2.drawRect(viewX, viewY, viewW, viewH);
+
+        g2.setColor(new Color(255, 90, 80));
+        g2.fillOval(playerX - 3, playerY - 3, 6, 6);
+        g2.setColor(Color.WHITE);
+        g2.drawOval(playerX - 3, playerY - 3, 6, 6);
+
+        g2.setFont(UiTheme.FONT_HUD_SMALL);
+        g2.setColor(UiTheme.TEXT);
+        String label = currentMapId == MapId.MAP_1 ? "MAP 1" : "MAP 2";
+        g2.drawString(label, miniX + 8, miniY + miniH + 16);
+    }
+
+    private double clampDouble(double value, double min, double max) {
+        return Math.max(min, Math.min(value, max));
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -834,13 +977,7 @@ private void drawParallax(Graphics2D g2) {
 
             // ===== MONSTERS =====
             for (Monster monster : getCurrentMonsters()) {
-
-                Rectangle r = monster.getBounds();
-
-                bufferG.setColor(monster.getColor());
-                bufferG.fillRect(r.x, r.y, r.width, r.height);
-
-                
+                monster.draw(bufferG);
             }
 
             // ===== BULLETS =====
@@ -902,6 +1039,10 @@ bulletG.translate(
             }
             if (menu.isPaused()) {
                 menu.render(bufferG);
+            }
+
+            if (!menu.isPaused() && minimapVisible) {
+                drawMinimap(bufferG);
             }
         }
 
