@@ -11,6 +11,9 @@ import goldenroad.input.MouseHandler;
 import goldenroad.map.CollisionHandler;
 import goldenroad.map.CollisionMap;
 import goldenroad.map.GridPathfinder;
+import goldenroad.map.MapCatalog;
+import goldenroad.map.MapDefinition;
+import goldenroad.map.MapId;
 import goldenroad.scene.SceneManager;
 import goldenroad.scene.Screen;
 import goldenroad.scene.Menu;
@@ -30,6 +33,7 @@ import java.awt.Rectangle;
 import java.util.Collections;
 import java.awt.image.BufferedImage;
 import java.awt.RenderingHints;
+import javax.imageio.ImageIO;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -63,6 +67,7 @@ public class GamePanel extends JPanel implements Runnable {
     private BufferedImage[] parallaxLayers;
 
     // MAP
+    private MapId currentMapId = MapId.MAP_2;
     private CollisionMap collisionMap;
     private CollisionHandler collisionHandler;
     private BufferedImage mapImage,hiddenImage,gameBuffer;
@@ -74,15 +79,8 @@ public class GamePanel extends JPanel implements Runnable {
     private String toastMessage = null;
     private long toastExpireAtNanos = 0L;
 
-    private  int WORLD_WIDTH = 180 * TILE_SIZE;
-    private  int WORLD_HEIGHT = 300 * TILE_SIZE;
-    // Size: 
-    // Map 00: 280 x 160 
-    // Map 01: 330 x 140 
-    // Map 02: 180 x 300 
-        
-    int worldWidth  =   WORLD_WIDTH;
-    int worldHeight =   WORLD_HEIGHT;
+    int worldWidth;
+    int worldHeight;
 
     // GUN + AIM
     private double renderScale;
@@ -151,6 +149,48 @@ public class GamePanel extends JPanel implements Runnable {
         };
     }
 
+    private void applyMap(MapDefinition mapDefinition, boolean spawnInitialItems) {
+        mapImage = AssetLoader.loadImage(mapDefinition.getBackgroundPath());
+        hiddenImage = AssetLoader.loadImage(mapDefinition.getHiddenPath());
+
+        collisionMap = new CollisionMap();
+        collisionMap.load(mapDefinition.getCollisionPath());
+        collisionHandler = new CollisionHandler(collisionMap);
+
+        worldWidth = mapDefinition.getWorldWidth();
+        worldHeight = mapDefinition.getWorldHeight();
+
+        if (player != null) {
+            player.setX(clamp(mapDefinition.getSpawnX(), 0, Math.max(0, worldWidth - 1)));
+            player.setY(clamp(mapDefinition.getSpawnY(), 0, Math.max(0, worldHeight - 1)));
+            player.setVelocityY(0);
+            player.setOnGround(true);
+        }
+
+        cameraX = 0;
+        cameraY = 0;
+        lookAheadX = 0;
+        leftShootCooldown = 0;
+        rightShootCooldown = 0;
+        bullets.clear();
+
+        if (spawnInitialItems) {
+            sceneManager.spawnRandomItems(120, worldWidth, worldHeight);
+        }
+    }
+
+    private int clamp(int value, int min, int max) {
+        if (max < min) {
+            return min;
+        }
+        return Math.max(min, Math.min(value, max));
+    }
+
+    private void loadMap(MapId mapId, boolean spawnInitialItems) {
+        currentMapId = mapId;
+        applyMap(MapCatalog.get(mapId), spawnInitialItems);
+    }
+
 
     public void showToast(String message) {
         if (message == null || message.isBlank()) {
@@ -192,23 +232,22 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void loadMap() {
-      try {
-          mapImage = AssetLoader.loadImage("/assets/map/ROOM_2.png");
-          hiddenImage = AssetLoader.loadImage("/assets/map/ROOM_2_HIDDEN.png");
+        try {
+            loadMap(currentMapId, true);
+            System.out.println("Load map + collision OK");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
-          collisionMap = new CollisionMap();
-          collisionMap.load("/assets/map/ROOM_2_COLLISION.png");
-
-          collisionHandler = new CollisionHandler(collisionMap);
-
-          System.out.println("Load map + collision OK");
-
-          sceneManager.spawnRandomItems(120, worldWidth, worldHeight);
-
-      } catch (Exception e) {
-          e.printStackTrace();
-      }
-  }
+    private void switchMap() {
+        MapId nextMapId = currentMapId == MapId.MAP_1 ? MapId.MAP_2 : MapId.MAP_1;
+        loadMap(nextMapId, false);
+        menu.setPaused(false);
+        inventoryPanel.close();
+        showToast(nextMapId == MapId.MAP_1 ? "Da chuyen sang map 1" : "Da chuyen sang map 2");
+        requestFocusInWindow();
+    }
 
     public void loadParallax() {
     try {
@@ -349,6 +388,11 @@ private void drawParallax(Graphics2D g2) {
     }
 
     private void update() {
+        if (keyHandler.consumeMapSwitchJustPressed()) {
+            switchMap();
+            return;
+        }
+
         if (menu.isActive()) {
             menu.update(mouseHandler);
             return;
