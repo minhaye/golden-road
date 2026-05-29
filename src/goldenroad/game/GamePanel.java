@@ -19,7 +19,6 @@ import goldenroad.ui.InventoryPanel;
 import goldenroad.ui.UiTheme;
 import goldenroad.util.AssetLoader;
 
-
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -38,15 +37,15 @@ import java.util.Random;
 
 import javax.swing.JPanel;
 
-
 public class GamePanel extends JPanel implements Runnable {
-    //public static final int SCREEN_WIDTH = 960;
-    //public static final int SCREEN_HEIGHT = 540;
+    // public static final int SCREEN_WIDTH = 960;
+    // public static final int SCREEN_HEIGHT = 540;
     public static final int SCREEN_WIDTH = 800;
     public static final int SCREEN_HEIGHT = 440;
     public static final int TILE_SIZE = 16;
     private static final int WINDOW_SCALE = 3;
-    // Default to 720p, can be changed to 1080p or 1440p by adjusting the denominator 
+    // Default to 720p, can be changed to 1080p or 1440p by adjusting the
+    // denominator
     // (example: for 1080p, use 1.25, for 1440p, use 1.25/1.5)
     // x2 = 1280x720 = 720p
     // x3 = 1920x1080 = 1080p
@@ -58,14 +57,14 @@ public class GamePanel extends JPanel implements Runnable {
     private double cameraX = 0;
     private double cameraY = 0;
     private double lookAheadX = 0;
-    
-    //PARALLAX
+
+    // PARALLAX
     private BufferedImage[] parallaxLayers;
 
     // MAP
     private CollisionMap collisionMap;
     private CollisionHandler collisionHandler;
-    private BufferedImage mapImage,hiddenImage,gameBuffer;
+    private BufferedImage mapImage, hiddenImage, gameBuffer;
     private Graphics2D bufferG;
     private BufferedImage hpItemSprite;
     private BufferedImage mpItemSprite;
@@ -74,15 +73,15 @@ public class GamePanel extends JPanel implements Runnable {
     private String toastMessage = null;
     private long toastExpireAtNanos = 0L;
 
-    private  int WORLD_WIDTH = 180 * TILE_SIZE;
-    private  int WORLD_HEIGHT = 300 * TILE_SIZE;
-    // Size: 
-    // Map 00: 280 x 160 
-    // Map 01: 330 x 140 
-    // Map 02: 180 x 300 
-        
-    int worldWidth  =   WORLD_WIDTH;
-    int worldHeight =   WORLD_HEIGHT;
+    private int WORLD_WIDTH = 180 * TILE_SIZE;
+    private int WORLD_HEIGHT = 300 * TILE_SIZE;
+    // Size:
+    // Map 00: 280 x 160
+    // Map 01: 330 x 140
+    // Map 02: 180 x 300
+
+    int worldWidth = WORLD_WIDTH;
+    int worldHeight = WORLD_HEIGHT;
 
     // GUN + AIM
     private double renderScale;
@@ -92,11 +91,11 @@ public class GamePanel extends JPanel implements Runnable {
     private int leftShootCooldown = 0;
     private int rightShootCooldown = 0;
 
-    private static final int LEFT_SHOOT_DELAY = 18;     // 0.5s at 60fps = 30 frames
+    private static final int LEFT_SHOOT_DELAY = 18; // 0.5s at 60fps = 30 frames
     private static final int RIGHT_SHOOT_DELAY = 120;
     private static final int LEFT_SHOOT_MP_COST = 5;
     private static final int RIGHT_SHOOT_MP_COST = 30;
-    
+
     private double LASER_SPEED = 15;
     private static final int LASER_DIAMETER = 10;
     private static final int LASER_DAMAGE = 4;
@@ -120,7 +119,6 @@ public class GamePanel extends JPanel implements Runnable {
     private final Inventory inventory = new Inventory();
     private Hud hud;
     private InventoryPanel inventoryPanel;
-
 
     private Thread gameThread;
 
@@ -150,7 +148,6 @@ public class GamePanel extends JPanel implements Runnable {
             case KEY -> keyItemSprite;
         };
     }
-
 
     public void showToast(String message) {
         if (message == null || message.isBlank()) {
@@ -192,112 +189,89 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void loadMap() {
-      try {
-          mapImage = AssetLoader.loadImage("/assets/map/ROOM_2.png");
-          hiddenImage = AssetLoader.loadImage("/assets/map/ROOM_2_HIDDEN.png");
+        try {
+            mapImage = AssetLoader.loadImage("/assets/map/ROOM_2.png");
+            hiddenImage = AssetLoader.loadImage("/assets/map/ROOM_2_HIDDEN.png");
 
-          collisionMap = new CollisionMap();
-          collisionMap.load("/assets/map/ROOM_2_COLLISION.png");
+            collisionMap = new CollisionMap();
+            collisionMap.load("/assets/map/ROOM_2_COLLISION.png");
 
-          collisionHandler = new CollisionHandler(collisionMap);
+            collisionHandler = new CollisionHandler(collisionMap);
 
-          System.out.println("Load map + collision OK");
+            System.out.println("Load map + collision OK");
 
-          sceneManager.spawnRandomItems(120, worldWidth, worldHeight);
+            sceneManager.spawnRandomItems(120, worldWidth, worldHeight);
 
-      } catch (Exception e) {
-          e.printStackTrace();
-      }
-  }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     public void loadParallax() {
-    try {
+        try {
 
-        parallaxLayers = new BufferedImage[4];
+            parallaxLayers = new BufferedImage[4];
 
-        parallaxLayers[0] = ImageIO.read(
-            getClass().getResourceAsStream(
-                "/assets/background/parallax_layer1.png"
-            )
-        );
+            parallaxLayers[0] = AssetLoader.loadImage("/assets/background/parallax_layer1.png");
+            parallaxLayers[1] = AssetLoader.loadImage("/assets/background/parallax_layer2.png");
+            parallaxLayers[2] = AssetLoader.loadImage("/assets/background/parallax_layer3.png");
+            parallaxLayers[3] = AssetLoader.loadImage("/assets/background/parallax_layer4.png");
 
-        parallaxLayers[1] = ImageIO.read(
-            getClass().getResourceAsStream(
-                "/assets/background/parallax_layer2.png"
-            )
-        );
+            System.out.println("Loaded parallax layers");
 
-        parallaxLayers[2] = ImageIO.read(
-            getClass().getResourceAsStream(
-                "/assets/background/parallax_layer3.png"
-            )
-        );
-
-        parallaxLayers[3] = ImageIO.read(
-            getClass().getResourceAsStream(
-                "/assets/background/parallax_layer4.png"
-            )
-        );
-
-        System.out.println("Loaded parallax layers");
-
-    } catch (Exception e) {
-        e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
-}
 
-private void drawParallax(Graphics2D g2) {
+    private void drawParallax(Graphics2D g2) {
 
-    double[] speeds = {
-        0.05,
-        0.2,
-        0.4,
-        0.8 // foreground layer, moves almost with the camera
-    };
+        double[] speeds = {
+                0.05,
+                0.2,
+                0.4,
+                0.8 // foreground layer, moves almost with the camera
+        };
 
-    for (int i = 0; i < parallaxLayers.length; i++) {
+        for (int i = 0; i < parallaxLayers.length; i++) {
 
-        BufferedImage layer = parallaxLayers[i];
+            BufferedImage layer = parallaxLayers[i];
 
-        if (layer == null) continue;
+            if (layer == null)
+                continue;
 
-        int x = (int)(-cameraX * speeds[i]);
-        int y = (int)(-cameraY * speeds[i]);
+            int x = (int) (-cameraX * speeds[i]);
+            int y = (int) (-cameraY * speeds[i]);
 
-        g2.drawImage(
-            layer,
-            x,
-            y,
-            null
-        );
+            g2.drawImage(
+                    layer,
+                    x,
+                    y,
+                    null);
+        }
     }
-}
 
     public GamePanel() {
         gameBuffer = new BufferedImage(
-        SCREEN_WIDTH,
-        SCREEN_HEIGHT,
-        BufferedImage.TYPE_INT_ARGB
-        );
+                SCREEN_WIDTH,
+                SCREEN_HEIGHT,
+                BufferedImage.TYPE_INT_ARGB);
 
         bufferG = gameBuffer.createGraphics();
         bufferG.setRenderingHint(
-        RenderingHints.KEY_INTERPOLATION,
-        RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
-        );
+                RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 
         setPanelSize();
         setBackground(new Color(20, 26, 38));
         setDoubleBuffered(true);
         setFocusable(true);
         setFocusTraversalKeys(
-            KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS,
-            Collections.emptySet()
-        );
+                KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS,
+                Collections.emptySet());
         setFocusTraversalKeys(
-            KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS,
-            Collections.emptySet()
-        );
+                KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS,
+                Collections.emptySet());
 
         addKeyListener(keyHandler);
         addMouseListener(mouseHandler);
@@ -306,17 +280,13 @@ private void drawParallax(Graphics2D g2) {
         initPlayer();
         loadItemSprites();
 
-
         menu.update(mouseHandler);
     }
 
-
-
     private void setPanelSize() {
         Dimension size = new Dimension(
-        SCREEN_WIDTH * WINDOW_SCALE,
-        SCREEN_HEIGHT * WINDOW_SCALE
-        );
+                SCREEN_WIDTH * WINDOW_SCALE,
+                SCREEN_HEIGHT * WINDOW_SCALE);
 
         setPreferredSize(size);
     }
@@ -404,10 +374,9 @@ private void drawParallax(Graphics2D g2) {
         player.updateResources();
 
         collisionHandler.move(
-            player,
-            player.getVelocityX(),
-            player.getVelocityY()
-        );
+                player,
+                player.getVelocityX(),
+                player.getVelocityY());
 
         handleItemPickup();
         updateMonsters();
@@ -429,11 +398,10 @@ private void drawParallax(Graphics2D g2) {
         }
 
         int[] coords = UiTheme.screenToBuffer(
-            mouseHandler.getMouseX(),
-            mouseHandler.getMouseY(),
-            getWidth(),
-            getHeight()
-        );
+                mouseHandler.getMouseX(),
+                mouseHandler.getMouseY(),
+                getWidth(),
+                getHeight());
 
         if (!Hud.containsBagButton(coords[0], coords[1])) {
             return;
@@ -447,11 +415,10 @@ private void drawParallax(Graphics2D g2) {
     private void handleItemPickup() {
         Screen currentScreen = sceneManager.getCurrentScreen();
         Rectangle playerBounds = new Rectangle(
-            (int) player.getX(),
-            (int) player.getY(),
-            (int) player.getWidth(),
-            (int) player.getHeight()
-        );
+                (int) player.getX(),
+                (int) player.getY(),
+                (int) player.getWidth(),
+                (int) player.getHeight());
 
         List<Item> items = new ArrayList<>(currentScreen.getItems());
         for (Item item : items) {
@@ -492,12 +459,12 @@ private void drawParallax(Graphics2D g2) {
         return RIGHT_SHOOT_DELAY;
     }
 
- 
     private static final double LOOK_AHEAD_DISTANCE = 120;
+
     private void updateCamera() {
 
         double halfW = SCREEN_WIDTH / 2;
-        double halfH = SCREEN_HEIGHT  / 2;
+        double halfH = SCREEN_HEIGHT / 2;
 
         // ===== LOOK AHEAD =====
 
@@ -505,8 +472,7 @@ private void drawParallax(Graphics2D g2) {
 
         if (player.getVelocityX() > 0) {
             targetLookAhead = LOOK_AHEAD_DISTANCE;
-        }
-        else if (player.getVelocityX() < 0) {
+        } else if (player.getVelocityX() < 0) {
             targetLookAhead = -LOOK_AHEAD_DISTANCE;
         }
 
@@ -532,25 +498,23 @@ private void drawParallax(Graphics2D g2) {
         }
 
         // ===== IDLE → kéo về center =====
-   
+
         double centerX = player.getX() - halfW;
         targetX += (centerX - targetX) * 0.5; // Thấp hơn = mượt và chậm hơn
-    
-    
+
         // ===== LERP CAMERA =====
         cameraX += (targetX - cameraX) * 0.1;
         cameraY += (targetY - cameraY) * 0.5;
 
-        // ===== CLAMP  =====
+        // ===== CLAMP =====
         cameraX = Math.max(0, cameraX);
         cameraY = Math.max(0, cameraY);
 
-        cameraX = Math.min(cameraX, worldWidth - SCREEN_WIDTH );
+        cameraX = Math.min(cameraX, worldWidth - SCREEN_WIDTH);
         cameraY = Math.min(cameraY, worldHeight - SCREEN_HEIGHT);
-}
+    }
 
-
-// Handle shooting input and bullet spawning
+    // Handle shooting input and bullet spawning
     private void handleShootingInput() {
         if (mouseHandler.isLeftPressed() && leftShootCooldown <= 0) {
             if (player.spendMp(LEFT_SHOOT_MP_COST)) {
@@ -571,26 +535,25 @@ private void drawParallax(Graphics2D g2) {
         double originX = player.getX() + 10;
         double originY = player.getY() + 15;
 
-        //  convert mouse sang world space
+        // convert mouse sang world space
         double worldMouseX = getMouseWorldX();
         double worldMouseY = getMouseWorldY();
 
-        //  dùng world space để tính direction
+        // dùng world space để tính direction
         double directionX = worldMouseX - originX;
         double directionY = worldMouseY - originY;
 
         spawnBullet(
-            originX,
-            originY,
-            directionX,
-            directionY,
-            LASER_SPEED,
-            LASER_DIAMETER,
-            LASER_COLOR,
-            LASER_DAMAGE,
-            Bullet.BulletType.LASER
-        );
-}
+                originX,
+                originY,
+                directionX,
+                directionY,
+                LASER_SPEED,
+                LASER_DIAMETER,
+                LASER_COLOR,
+                LASER_DAMAGE,
+                Bullet.BulletType.LASER);
+    }
 
     private void spawnClusterShot() {
 
@@ -610,13 +573,12 @@ private void drawParallax(Graphics2D g2) {
         for (int i = 0; i < CLUSTER_BULLET_COUNT; i++) {
 
             // ===== RANDOM SPREAD =====
-            double randomAngle = Math.toRadians( (Math.random() - 0.5) * CLUSTER_SPREAD_DEGREES);
+            double randomAngle = Math.toRadians((Math.random() - 0.5) * CLUSTER_SPREAD_DEGREES);
 
             double[] dir = rotateVector(
-                baseDirectionX,
-                baseDirectionY,
-                randomAngle
-            );
+                    baseDirectionX,
+                    baseDirectionY,
+                    randomAngle);
 
             // ===== RANDOM SPEED =====
             double speed = CLUSTER_BULLET_SPEED + (Math.random() * 4 - 2);
@@ -626,30 +588,28 @@ private void drawParallax(Graphics2D g2) {
             double spawnOffsetY = (Math.random() - 0.5) * 8;
 
             spawnBullet(
-                originX + spawnOffsetX,
-                originY + spawnOffsetY,
-                dir[0],
-                dir[1],
-                speed,
-                CLUSTER_BULLET_DIAMETER,
-                CLUSTER_COLOR,
-                CLUSTER_BULLET_DAMAGE,
-                Bullet.BulletType.SHOTGUN
-            );
+                    originX + spawnOffsetX,
+                    originY + spawnOffsetY,
+                    dir[0],
+                    dir[1],
+                    speed,
+                    CLUSTER_BULLET_DIAMETER,
+                    CLUSTER_COLOR,
+                    CLUSTER_BULLET_DAMAGE,
+                    Bullet.BulletType.SHOTGUN);
         }
-}
+    }
 
     private void spawnBullet(
-        double originX,
-        double originY,
-        double directionX,
-        double directionY,
-        double speed,
-        int diameter,
-        Color color,
-        int damage,
-        Bullet.BulletType type
-    ) {
+            double originX,
+            double originY,
+            double directionX,
+            double directionY,
+            double speed,
+            int diameter,
+            Color color,
+            int damage,
+            Bullet.BulletType type) {
 
         double length = Math.sqrt(directionX * directionX + directionY * directionY);
 
@@ -659,18 +619,16 @@ private void drawParallax(Graphics2D g2) {
         }
 
         bullets.add(new Bullet(
-            originX - (diameter / 2.0),
-            originY - (diameter / 2.0),
-            directionX,
-            directionY,
-            speed,
-            diameter,
-            color,
-            damage,
-            collisionMap,
-            type
-        )
-        );
+                originX - (diameter / 2.0),
+                originY - (diameter / 2.0),
+                directionX,
+                directionY,
+                speed,
+                diameter,
+                color,
+                damage,
+                collisionMap,
+                type));
     }
 
     private double[] rotateVector(double x, double y, double angleRadians) {
@@ -678,13 +636,13 @@ private void drawParallax(Graphics2D g2) {
         double sin = Math.sin(angleRadians);
 
         return new double[] {
-            (x * cos) - (y * sin),
-            (x * sin) + (y * cos)
+                (x * cos) - (y * sin),
+                (x * sin) + (y * cos)
         };
     }
 
     private double getMouseWorldX() {
-        double mouseX = (mouseHandler.getMouseX() - renderOffsetX)/ renderScale;
+        double mouseX = (mouseHandler.getMouseX() - renderOffsetX) / renderScale;
         return mouseX + cameraX;
     }
 
@@ -703,14 +661,14 @@ private void drawParallax(Graphics2D g2) {
             if (bullet.isDestroyed()) {
                 bulletIterator.remove();
                 continue;
-            }   
+            }
 
             Rectangle bulletBounds = bullet.getBounds();
             if (isOutOfScreen(bulletBounds) || collidesWithSolidBlock(bulletBounds)) {
                 bulletIterator.remove();
                 continue;
             }
-  
+
             boolean hitMonster = false;
             for (Monster monster : currentScreen.getMonsters()) {
                 if (bulletBounds.intersects(monster.getBounds())) {
@@ -743,11 +701,10 @@ private void drawParallax(Graphics2D g2) {
     private boolean isOutOfScreen(Rectangle bounds) {
 
         return bounds.x + bounds.width < cameraX
-        || bounds.x > cameraX + SCREEN_WIDTH
-        || bounds.y + bounds.height < cameraY
-        || bounds.y > cameraY + SCREEN_HEIGHT;
+                || bounds.x > cameraX + SCREEN_WIDTH
+                || bounds.y + bounds.height < cameraY
+                || bounds.y > cameraY + SCREEN_HEIGHT;
     }
-
 
     private List<Rectangle> getCurrentSolidBlocks() {
         return sceneManager.getCurrentScreen().getSolidBlocks();
@@ -767,8 +724,6 @@ private void drawParallax(Graphics2D g2) {
 
         // ===== RESET =====
         bufferG.setTransform(new java.awt.geom.AffineTransform());
-        
-        
 
         // ===== CLEAR =====
         bufferG.setColor(getBackground());
@@ -780,19 +735,18 @@ private void drawParallax(Graphics2D g2) {
 
         } else {
             // ===== PARALLAX =====
-            drawParallax(bufferG); 
+            drawParallax(bufferG);
 
             // ===== CAMERA =====
             bufferG.translate(
-                -(int)cameraX,
-                -(int)cameraY
-            );
+                    -(int) cameraX,
+                    -(int) cameraY);
 
             // ===== MAP =====
             if (mapImage != null) {
                 bufferG.drawImage(mapImage, 0, 0, null);
             }
-            
+
             // ===== ITEMS =====
             for (Item item : getCurrentItems()) {
                 if (item.isCollected()) {
@@ -823,42 +777,37 @@ private void drawParallax(Graphics2D g2) {
             // ===== BULLETS =====
             for (Bullet bullet : bullets) {
 
-         BufferedImage sprite = bullet.getSprite();
+                BufferedImage sprite = bullet.getSprite();
 
-    if (sprite == null) {
-        continue;
-    }
+                if (sprite == null) {
+                    continue;
+                }
 
-    int width = sprite.getWidth();
-    int height = sprite.getHeight();
+                int width = sprite.getWidth();
+                int height = sprite.getHeight();
 
-    Graphics2D bulletG = (Graphics2D) bufferG.create();
+                Graphics2D bulletG = (Graphics2D) bufferG.create();
 
-int drawX =
-    bullet.getRenderX() - (width / 2);
+                int drawX = bullet.getRenderX() - (width / 2);
 
-int drawY =
-    bullet.getRenderY() - (height / 2);
+                int drawY = bullet.getRenderY() - (height / 2);
 
-bulletG.translate(
-    drawX,
-    drawY
-);
+                bulletG.translate(
+                        drawX,
+                        drawY);
 
-    bulletG.rotate(
-        bullet.getAngle(),
-        width / 2.0,
-        height / 2.0
-    );
+                bulletG.rotate(
+                        bullet.getAngle(),
+                        width / 2.0,
+                        height / 2.0);
 
-    bulletG.drawImage(
-        sprite,
-        0,
-        0,
-        null
-    );
+                bulletG.drawImage(
+                        sprite,
+                        0,
+                        0,
+                        null);
 
-    bulletG.dispose();            
+                bulletG.dispose();
             }
 
             // ===== PLAYER =====
@@ -887,9 +836,8 @@ bulletG.translate(
         Graphics2D g2 = (Graphics2D) g;
 
         g2.setRenderingHint(
-            RenderingHints.KEY_INTERPOLATION,
-            RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
-        );
+                RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 
         int panelWidth = getWidth();
         int panelHeight = getHeight();
@@ -901,13 +849,12 @@ bulletG.translate(
         double scale = Math.min(scaleX, scaleY);
 
         // ===== SIZE SAU SCALE =====
-        int renderWidth = (int)(SCREEN_WIDTH * scale);
-        int renderHeight = (int)(SCREEN_HEIGHT * scale);
+        int renderWidth = (int) (SCREEN_WIDTH * scale);
+        int renderHeight = (int) (SCREEN_HEIGHT * scale);
 
         // ===== CENTER =====
         int x = (panelWidth - renderWidth) / 2;
         int y = (panelHeight - renderHeight) / 2;
-
 
         renderScale = scale;
         renderOffsetX = x;
@@ -919,14 +866,13 @@ bulletG.translate(
 
         // ===== DRAW GAME =====
         g2.drawImage(
-            gameBuffer,
-            x,
-            y,
-            renderWidth,
-            renderHeight,
-            null
-        );
+                gameBuffer,
+                x,
+                y,
+                renderWidth,
+                renderHeight,
+                null);
     }
 
-    // CAWL AND BAWLS 
+    // CAWL AND BAWLS
 }

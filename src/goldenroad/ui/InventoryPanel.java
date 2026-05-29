@@ -6,14 +6,13 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 
-import javax.imageio.ImageIO;
-
 import goldenroad.entity.Inventory;
 import goldenroad.entity.Item;
 import goldenroad.entity.Player;
 import goldenroad.game.GamePanel;
 import goldenroad.input.KeyHandler;
 import goldenroad.input.MouseHandler;
+import goldenroad.util.AssetLoader;
 
 public class InventoryPanel {
 
@@ -52,17 +51,7 @@ public class InventoryPanel {
     }
 
     private BufferedImage loadSprite(String resourcePath) {
-        try {
-            var stream = getClass().getResourceAsStream(resourcePath);
-            if (stream == null) {
-                System.out.println("Khong tim thay resource: " + resourcePath);
-                return null;
-            }
-            return ImageIO.read(stream);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        return AssetLoader.loadImage(resourcePath);
     }
 
     public boolean isOpen() {

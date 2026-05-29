@@ -1,10 +1,9 @@
 package goldenroad.entity;
 
 import goldenroad.map.CollisionMap;
+import goldenroad.util.AssetLoader;
 
 import java.awt.image.BufferedImage;
-
-import javax.imageio.ImageIO;
 
 import java.awt.Color;
 import java.awt.Rectangle;
@@ -52,23 +51,8 @@ public class Bullet {
     }
     
 static {
-    try {
-
-        laserSprite = javax.imageio.ImageIO.read(
-            Bullet.class.getResourceAsStream(
-                "/assets/bullet/bullets.png"
-            )
-        );
-
-        shotgunSprite = javax.imageio.ImageIO.read(
-            Bullet.class.getResourceAsStream(
-                "/assets/bullet/shotgun_bullets.png"
-            )
-        );
-
-    } catch (Exception e) {
-        e.printStackTrace();
-    }
+    laserSprite = AssetLoader.loadImage("/assets/bullet/bullets.png");
+    shotgunSprite = AssetLoader.loadImage("/assets/bullet/shotgun_bullets.png");
 }
     public BulletType getType() {
         return type;
