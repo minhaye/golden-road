@@ -32,7 +32,7 @@ public class SceneManager {
                 new Rectangle(560, 340, 170, 20) 
             ),
             List.of(
-                new Monster(640, 300, 36, 40, new Color(200, 70, 70), 6)
+                new Monster(560, 1880, 36, 32, new Color(185, 80, 195), 8)
             ),
             List.of(
                 new Item(280, 355, ITEM_WIDTH, ITEM_HEIGHT, new Color(80, 210, 120), Item.Shape.OVAL, Item.ItemType.HP_POTION),

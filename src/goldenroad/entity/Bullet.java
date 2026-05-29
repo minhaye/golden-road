@@ -113,6 +113,9 @@ static {
     }
 }
 private boolean collides(double nextX, double nextY) {
+    if (collisionMap == null || !collisionMap.isLoaded()) {
+        return false;
+    }
 
     int left =
         (int)Math.floor(nextX);
