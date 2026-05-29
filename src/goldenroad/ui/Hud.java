@@ -9,14 +9,14 @@ import goldenroad.game.GamePanel;
 
 public class Hud {
 
-    private static final int PADDING = 8;
-    private static final int BAR_W = 120;
-    private static final int BAR_H = 10;
+    private static final int PADDING = 16;
+    private static final int BAR_W = 180;
+    private static final int BAR_H = 12;
     private static final int BAR_GAP = 6;
     private static final int BAR_ARC = 6;
     private static final int SKILL_SIZE = 32;
     private static final int SKILL_GAP = 6;
-    private static final int BAG_SIZE = 28;
+    private static final int BAG_SIZE = 32;
 
     private final GamePanel panel;
     private final Player player;

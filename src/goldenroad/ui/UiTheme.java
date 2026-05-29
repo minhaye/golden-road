@@ -22,7 +22,7 @@ public final class UiTheme {
     public static final Color ABOUT_BTN = new Color(70, 80, 100);
 
     public static final Color HP_FILL = new Color(220, 70, 70);
-    public static final Color MP_FILL = new Color(80, 140, 220);
+    public static final Color MP_FILL = new Color(100, 230, 255);
 
     public static final Color SKILL_GUN = new Color(255, 90, 80);
     public static final Color SKILL_SHOTGUN = new Color(255, 235, 160);

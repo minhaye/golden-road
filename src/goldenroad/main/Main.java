@@ -11,10 +11,11 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
             JFrame window = new JFrame("Scientific Witchery");
             window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            
-            
+
             GamePanel gamePanel = new GamePanel();
             gamePanel.loadMap();
+            gamePanel.loadParallax();
+
             window.setExtendedState(JFrame.MAXIMIZED_BOTH);
             window.add(gamePanel);
             window.pack();
@@ -23,10 +24,9 @@ public class Main {
             window.setFocusable(true);
             window.setResizable(false);
             window.setVisible(true);
+
             gamePanel.requestFocusInWindow();
             gamePanel.startGameLoop();
         });
     }
-
-    
 }

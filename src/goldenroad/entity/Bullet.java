@@ -1,12 +1,20 @@
 package goldenroad.entity;
 
 import goldenroad.map.CollisionMap;
+
+import java.awt.image.BufferedImage;
+
+import javax.imageio.ImageIO;
+
 import java.awt.Color;
 import java.awt.Rectangle;
 
 public class Bullet {
     private CollisionMap collisionMap;
     private boolean destroyed = false;
+    private final BulletType type;
+    private static BufferedImage laserSprite;
+    private static BufferedImage shotgunSprite;
 
     private double x;
     private double y;
@@ -18,10 +26,16 @@ public class Bullet {
     private final Color color;
     private final int damage;
 
-    public Bullet(double x, double y, double directionX, double directionY, double speed, int diameter, Color color, int damage, CollisionMap collisionMap) {
+    public enum BulletType {
+        LASER,
+        SHOTGUN
+    }
+
+    public Bullet(double x, double y, double directionX, double directionY, double speed, int diameter, Color color, int damage, CollisionMap collisionMap, BulletType type) {
         this.x = x;
         this.y = y;
         this.collisionMap = collisionMap;
+        this.type = type;
 
         double length = Math.hypot(directionX, directionY);
         if (length == 0) {
@@ -36,7 +50,42 @@ public class Bullet {
         this.color = color;
         this.damage = damage;
     }
+    
+static {
+    try {
 
+        laserSprite = javax.imageio.ImageIO.read(
+            Bullet.class.getResourceAsStream(
+                "/assets/bullet/bullets.png"
+            )
+        );
+
+        shotgunSprite = javax.imageio.ImageIO.read(
+            Bullet.class.getResourceAsStream(
+                "/assets/bullet/shotgun_bullets.png"
+            )
+        );
+
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+    public BulletType getType() {
+        return type;
+    }
+
+    public BufferedImage getSprite() {
+
+    if (type == BulletType.SHOTGUN) {
+        return shotgunSprite;
+    }
+
+    return laserSprite;
+}
+
+    public double getAngle() {
+        return Math.atan2(velocityY, velocityX);
+    }
     public void update() {
 
     double steps =
@@ -93,9 +142,9 @@ private boolean collides(double nextX, double nextY) {
     return false;
 }
 
-public boolean isDestroyed() {
-    return destroyed;
-}
+    public boolean isDestroyed() {
+        return destroyed;
+    }
 
     public Rectangle getBounds() {
         return new Rectangle((int) Math.round(x), (int) Math.round(y), diameter, diameter);

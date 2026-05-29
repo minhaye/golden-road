@@ -47,7 +47,7 @@ public class InventoryPanel {
         this.inventory = inventory;
         this.player = player;
         hpItemSprite = loadSprite("/assets/item/hp.png");
-        mpItemSprite = loadSprite("/assets/item/mp item.png");
+        mpItemSprite = loadSprite("/assets/item/mp.png");
         keyItemSprite = loadSprite("/assets/item/key.png");
     }
 
