@@ -161,7 +161,6 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
 
-
     private void setPanelSize() {
         Dimension size = new Dimension(
         SCREEN_WIDTH * WINDOW_SCALE,
@@ -213,6 +212,7 @@ public class GamePanel extends JPanel implements Runnable {
             player.getVelocityY()
         );
 
+        updateMonsters();
         updateCamera();
         handleShootingInput();
         updateBullets();
@@ -220,6 +220,16 @@ public class GamePanel extends JPanel implements Runnable {
         if (leftShootCooldown > 0)      leftShootCooldown--;
         if (rightShootCooldown > 0)     rightShootCooldown--;
         
+    }
+
+    private void updateMonsters() {
+        if (collisionMap == null) {
+            return;
+        }
+
+        for (Monster monster : getCurrentMonsters()) {
+            monster.update(player, collisionMap, bullets);
+        }
     }
 
  
@@ -529,11 +539,14 @@ public class GamePanel extends JPanel implements Runnable {
 
             // ===== MONSTERS =====
             for (Monster monster : getCurrentMonsters()) {
-
                 Rectangle r = monster.getBounds();
-
-                bufferG.setColor(monster.getColor());
+                bufferG.setColor(monster.getRenderColor());
                 bufferG.fillRect(r.x, r.y, r.width, r.height);
+
+                if (monster.isAttackActive()) {
+                    bufferG.setColor(Color.WHITE);
+                    bufferG.drawRect(r.x - 2, r.y - 2, r.width + 4, r.height + 4);
+                }
             }
 
             // ===== BULLETS =====
