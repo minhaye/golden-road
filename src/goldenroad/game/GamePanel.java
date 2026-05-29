@@ -76,9 +76,11 @@ public class GamePanel extends JPanel implements Runnable {
     private BufferedImage hpItemSprite;
     private BufferedImage mpItemSprite;
     private BufferedImage keyItemSprite;
+    
 
     private String toastMessage = null;
     private long toastExpireAtNanos = 0L;
+    private boolean minimapVisible = false;
 
     private  int WORLD_WIDTH = 500 * TILE_SIZE;
     private  int WORLD_HEIGHT = 210 * TILE_SIZE;
@@ -1044,7 +1046,7 @@ bulletG.translate(
 
             if (!menu.isPaused() && minimapVisible) {
                 drawMinimap(bufferG);
-
+            }
         }
 
         // ===== DRAW BUFFER TO SCREEN =====
