@@ -80,12 +80,13 @@ public class GamePanel extends JPanel implements Runnable {
     private String toastMessage = null;
     private long toastExpireAtNanos = 0L;
 
-    private  int WORLD_WIDTH = 330 * TILE_SIZE;
-    private  int WORLD_HEIGHT = 180 * TILE_SIZE;
+    private  int WORLD_WIDTH = 500 * TILE_SIZE;
+    private  int WORLD_HEIGHT = 210 * TILE_SIZE;
     // Size: 
     // Map 00: 280 x 160 
     // Map 01: 330 x 140 
     // Map 02: 180 x 300 
+    // Map 03: 500 x 210
         
     int worldWidth  =   WORLD_WIDTH;
     int worldHeight =   WORLD_HEIGHT;
@@ -246,8 +247,8 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void loadMap() {
         try {
-            var stream = getClass().getResourceAsStream("/assets/map/ROOM_1.png");
-            var stream1 = getClass().getResourceAsStream("/assets/map/ROOM_1_HIDDEN.png");
+            var stream = getClass().getResourceAsStream("/assets/map/ROOM_3.png");
+            var stream1 = getClass().getResourceAsStream("/assets/map/ROOM_3_HIDDEN.png");
 
             if (stream == null) {
                 System.out.println("Không tìm thấy map!");
@@ -263,7 +264,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         // load collision
         collisionMap = new CollisionMap();
-        collisionMap.load("/assets/map/ROOM_1_COLLISION.png");
+        collisionMap.load("/assets/map/ROOM_3_COLLISION.png");
 
         collisionHandler = new CollisionHandler(collisionMap);
 
@@ -431,15 +432,15 @@ private void drawParallax(Graphics2D g2) {
     }
 
     private void update() {
-        if (keyHandler.consumeMinimapToggleJustPressed()) {
+        /*if (keyHandler.consumeMinimapToggleJustPressed()) {
             toggleMinimap();
         }
-
+        
         if (keyHandler.consumeMapSwitchJustPressed()) {
             switchMap();
             return;
         }
-
+*/
         if (menu.isActive()) {
             menu.update(mouseHandler);
             return;
@@ -1043,7 +1044,7 @@ bulletG.translate(
 
             if (!menu.isPaused() && minimapVisible) {
                 drawMinimap(bufferG);
-            }
+
         }
 
         // ===== DRAW BUFFER TO SCREEN =====
