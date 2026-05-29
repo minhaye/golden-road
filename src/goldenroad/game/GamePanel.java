@@ -28,6 +28,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.BasicStroke;
 import java.awt.KeyboardFocusManager;
 import java.awt.Rectangle;
 import java.util.Collections;
@@ -805,6 +806,75 @@ private void drawParallax(Graphics2D g2) {
         return sceneManager.getCurrentScreen().getItems();
     }
 
+    private void drawMinimap(Graphics2D g2) {
+        if (worldWidth <= 0 || worldHeight <= 0) {
+            return;
+        }
+
+        int panelWidth = UiTheme.BASE_W;
+        int mapMaxWidth = 160;
+        int mapMaxHeight = 110;
+        int padding = 12;
+        int miniX = panelWidth - mapMaxWidth - padding;
+        int miniY = padding;
+
+        double scale = Math.min(
+            (double) mapMaxWidth / worldWidth,
+            (double) mapMaxHeight / worldHeight
+        );
+        scale = Math.max(0.02, Math.min(scale, 1.0));
+
+        int miniW = Math.max(1, (int) Math.round(worldWidth * scale));
+        int miniH = Math.max(1, (int) Math.round(worldHeight * scale));
+
+        g2.setComposite(AlphaComposite.SrcOver);
+        g2.setColor(new Color(10, 14, 18, 210));
+        g2.fillRoundRect(miniX - 4, miniY - 4, miniW + 8, miniH + 28, 12, 12);
+
+        g2.setColor(new Color(255, 255, 255, 40));
+        g2.fillRoundRect(miniX, miniY, miniW, miniH, 8, 8);
+
+        g2.setColor(new Color(120, 140, 180, 180));
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawRoundRect(miniX, miniY, miniW, miniH, 8, 8);
+
+        if (mapImage != null) {
+            g2.drawImage(mapImage, miniX, miniY, miniW, miniH, null);
+        }
+
+        double playerRatioX = clampDouble(player.getX() / Math.max(1.0, worldWidth), 0.0, 1.0);
+        double playerRatioY = clampDouble(player.getY() / Math.max(1.0, worldHeight), 0.0, 1.0);
+        int playerX = miniX + (int) Math.round(playerRatioX * miniW);
+        int playerY = miniY + (int) Math.round(playerRatioY * miniH);
+
+        int viewX = miniX + (int) Math.round((cameraX / Math.max(1.0, worldWidth)) * miniW);
+        int viewY = miniY + (int) Math.round((cameraY / Math.max(1.0, worldHeight)) * miniH);
+        int viewW = (int) Math.round((SCREEN_WIDTH / Math.max(1.0, worldWidth)) * miniW);
+        int viewH = (int) Math.round((SCREEN_HEIGHT / Math.max(1.0, worldHeight)) * miniH);
+        viewW = Math.max(2, Math.min(viewW, miniW));
+        viewH = Math.max(2, Math.min(viewH, miniH));
+
+        viewX = Math.max(miniX, Math.min(viewX, miniX + miniW - viewW));
+        viewY = Math.max(miniY, Math.min(viewY, miniY + miniH - viewH));
+
+        g2.setColor(new Color(255, 255, 255, 120));
+        g2.drawRect(viewX, viewY, viewW, viewH);
+
+        g2.setColor(new Color(255, 90, 80));
+        g2.fillOval(playerX - 3, playerY - 3, 6, 6);
+        g2.setColor(Color.WHITE);
+        g2.drawOval(playerX - 3, playerY - 3, 6, 6);
+
+        g2.setFont(UiTheme.FONT_HUD_SMALL);
+        g2.setColor(UiTheme.TEXT);
+        String label = currentMapId == MapId.MAP_1 ? "MAP 1" : "MAP 2";
+        g2.drawString(label, miniX + 8, miniY + miniH + 16);
+    }
+
+    private double clampDouble(double value, double min, double max) {
+        return Math.max(min, Math.min(value, max));
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -923,6 +993,10 @@ bulletG.translate(
             }
             if (menu.isPaused()) {
                 menu.render(bufferG);
+            }
+
+            if (!menu.isPaused()) {
+                drawMinimap(bufferG);
             }
         }
 
