@@ -10,7 +10,6 @@ import goldenroad.input.KeyHandler;
 import goldenroad.input.MouseHandler;
 import goldenroad.map.CollisionHandler;
 import goldenroad.map.CollisionMap;
-import goldenroad.map.GridPathfinder;
 import goldenroad.map.MapCatalog;
 import goldenroad.map.MapDefinition;
 import goldenroad.map.MapId;
@@ -116,7 +115,6 @@ public class GamePanel extends JPanel implements Runnable {
     private final MouseHandler mouseHandler = new MouseHandler();
     private final SceneManager sceneManager = new SceneManager();
     private final Menu menu = new Menu(this);
-    private final GridPathfinder enemyPathfinder = new GridPathfinder(TILE_SIZE);
     private final List<Bullet> bullets = new ArrayList<>();
     private final Inventory inventory = new Inventory();
     private Hud hud;
@@ -529,7 +527,10 @@ private void drawParallax(Graphics2D g2) {
         }
 
         for (Monster monster : getCurrentMonsters()) {
-            monster.update(player, collisionMap, bullets);
+            int damage = monster.update(player, collisionMap, bullets);
+            if (damage > 0) {
+                player.takeDamage(damage);
+            }
         }
     }
 

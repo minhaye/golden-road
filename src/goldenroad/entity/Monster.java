@@ -24,14 +24,13 @@ public class Monster {
     }
 
     public enum Type {
-        GRUNT,
-        SCOUT,
-        BRUTE,
-        HOPPER
+        GROUND
     }
 
     private static final int TILE_SIZE = 16;
     private static final int ATTACK_ACTIVE_FRAMES = 12;
+    private static final int ATTACK_DAMAGE = 3;
+    private static final int ATTACK_COOLDOWN_FRAMES = 60;
     private static final int RETREAT_DURATION_FRAMES = 120;
     private static final int PATH_REFRESH_FRAMES = 18;
     private static final int PATROL_IDLE_FRAMES = 35;
@@ -40,6 +39,12 @@ public class Monster {
     private static final double ARRIVE_DISTANCE = 4.0;
     private static final double GRAVITY = 0.7;
     private static final double MAX_FALL_SPEED = 9.0;
+    private static final double DETECTION_RANGE = 260.0;
+    private static final double ATTACK_RANGE = 48.0;
+    private static final double PATROL_RANGE = 120.0;
+    private static final double MOVE_SPEED = 2.0;
+    private static final double RETREAT_SPEED = 2.6;
+    private static final double LOW_HEALTH_RETREAT_RATIO = 0.4;
 
     private static final Map<String, List<Point>> PATH_CACHE = new LinkedHashMap<>(PATH_CACHE_LIMIT, 0.75f, true) {
         @Override
@@ -52,25 +57,15 @@ public class Monster {
     private final Color color;
     private final Type type;
     private final int maxHealth;
-    private int health;
-
-    private final double detectionRange;
-    private final double attackRange;
-    private final double patrolRange;
-    private final double moveSpeed;
-    private final double retreatSpeed;
-    private final int attackCooldownFrames;
     private final int retreatHealthThreshold;
-    private final boolean canJump;
-    private final boolean canDodge;
-    private final double jumpStrength;
+    private int health;
 
     private double x;
     private double y;
     private double velocityY = 0;
     private boolean onGround = true;
-    private final double spawnX;
-    private final double spawnY;
+    private double spawnX;
+    private double spawnY;
     private double patrolTargetX;
     private int patrolDirection = 1;
     private double facingDirection = 1;
@@ -81,21 +76,23 @@ public class Monster {
     private int attackActiveTimer = 0;
     private int retreatTimer = 0;
     private int pathRefreshTimer = 0;
-    private int jumpCooldownTimer = 0;
     private int dodgeCooldownTimer = 0;
     private int dodgeTimer = 0;
     private double dodgeDirection = 0;
+    private boolean placementResolved = false;
+    private int resolvedMapWidth = -1;
+    private int resolvedMapHeight = -1;
 
     private final List<Point> path = new ArrayList<>();
     private int pathIndex = 0;
     private Point lastTargetTile = new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
 
     public Monster(int x, int y, int width, int height, Color color) {
-        this(x, y, width, height, color, 3, Type.GRUNT);
+        this(x, y, width, height, color, 3, Type.GROUND);
     }
 
     public Monster(int x, int y, int width, int height, Color color, int health) {
-        this(x, y, width, height, color, health, Type.GRUNT);
+        this(x, y, width, height, color, health, Type.GROUND);
     }
 
     public Monster(int x, int y, int width, int height, Color color, int health, Type type) {
@@ -104,33 +101,24 @@ public class Monster {
         this.type = type;
         this.health = Math.max(1, health);
         this.maxHealth = this.health;
+        this.retreatHealthThreshold = Math.max(1, (int)Math.ceil(this.maxHealth * LOW_HEALTH_RETREAT_RATIO));
         this.x = x;
         this.y = y;
         this.spawnX = x;
         this.spawnY = y;
-        this.patrolTargetX = x + getDefaultPatrolRange(type);
-
-        this.detectionRange = getDefaultDetectionRange(type);
-        this.attackRange = getDefaultAttackRange(type);
-        this.patrolRange = getDefaultPatrolRange(type);
-        this.moveSpeed = getDefaultMoveSpeed(type);
-        this.retreatSpeed = getDefaultRetreatSpeed(type);
-        this.attackCooldownFrames = getDefaultAttackCooldown(type);
-        this.retreatHealthThreshold = Math.max(1, (int)Math.ceil(this.maxHealth * getRetreatHealthRatio(type)));
-        this.canJump = type == Type.HOPPER;
-        this.canDodge = type == Type.SCOUT || type == Type.HOPPER;
-        this.jumpStrength = type == Type.HOPPER ? 12.5 : 0;
+        this.patrolTargetX = x + PATROL_RANGE;
     }
 
-    public void update(Player player, CollisionMap map) {
-        update(player, map, Collections.emptyList());
+    public int update(Player player, CollisionMap map) {
+        return update(player, map, Collections.emptyList());
     }
 
-    public void update(Player player, CollisionMap map, List<Bullet> bullets) {
+    public int update(Player player, CollisionMap map, List<Bullet> bullets) {
         if (player == null || map == null || health <= 0) {
-            return;
+            return 0;
         }
 
+        resolvePlacement(map);
         updateTimers();
         refreshGroundState(map);
         startDodgeIfThreatened(bullets);
@@ -138,24 +126,26 @@ public class Monster {
         if (dodgeTimer > 0) {
             state = State.RETREAT;
             dodgeTimer--;
-            moveHorizontal(dodgeDirection * retreatSpeed * 1.25, map, true);
+            moveHorizontal(dodgeDirection * RETREAT_SPEED * 1.15, map, true);
             applyVerticalPhysics(map);
             updateBounds();
-            return;
+            return 0;
         }
 
         chooseState(player);
 
+        int damage = 0;
         switch (state) {
             case IDLE -> updateIdle();
             case PATROL -> updatePatrol(map);
             case CHASE -> updateChase(player, map);
-            case ATTACK -> updateAttack(player);
+            case ATTACK -> damage = updateAttack(player);
             case RETREAT -> updateRetreat(player, map);
         }
 
         applyVerticalPhysics(map);
         updateBounds();
+        return damage;
     }
 
     public void draw(Graphics2D g) {
@@ -167,67 +157,17 @@ public class Monster {
             g.setColor(Color.WHITE);
             g.drawRect(r.x - 2, r.y - 2, r.width + 4, r.height + 4);
         }
-    }
 
-    private static double getDefaultDetectionRange(Type type) {
-        return switch (type) {
-            case SCOUT -> 300.0;
-            case BRUTE -> 230.0;
-            case HOPPER -> 285.0;
-            case GRUNT -> 260.0;
-        };
-    }
+        if (health < maxHealth) {
+            int barWidth = r.width;
+            int barHeight = 4;
+            int hpWidth = Math.max(1, (int)Math.round(barWidth * getHealthRatio()));
 
-    private static double getDefaultAttackRange(Type type) {
-        return switch (type) {
-            case BRUTE -> 64.0;
-            case HOPPER -> 52.0;
-            case SCOUT, GRUNT -> 48.0;
-        };
-    }
-
-    private static double getDefaultPatrolRange(Type type) {
-        return switch (type) {
-            case SCOUT -> 160.0;
-            case BRUTE -> 95.0;
-            case HOPPER -> 140.0;
-            case GRUNT -> 120.0;
-        };
-    }
-
-    private static double getDefaultMoveSpeed(Type type) {
-        return switch (type) {
-            case SCOUT -> 2.7;
-            case BRUTE -> 1.55;
-            case HOPPER -> 2.25;
-            case GRUNT -> 2.0;
-        };
-    }
-
-    private static double getDefaultRetreatSpeed(Type type) {
-        return switch (type) {
-            case SCOUT -> 3.3;
-            case BRUTE -> 2.0;
-            case HOPPER -> 3.0;
-            case GRUNT -> 2.6;
-        };
-    }
-
-    private static int getDefaultAttackCooldown(Type type) {
-        return switch (type) {
-            case SCOUT -> 46;
-            case BRUTE -> 78;
-            case HOPPER -> 54;
-            case GRUNT -> 60;
-        };
-    }
-
-    private static double getRetreatHealthRatio(Type type) {
-        return switch (type) {
-            case BRUTE -> 0.30;
-            case SCOUT, HOPPER -> 0.45;
-            case GRUNT -> 0.40;
-        };
+            g.setColor(new Color(35, 20, 25));
+            g.fillRect(r.x, r.y - 8, barWidth, barHeight);
+            g.setColor(new Color(80, 220, 120));
+            g.fillRect(r.x, r.y - 8, hpWidth, barHeight);
+        }
     }
 
     private void updateTimers() {
@@ -239,9 +179,6 @@ public class Monster {
         }
         if (pathRefreshTimer > 0) {
             pathRefreshTimer--;
-        }
-        if (jumpCooldownTimer > 0) {
-            jumpCooldownTimer--;
         }
         if (dodgeCooldownTimer > 0) {
             dodgeCooldownTimer--;
@@ -258,13 +195,97 @@ public class Monster {
         }
     }
 
+    private void resolvePlacement(CollisionMap map) {
+        if (map == null || !map.isLoaded()) {
+            placementResolved = true;
+            return;
+        }
+
+        if (resolvedMapWidth != map.getWidth() || resolvedMapHeight != map.getHeight()) {
+            placementResolved = false;
+            resolvedMapWidth = map.getWidth();
+            resolvedMapHeight = map.getHeight();
+        }
+
+        if (placementResolved && map.canStandAt(x, y, bounds.width, bounds.height)) {
+            return;
+        }
+
+        if (!isInsideMapBounds(map, x, y)) {
+            placementResolved = true;
+            return;
+        }
+
+        Point standable = findNearestStandablePosition(map, x, y, 24);
+        if (standable != null) {
+            x = standable.x;
+            y = standable.y;
+            spawnX = x;
+            spawnY = y;
+            patrolTargetX = spawnX + patrolDirection * PATROL_RANGE;
+            velocityY = 0;
+            onGround = true;
+            clearPath();
+            updateBounds();
+        }
+
+        placementResolved = true;
+    }
+
+    private boolean isInsideMapBounds(CollisionMap map, double candidateX, double candidateY) {
+        return candidateX >= 0
+            && candidateY >= 0
+            && candidateX + bounds.width < map.getWidth()
+            && candidateY + bounds.height < map.getHeight();
+    }
+
+    private Point findNearestStandablePosition(CollisionMap map, double originX, double originY, int maxRadiusTiles) {
+        if (map.canStandAt(originX, originY, bounds.width, bounds.height)) {
+            return new Point((int)Math.round(originX), (int)Math.round(originY));
+        }
+
+        double baseX = clamp(originX, 0, Math.max(0, map.getWidth() - bounds.width - 1));
+        double baseY = clamp(originY, 0, Math.max(0, map.getHeight() - bounds.height - 1));
+        Point best = null;
+        double bestDistance = Double.MAX_VALUE;
+
+        for (int radius = 0; radius <= maxRadiusTiles; radius++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dy = -radius; dy <= radius; dy++) {
+                    if (Math.abs(dx) != radius && Math.abs(dy) != radius) {
+                        continue;
+                    }
+
+                    int candidateX = (int)Math.round(baseX + dx * TILE_SIZE);
+                    int candidateY = (int)Math.round(baseY + dy * TILE_SIZE);
+
+                    if (!map.canStandAt(candidateX, candidateY, bounds.width, bounds.height)) {
+                        continue;
+                    }
+
+                    double distance = Math.hypot(candidateX - originX, candidateY - originY);
+                    if (distance < bestDistance) {
+                        best = new Point(candidateX, candidateY);
+                        bestDistance = distance;
+                    }
+                }
+            }
+
+            if (best != null) {
+                return best;
+            }
+        }
+
+        return null;
+    }
+
     private void startDodgeIfThreatened(List<Bullet> bullets) {
-        if (!canDodge || dodgeCooldownTimer > 0 || bullets == null || bullets.isEmpty()) {
+        if (dodgeCooldownTimer > 0 || bullets == null || bullets.isEmpty()) {
             return;
         }
 
         Rectangle dangerZone = new Rectangle(bounds);
-        dangerZone.grow(90, 30);
+        dangerZone.grow(72, 18);
 
         for (Bullet bullet : bullets) {
             Rectangle bulletBounds = bullet.getBounds();
@@ -277,50 +298,34 @@ public class Monster {
                 dodgeDirection = -facingDirection;
             }
 
-            dodgeTimer = 18;
-            dodgeCooldownTimer = 70;
+            dodgeTimer = 12;
+            dodgeCooldownTimer = 80;
             clearPath();
-
-            if (canJump && onGround && jumpCooldownTimer <= 0) {
-                jump();
-            }
             return;
         }
     }
 
     private void chooseState(Player player) {
         double distance = distanceToPlayer(player);
-        boolean lowHealth = health <= retreatHealthThreshold && health < maxHealth;
 
-        if (lowHealth && distance <= detectionRange * 1.35) {
-            if (state != State.RETREAT) {
-                retreatTimer = RETREAT_DURATION_FRAMES;
-                clearPath();
-            }
-            state = State.RETREAT;
+        if (isLowHealth() && distance <= DETECTION_RANGE * 1.35) {
+            enterState(State.RETREAT);
+            retreatTimer = Math.max(retreatTimer, RETREAT_DURATION_FRAMES);
             return;
         }
 
-        if (distance <= attackRange) {
-            if (state != State.ATTACK) {
-                clearPath();
-            }
-            state = State.ATTACK;
+        if (distance <= ATTACK_RANGE) {
+            enterState(State.ATTACK);
             return;
         }
 
-        if (distance <= detectionRange) {
-            if (state != State.CHASE) {
-                clearPath();
-            }
-            state = State.CHASE;
+        if (distance <= DETECTION_RANGE) {
+            enterState(State.CHASE);
             return;
         }
 
         if (state == State.CHASE || state == State.ATTACK || state == State.RETREAT) {
-            state = State.IDLE;
-            idleTimer = PATROL_IDLE_FRAMES;
-            clearPath();
+            enterState(State.IDLE);
         }
     }
 
@@ -331,7 +336,7 @@ public class Monster {
         }
 
         state = State.PATROL;
-        patrolTargetX = spawnX + patrolDirection * patrolRange;
+        patrolTargetX = spawnX + patrolDirection * PATROL_RANGE;
     }
 
     private void updatePatrol(CollisionMap map) {
@@ -347,19 +352,13 @@ public class Monster {
         }
 
         facingDirection = direction;
-        boolean moved = moveHorizontal(direction * moveSpeed, map, true);
+        boolean moved = moveHorizontal(direction * MOVE_SPEED, map, true);
         if (!moved) {
-            if (canJump && onGround && jumpCooldownTimer <= 0) {
-                jump();
-            } else {
-                pauseAndReversePatrol();
-            }
+            pauseAndReversePatrol();
         }
     }
 
     private void updateChase(Player player, CollisionMap map) {
-        maybeJumpTowardPlayer(player);
-
         Point targetTile = getNearestWalkableTile(map, getPlayerTile(player), 6);
         Point currentTile = getNearestWalkableTile(map, getCurrentTile(), 3);
 
@@ -375,21 +374,29 @@ public class Monster {
             moveTowardPoint(
                 playerCenterX(player) - bounds.width / 2.0,
                 player.getY() + player.getHeight() - bounds.height,
-                moveSpeed,
+                MOVE_SPEED,
                 map,
                 false
             );
         }
     }
 
-    private void updateAttack(Player player) {
+    private int updateAttack(Player player) {
         clearPath();
         faceTarget(playerCenterX(player));
 
+        if (distanceToPlayer(player) > ATTACK_RANGE * 1.15) {
+            enterState(State.CHASE);
+            return 0;
+        }
+
         if (attackCooldownTimer <= 0) {
             attackActiveTimer = ATTACK_ACTIVE_FRAMES;
-            attackCooldownTimer = attackCooldownFrames;
+            attackCooldownTimer = ATTACK_COOLDOWN_FRAMES;
+            return ATTACK_DAMAGE;
         }
+
+        return 0;
     }
 
     private void updateRetreat(Player player, CollisionMap map) {
@@ -402,18 +409,13 @@ public class Monster {
         }
 
         facingDirection = away;
-        boolean moved = moveHorizontal(away * retreatSpeed, map, true);
-        if (!moved && canJump && onGround && jumpCooldownTimer <= 0) {
-            jump();
-            moved = moveHorizontal(away * retreatSpeed, map, false);
-        }
+        boolean moved = moveHorizontal(away * RETREAT_SPEED, map, true);
         if (!moved) {
-            moveTowardPoint(spawnX, spawnY, moveSpeed, map, false);
+            moveTowardPoint(spawnX, spawnY, MOVE_SPEED, map, false);
         }
 
-        if (retreatTimer <= 0 && distanceToPlayer(player) > detectionRange) {
-            state = State.IDLE;
-            idleTimer = PATROL_IDLE_FRAMES;
+        if (retreatTimer <= 0 && distanceToPlayer(player) > DETECTION_RANGE) {
+            enterState(State.IDLE);
         }
     }
 
@@ -440,7 +442,7 @@ public class Monster {
             targetY = tileFeetY(next.y) - bounds.height;
         }
 
-        return moveTowardPoint(targetX, targetY, moveSpeed, map, false);
+        return moveTowardPoint(targetX, targetY, MOVE_SPEED, map, false);
     }
 
     private List<Point> findPath(CollisionMap map, Point start, Point goal) {
@@ -456,19 +458,18 @@ public class Monster {
 
         int widthTiles = Math.max(1, (int)Math.ceil(map.getWidth() / (double)TILE_SIZE));
         int heightTiles = Math.max(1, (int)Math.ceil(map.getHeight() / (double)TILE_SIZE));
-        boolean[][] visited = new boolean[widthTiles][heightTiles];
-        Point[][] parent = new Point[widthTiles][heightTiles];
-        Queue<Point> open = new ArrayDeque<>();
-
         if (!isInsideTileMap(start, widthTiles, heightTiles) || !isInsideTileMap(goal, widthTiles, heightTiles)) {
             return Collections.emptyList();
         }
+
+        boolean[][] visited = new boolean[widthTiles][heightTiles];
+        Point[][] parent = new Point[widthTiles][heightTiles];
+        Queue<Point> open = new ArrayDeque<>();
 
         open.add(start);
         visited[start.x][start.y] = true;
         int searchedNodes = 0;
         Point best = start;
-
         int[][] directions = {
             {1, 0},
             {-1, 0},
@@ -483,7 +484,6 @@ public class Monster {
             if (current.distance(goal) < best.distance(goal)) {
                 best = current;
             }
-
             if (current.equals(goal)) {
                 return cachePath(cacheKey, buildPath(parent, start, goal));
             }
@@ -573,22 +573,13 @@ public class Monster {
             return true;
         }
 
-        if (canJump && onGround && jumpCooldownTimer <= 0 && targetY < y - TILE_SIZE) {
-            jump();
-        }
-
         double direction = Math.signum(dx);
         if (direction == 0) {
             return false;
         }
 
         faceTarget(targetX + bounds.width / 2.0);
-        boolean moved = moveHorizontal(direction * speed, map, needsSupport);
-        if (!moved && canJump && onGround && jumpCooldownTimer <= 0) {
-            jump();
-            return moveHorizontal(direction * speed, map, false);
-        }
-        return moved;
+        return moveHorizontal(direction * speed, map, needsSupport);
     }
 
     private boolean moveHorizontal(double dx, CollisionMap map, boolean needsSupport) {
@@ -644,24 +635,6 @@ public class Monster {
         return !needsSupport || map.canStandAt(nextX, nextY, bounds.width, bounds.height);
     }
 
-    private void maybeJumpTowardPlayer(Player player) {
-        if (!canJump || !onGround || jumpCooldownTimer > 0) {
-            return;
-        }
-
-        double horizontalDistance = Math.abs(playerCenterX(player) - getCenterX());
-        boolean playerAbove = player.getY() + player.getHeight() < y - TILE_SIZE;
-        if (playerAbove && horizontalDistance < detectionRange * 0.7) {
-            jump();
-        }
-    }
-
-    private void jump() {
-        velocityY = -jumpStrength;
-        onGround = false;
-        jumpCooldownTimer = 55;
-    }
-
     private void pauseAndReversePatrol() {
         patrolDirection *= -1;
         idleTimer = PATROL_IDLE_FRAMES;
@@ -674,6 +647,21 @@ public class Monster {
         pathIndex = 0;
         lastTargetTile = new Point(Integer.MIN_VALUE, Integer.MIN_VALUE);
         pathRefreshTimer = 0;
+    }
+
+    private void enterState(State nextState) {
+        if (state == nextState) {
+            return;
+        }
+
+        state = nextState;
+        clearPath();
+        if (state == State.IDLE) {
+            idleTimer = PATROL_IDLE_FRAMES;
+        }
+        if (state == State.RETREAT) {
+            retreatTimer = Math.max(retreatTimer, RETREAT_DURATION_FRAMES);
+        }
     }
 
     private void faceTarget(double targetCenterX) {
@@ -712,6 +700,13 @@ public class Monster {
 
     private double distanceToPlayer(Player player) {
         return Math.hypot(playerCenterX(player) - getCenterX(), playerCenterY(player) - getCenterY());
+    }
+
+    private double clamp(double value, double min, double max) {
+        if (max < min) {
+            return min;
+        }
+        return Math.max(min, Math.min(max, value));
     }
 
     private double playerCenterX(Player player) {
@@ -781,27 +776,15 @@ public class Monster {
     }
 
     public double getDetectionRange() {
-        return detectionRange;
+        return DETECTION_RANGE;
     }
 
     public double getAttackRange() {
-        return attackRange;
+        return ATTACK_RANGE;
     }
 
     public boolean isAttackActive() {
         return attackActiveTimer > 0;
-    }
-
-    public boolean canJump() {
-        return canJump;
-    }
-
-    public boolean canDodge() {
-        return canDodge;
-    }
-
-    public double getFacingDirection() {
-        return facingDirection;
     }
 
     public boolean takeDamage(int damage) {
@@ -811,9 +794,7 @@ public class Monster {
 
         health = Math.max(0, health - damage);
         if (isLowHealth()) {
-            state = State.RETREAT;
-            retreatTimer = RETREAT_DURATION_FRAMES;
-            clearPath();
+            enterState(State.RETREAT);
         }
         return health <= 0;
     }
