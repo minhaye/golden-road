@@ -75,22 +75,14 @@ public class GamePanel extends JPanel implements Runnable {
     private BufferedImage hpItemSprite;
     private BufferedImage mpItemSprite;
     private BufferedImage keyItemSprite;
-    
 
     private String toastMessage = null;
     private long toastExpireAtNanos = 0L;
-    private boolean minimapVisible = false;
 
-    private  int WORLD_WIDTH = 500 * TILE_SIZE;
-    private  int WORLD_HEIGHT = 210 * TILE_SIZE;
-    // Size: 
-    // Map 00: 280 x 160 
-    // Map 01: 330 x 140 
-    // Map 02: 180 x 300 
-    // Map 03: 500 x 210
-        
-    int worldWidth  =   WORLD_WIDTH;
-    int worldHeight =   WORLD_HEIGHT;
+    private boolean minimapVisible = true;
+
+    int worldWidth;
+    int worldHeight;
 
     // GUN + AIM
     private double renderScale;
@@ -133,13 +125,8 @@ public class GamePanel extends JPanel implements Runnable {
 
     private Player player;
 
-    //Spawn: 
-    // Map 00: 
-    // Map 01:
-    // Map 02: 400, 4000
-
     public void initPlayer() {
-        player = new Player(400, 2000);
+        player = new Player(400, 1995);
         player.update(keyHandler);
         hud = new Hud(this, player, inventory);
         inventoryPanel = new InventoryPanel(inventory, player);
@@ -247,32 +234,8 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void loadMap() {
         try {
-            var stream = getClass().getResourceAsStream("/assets/map/ROOM_3.png");
-            var stream1 = getClass().getResourceAsStream("/assets/map/ROOM_3_HIDDEN.png");
-
-            if (stream == null) {
-                System.out.println("Không tìm thấy map!");
-                return;
-            }
-            if (stream1 == null) {
-                System.out.println("Không tìm thấy hidden map!");
-                return;
-        }
-   
-        mapImage = ImageIO.read(stream);
-        hiddenImage = ImageIO.read(stream1);
-
-        // load collision
-        collisionMap = new CollisionMap();
-        collisionMap.load("/assets/map/ROOM_3_COLLISION.png");
-
-        collisionHandler = new CollisionHandler(collisionMap);
-
-        System.out.println("Load map + collision OK");
-
-        // Spawn many random items on the current screen so player can pick them up
-        sceneManager.spawnRandomItems(120, worldWidth, worldHeight);
-
+            loadMap(currentMapId, true);
+            System.out.println("Load map + collision OK");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -431,15 +394,15 @@ private void drawParallax(Graphics2D g2) {
     }
 
     private void update() {
-        /*if (keyHandler.consumeMinimapToggleJustPressed()) {
+        if (keyHandler.consumeMinimapToggleJustPressed()) {
             toggleMinimap();
         }
-        
+
         if (keyHandler.consumeMapSwitchJustPressed()) {
             switchMap();
             return;
         }
-*/
+
         if (menu.isActive()) {
             menu.update(mouseHandler);
             return;
