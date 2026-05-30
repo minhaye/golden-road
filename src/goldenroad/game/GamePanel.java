@@ -68,7 +68,7 @@ public class GamePanel extends JPanel implements Runnable {
     private BufferedImage[] parallaxLayers;
 
     // MAP
-    private MapId currentMapId = MapId.MAP_2;
+    private MapId currentMapId = MapId.MAP_3;
     private CollisionMap collisionMap;
     private CollisionHandler collisionHandler;
     private BufferedImage mapImage,hiddenImage,gameBuffer;
