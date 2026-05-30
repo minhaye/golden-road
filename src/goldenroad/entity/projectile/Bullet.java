@@ -1,4 +1,4 @@
-package goldenroad.entity;
+package goldenroad.entity.projectile;
 
 import goldenroad.map.CollisionMap;
 
@@ -7,6 +7,7 @@ import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 
 import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.Rectangle;
 
 public class Bullet {
@@ -168,5 +169,23 @@ private boolean collides(double nextX, double nextY) {
 
     public int getDamage() {
         return damage;
+    }
+
+    public void render(java.awt.Graphics2D g) {
+        BufferedImage sprite = getSprite();
+        if (sprite == null) return;
+
+        int width = sprite.getWidth();
+        int height = sprite.getHeight();
+
+        Graphics2D bulletG = (Graphics2D) g.create();
+
+        int drawX = getRenderX() - (width / 2);
+        int drawY = getRenderY() - (height / 2);
+
+        bulletG.translate(drawX, drawY);
+        bulletG.rotate(getAngle(), width / 2.0, height / 2.0);
+        bulletG.drawImage(sprite, 0, 0, null);
+        bulletG.dispose();
     }
 }

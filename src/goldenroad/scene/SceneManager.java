@@ -6,8 +6,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import goldenroad.entity.Item;
-import goldenroad.entity.Monster;
+import goldenroad.entity.item.Item;
+import goldenroad.entity.monster.AggressiveBehavior;
+import goldenroad.entity.monster.IdleBehavior;
+import goldenroad.entity.monster.Monster;
+import goldenroad.entity.monster.PatrolBehavior;
 
 public class SceneManager {
     private final List<Floor> floors = new ArrayList<>();
@@ -25,6 +28,11 @@ public class SceneManager {
     private void setupPrototypeData() {
         List<Screen> floor1Screens = new ArrayList<>();
         List<Monster> monsters = new ArrayList<>();
+
+        monsters.add(createIdleMonster(320, 2040));
+        monsters.add(createIdleMonster(2624, 760));
+        monsters.add(createPatrolMonster(640, 1400, 560, 976));
+        monsters.add(createPatrolMonster(2688, 760, 2480, 2960));
 
         addMonsterLane(monsters, 192, 1472, 2040);
         addMonsterLane(monsters, 1984, 2256, 2040);
@@ -46,9 +54,9 @@ public class SceneManager {
             ),
             monsters,
             List.of(
-                new Item(280, 355, ITEM_WIDTH, ITEM_HEIGHT, new Color(80, 210, 120), Item.Shape.OVAL, Item.ItemType.HP_POTION),
-                new Item(320, 355, ITEM_WIDTH, ITEM_HEIGHT, new Color(80, 140, 220), Item.Shape.OVAL, Item.ItemType.MP_POTION),
-                new Item(360, 355, ITEM_WIDTH, ITEM_HEIGHT, new Color(230, 190, 70), Item.Shape.RECTANGLE, Item.ItemType.KEY)
+                Item.ofType(280, 355, ITEM_WIDTH, ITEM_HEIGHT, Item.ItemType.HP_POTION),
+                Item.ofType(320, 355, ITEM_WIDTH, ITEM_HEIGHT, Item.ItemType.MP_POTION),
+                Item.ofType(360, 355, ITEM_WIDTH, ITEM_HEIGHT, Item.ItemType.KEY)
             )
         ));
 
@@ -64,7 +72,7 @@ public class SceneManager {
     }
 
     private Monster createBlockMonster(int x, int y) {
-        return new Monster(
+        Monster monster = new Monster(
             x,
             y,
             36,
@@ -72,6 +80,37 @@ public class SceneManager {
             new Color(200, 70, 70),
             6
         );
+
+        monster.setBehavior(new AggressiveBehavior());
+        return monster;
+    }
+
+    private Monster createIdleMonster(int x, int y) {
+        Monster monster = new Monster(
+            x,
+            y,
+            36,
+            40,
+            new Color(130, 130, 130),
+            6
+        );
+
+        monster.setBehavior(new IdleBehavior());
+        return monster;
+    }
+
+    private Monster createPatrolMonster(int x, int y, int leftBoundary, int rightBoundary) {
+        Monster monster = new Monster(
+            x,
+            y,
+            36,
+            40,
+            new Color(175, 175, 175),
+            6
+        );
+
+        monster.setBehavior(new PatrolBehavior(leftBoundary, rightBoundary, 1.6));
+        return monster;
     }
 
     public Screen getCurrentScreen() {
@@ -122,16 +161,7 @@ public class SceneManager {
             int y = rnd.nextInt(Math.max(1, worldHeight - ITEM_HEIGHT));
 
             Item.ItemType type = types[rnd.nextInt(types.length)];
-            Item.Shape shape = (type == Item.ItemType.KEY) ? Item.Shape.RECTANGLE : Item.Shape.OVAL;
-
-            Color color;
-            switch (type) {
-                case HP_POTION -> color = new Color(80, 210, 120);
-                case MP_POTION -> color = new Color(80, 140, 220);
-                default -> color = new Color(230, 190, 70);
-            }
-
-            Item item = new Item(x, y, ITEM_WIDTH, ITEM_HEIGHT, color, shape, type);
+            Item item = Item.ofType(x, y, ITEM_WIDTH, ITEM_HEIGHT, type);
             screen.addItem(item);
         }
     }

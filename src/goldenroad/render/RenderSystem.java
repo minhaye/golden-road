@@ -5,10 +5,35 @@ import java.awt.image.BufferedImage;
 
 public class RenderSystem {
 
+    public static final class Viewport {
+        private final double scale;
+        private final int offsetX;
+        private final int offsetY;
+
+        private Viewport(double scale, int offsetX, int offsetY) {
+            this.scale = scale;
+            this.offsetX = offsetX;
+            this.offsetY = offsetY;
+        }
+
+        public double getScale() {
+            return scale;
+        }
+
+        public int getOffsetX() {
+            return offsetX;
+        }
+
+        public int getOffsetY() {
+            return offsetY;
+        }
+    }
+
     private final int baseWidth;
     private final int baseHeight;
 
     private final BufferedImage buffer;
+    private Viewport lastViewport = new Viewport(1.0, 0, 0);
 
     public RenderSystem(int baseWidth, int baseHeight) {
         this.baseWidth = baseWidth;
@@ -37,7 +62,7 @@ public class RenderSystem {
         return g2;
     }
 
-    public void end(Graphics g) {
+    public Viewport end(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
 
         int windowWidth = g2d.getClipBounds().width;
@@ -55,6 +80,12 @@ public class RenderSystem {
         int offsetY = (windowHeight - drawHeight) / 2;
 
         g2d.drawImage(buffer, offsetX, offsetY, drawWidth, drawHeight, null);
+        lastViewport = new Viewport(scale, offsetX, offsetY);
+        return lastViewport;
+    }
+
+    public Viewport getLastViewport() {
+        return lastViewport;
     }
 
     public int getBaseWidth() {

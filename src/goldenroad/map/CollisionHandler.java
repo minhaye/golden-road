@@ -1,6 +1,6 @@
 package goldenroad.map;
 
-import goldenroad.entity.Player;
+import goldenroad.entity.player.Player;
 
 public class CollisionHandler {
     
