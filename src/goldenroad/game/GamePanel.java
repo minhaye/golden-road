@@ -359,7 +359,6 @@ private void drawParallax(Graphics2D g2) {
     }
 
 
-
     private void setPanelSize() {
         Dimension size = new Dimension(
         SCREEN_WIDTH * WINDOW_SCALE,
@@ -525,11 +524,12 @@ private void drawParallax(Graphics2D g2) {
     }
 
     private void updateMonsters() {
+        if (collisionMap == null) {
+            return;
+        }
+
         for (Monster monster : getCurrentMonsters()) {
-            int damage = monster.update(player, collisionMap, enemyPathfinder);
-            if (damage > 0) {
-                player.takeDamage(damage);
-            }
+            monster.update(player, collisionMap, bullets);
         }
     }
 
@@ -549,7 +549,6 @@ private void drawParallax(Graphics2D g2) {
         return RIGHT_SHOOT_DELAY;
     }
 
- 
     private static final double LOOK_AHEAD_DISTANCE = 120;
     private void updateCamera() {
 
