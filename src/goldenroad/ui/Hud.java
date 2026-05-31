@@ -3,8 +3,8 @@ package goldenroad.ui;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 
-import goldenroad.entity.Inventory;
-import goldenroad.entity.Player;
+import goldenroad.entity.item.Inventory;
+import goldenroad.entity.player.Player;
 import goldenroad.game.GamePanel;
 
 public class Hud {

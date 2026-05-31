@@ -1,6 +1,6 @@
 package goldenroad.render;
 
-import goldenroad.entity.Player;
+import goldenroad.entity.player.Player;
 
 public class Camera {
 
@@ -10,6 +10,12 @@ public class Camera {
     private double lookAheadX = 0;
 
     private static final double LOOK_AHEAD_DISTANCE = 120;
+
+    public void reset() {
+        x = 0;
+        y = 0;
+        lookAheadX = 0;
+    }
 
     public void update(
         Player player,

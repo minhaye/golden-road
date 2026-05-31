@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import goldenroad.entity.Item;
-import goldenroad.entity.Monster;
+import goldenroad.entity.item.Item;
+import goldenroad.entity.monster.Monster;
 
 public class Screen {
     private final List<Rectangle> solidBlocks;

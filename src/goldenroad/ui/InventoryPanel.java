@@ -8,9 +8,9 @@ import java.awt.image.BufferedImage;
 
 import javax.imageio.ImageIO;
 
-import goldenroad.entity.Inventory;
-import goldenroad.entity.Item;
-import goldenroad.entity.Player;
+import goldenroad.entity.item.Inventory;
+import goldenroad.entity.item.Item;
+import goldenroad.entity.player.Player;
 import goldenroad.game.GamePanel;
 import goldenroad.input.KeyHandler;
 import goldenroad.input.MouseHandler;

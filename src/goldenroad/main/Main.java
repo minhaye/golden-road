@@ -9,24 +9,33 @@ public class Main {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JFrame window = new JFrame("Scientific Witchery");
-            window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            try {
+                JFrame window = new JFrame("Scientific Witchery");
+                window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-            GamePanel gamePanel = new GamePanel();
-            gamePanel.loadMap();
-            gamePanel.loadParallax();
+                GamePanel gamePanel = new GamePanel();
+                gamePanel.loadMap();
+                gamePanel.loadParallax();
 
-            window.setExtendedState(JFrame.MAXIMIZED_BOTH);
-            window.add(gamePanel);
-            window.pack();
-            window.setSize(1980, 1080);
-            window.setLocationRelativeTo(null);
-            window.setFocusable(true);
-            window.setResizable(false);
-            window.setVisible(true);
+                window.setExtendedState(JFrame.MAXIMIZED_BOTH);
+                window.add(gamePanel);
+                window.pack();
+                window.setSize(1980, 1080);
+                window.setLocationRelativeTo(null);
+                window.setFocusable(true);
+                window.setResizable(false);
+                window.setVisible(true);
 
-            gamePanel.requestFocusInWindow();
-            gamePanel.startGameLoop();
+                gamePanel.requestFocusInWindow();
+                gamePanel.startGameLoop();
+            } catch (Throwable t) {
+                t.printStackTrace();
+                try (java.io.PrintWriter pw = new java.io.PrintWriter(new java.io.File("errors_runtime.log"))) {
+                    t.printStackTrace(pw);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         });
     }
 }
