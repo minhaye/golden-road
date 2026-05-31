@@ -116,7 +116,7 @@ public class GameOverlayRenderer {
         g2.setFont(UiTheme.FONT_HUD_SMALL);
         g2.setColor(UiTheme.TEXT);
         MapId mapId = world.getCurrentMapId();
-        String label = mapId == MapId.MAP_1 ? "MAP 1" : "MAP 2";
+        String label = mapId == null ? "MAP ?" : mapId.displayName();
         g2.drawString(label, miniX + 8, miniY + miniH + 16);
     }
 

@@ -14,10 +14,16 @@ import goldenroad.entity.monster.PatrolBehavior;
 import goldenroad.entity.monster.AirborneBehavior;
 import goldenroad.entity.monster.MonsterConfig;
 import goldenroad.entity.monster.MonsterFactory;
+import goldenroad.map.CollisionMap;
+import goldenroad.map.GridPathfinder;
 import goldenroad.util.AssetLoader;
 import java.awt.image.BufferedImage;
 
 public class SceneManager {
+    private static final int TILE_SIZE = 16;
+    private static final int AIRBORNE_MONSTER_WIDTH = 80;
+    private static final int AIRBORNE_MONSTER_HEIGHT = 68;
+
     private final List<Floor> floors = new ArrayList<>();
     private final MonsterSpawnPlanner monsterSpawnPlanner = new MonsterSpawnPlanner();
 
@@ -240,12 +246,24 @@ public class SceneManager {
 
     // Spawn up to `count` monsters distributed evenly across the map area.
     // This should be called after the map/world dimensions are known.
-    public void spawnMonsters(int count, int worldWidth, int worldHeight) {
+    public void spawnMonsters(
+        int count,
+        int worldWidth,
+        int worldHeight,
+        CollisionMap collisionMap,
+        double playerX,
+        double playerY,
+        double playerWidth,
+        double playerHeight
+    ) {
         if (count <= 0 || worldWidth <= 0 || worldHeight <= 0) return;
 
         int cap = Math.min(20, count); // hard cap at 20 as requested
         Random rnd = new Random();
         Screen screen = getCurrentScreen();
+        GridPathfinder pathfinder = new GridPathfinder(TILE_SIZE);
+        double playerCenterX = playerX + playerWidth / 2.0;
+        double playerCenterY = playerY + playerHeight / 2.0;
 
         // Clear existing monsters (remove all by creating a fresh list in Screen is not exposed,
         // so remove by iterating current monsters)
@@ -256,21 +274,66 @@ public class SceneManager {
 
         // Distribute spawn by splitting width into segments
         for (int i = 0; i < cap; i++) {
-            // center x for this slot
-            double slotCenter = (double)(i + 1) * worldWidth / (cap + 1);
-            int jitterX = Math.max(8, worldWidth / Math.max(10, cap*4));
-            int x = clamp((int)Math.round(slotCenter + (rnd.nextInt(jitterX*2+1) - jitterX)), 0, Math.max(0, worldWidth - 40));
+            Monster monster = null;
 
-            // place y across the height but avoid too close to top/bottom edges
-            int minY = Math.max(0, worldHeight/10);
-            int maxY = Math.max(minY+1, worldHeight - worldHeight/10);
-            int y = minY + rnd.nextInt(maxY - minY);
+            for (int attempt = 0; attempt < 32 && monster == null; attempt++) {
+                double slotCenter = (double) (i + 1) * worldWidth / (cap + 1);
+                int jitterX = Math.max(8, worldWidth / Math.max(10, cap * 4));
+                int x = clamp(
+                    (int) Math.round(slotCenter + (rnd.nextInt(jitterX * 2 + 1) - jitterX)),
+                    0,
+                    Math.max(0, worldWidth - AIRBORNE_MONSTER_WIDTH)
+                );
 
-                // Always spawn airborne monsters (only load airborne assets)
-                Monster monster = createAirborneMonster(x, y, Math.max(0, x - 80), Math.min(worldWidth, x + 80));
+                int minY = Math.max(0, worldHeight / 10);
+                int maxY = Math.max(minY + 1, worldHeight - worldHeight / 10);
+                int y = clamp(minY + rnd.nextInt(maxY - minY), 0, Math.max(0, worldHeight - AIRBORNE_MONSTER_HEIGHT));
 
-            screen.addMonster(monster);
+                if (!isReachableSpawn(collisionMap, pathfinder, playerCenterX, playerCenterY, x, y)) {
+                    continue;
+                }
+
+                monster = createAirborneMonster(x, y, Math.max(0, x - 80), Math.min(worldWidth, x + 80));
+            }
+
+            if (monster != null) {
+                screen.addMonster(monster);
+            }
         }
+    }
+
+    private boolean isReachableSpawn(
+        CollisionMap collisionMap,
+        GridPathfinder pathfinder,
+        double playerCenterX,
+        double playerCenterY,
+        int x,
+        int y
+    ) {
+        if (collisionMap == null || !collisionMap.isLoaded()) {
+            return true;
+        }
+
+        if (collisionMap.isAreaSolid(x, y, AIRBORNE_MONSTER_WIDTH, AIRBORNE_MONSTER_HEIGHT)) {
+            return false;
+        }
+
+        double monsterCenterX = x + AIRBORNE_MONSTER_WIDTH / 2.0;
+        double monsterCenterY = y + AIRBORNE_MONSTER_HEIGHT / 2.0;
+        if (Math.round(playerCenterX) == Math.round(monsterCenterX) && Math.round(playerCenterY) == Math.round(monsterCenterY)) {
+            return false;
+        }
+
+        return !pathfinder.findPath(
+            collisionMap,
+            20,
+            50,
+            playerCenterX,
+            playerCenterY,
+            monsterCenterX,
+            monsterCenterY,
+            12000
+        ).isEmpty();
     }
 
     private int clamp(int value, int min, int max) {

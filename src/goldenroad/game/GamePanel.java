@@ -195,7 +195,7 @@ public class GamePanel extends JPanel implements Runnable {
         bullets.clear();
         menu.setPaused(false);
         inventoryPanel.close();
-        showToast(currentMapId == MapId.MAP_1 ? "Da chuyen sang map 1" : "Da chuyen sang map 2");
+        showToast("Da chuyen sang " + currentMapId.displayName().toLowerCase());
         requestFocusInWindow();
     }
 
@@ -316,6 +316,20 @@ private void drawParallax(Graphics2D g2) {
 
     public int getRightShootCooldownMax() {
         return player.getAttack().getRightCooldownMax();
+    }
+
+    public int getAliveMonsterCount() {
+        try {
+            java.util.List<goldenroad.entity.monster.Monster> monsters = sceneManager.getCurrentScreen().getMonsters();
+            if (monsters == null) return 0;
+            int alive = 0;
+            for (goldenroad.entity.monster.Monster m : monsters) {
+                if (m != null && !m.isDead()) alive++;
+            }
+            return alive;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
 
