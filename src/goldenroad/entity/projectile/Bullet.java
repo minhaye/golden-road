@@ -16,6 +16,7 @@ public class Bullet {
     private final BulletType type;
     private static BufferedImage laserSprite;
     private static BufferedImage shotgunSprite;
+    private final BufferedImage instanceSprite;
 
     private double x;
     private double y;
@@ -26,6 +27,10 @@ public class Bullet {
     private final int diameter;
     private final Color color;
     private final int damage;
+    private int ageFrames = 0;
+    private double travelDistance = 0.0;
+    private static final int MAX_AGE_FRAMES = 240;
+    private static final double MAX_TRAVEL_DISTANCE = 1800.0;
 
     public enum BulletType {
         LASER,
@@ -33,10 +38,15 @@ public class Bullet {
     }
 
     public Bullet(double x, double y, double directionX, double directionY, double speed, int diameter, Color color, int damage, CollisionMap collisionMap, BulletType type) {
+        this(x, y, directionX, directionY, speed, diameter, color, damage, collisionMap, type, null);
+    }
+
+    public Bullet(double x, double y, double directionX, double directionY, double speed, int diameter, Color color, int damage, CollisionMap collisionMap, BulletType type, BufferedImage instanceSprite) {
         this.x = x;
         this.y = y;
         this.collisionMap = collisionMap;
         this.type = type;
+        this.instanceSprite = instanceSprite;
 
         double length = Math.hypot(directionX, directionY);
         if (length == 0) {
@@ -76,18 +86,30 @@ static {
     }
 
     public BufferedImage getSprite() {
+        if (instanceSprite != null) {
+            return instanceSprite;
+        }
 
-    if (type == BulletType.SHOTGUN) {
-        return shotgunSprite;
-    }
+        if (type == BulletType.SHOTGUN) {
+            return shotgunSprite;
+        }
 
-    return laserSprite;
+        return laserSprite;
 }
 
     public double getAngle() {
         return Math.atan2(velocityY, velocityX);
     }
     public void update() {
+    if (destroyed) {
+        return;
+    }
+
+    ageFrames++;
+    if (ageFrames > MAX_AGE_FRAMES || travelDistance > MAX_TRAVEL_DISTANCE) {
+        destroyed = true;
+        return;
+    }
 
     double steps =
         Math.max(
@@ -111,6 +133,7 @@ static {
 
         x = nextX;
         y = nextY;
+        travelDistance += Math.hypot(stepX, stepY);
     }
 }
 private boolean collides(double nextX, double nextY) {

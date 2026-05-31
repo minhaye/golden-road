@@ -2,6 +2,7 @@ package goldenroad.entity.player;
 
 public class PlayerCombat {
     private final PlayerResources resources;
+    private static final boolean INVINCIBLE = true;
 
     private int invulnerabilityTimer = 0;
     private final int INVULNERABILITY_DURATION = 60; // frames
@@ -20,6 +21,10 @@ public class PlayerCombat {
 
     // Apply damage if not invulnerable. Returns true if damage applied.
     public boolean applyDamage(int damage) {
+        if (INVINCIBLE) {
+            return false;
+        }
+
         if (damage <= 0) return false;
         if (isInvulnerable()) return false;
 

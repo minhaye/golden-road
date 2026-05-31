@@ -90,12 +90,13 @@ public class GameWorld {
             }
 
             boolean hitMonster = false;
-            Iterator<Monster> monsterIterator = sceneManager.getCurrentScreen().getMonsters().iterator();
-            while (monsterIterator.hasNext()) {
-                Monster monster = monsterIterator.next();
+            // iterate over a copy because Screen.getMonsters() returns an unmodifiable view
+            List<Monster> monstersCopy = new ArrayList<>(sceneManager.getCurrentScreen().getMonsters());
+            for (Monster monster : monstersCopy) {
                 if (bounds.intersects(monster.getBounds())) {
                     if (monster.takeDamage(bullet.getDamage())) {
-                        monsterIterator.remove();
+                        // remove from the underlying screen list via provided API
+                        sceneManager.getCurrentScreen().removeMonster(monster);
                     }
                     it.remove();
                     hitMonster = true;
@@ -153,14 +154,14 @@ public class GameWorld {
             }
         }
 
-        // MONSTERS
-        for (Monster monster : sceneManager.getCurrentScreen().getMonsters()) {
+        // MONSTERS (iterate over a copy to avoid concurrent modification during update)
+        for (Monster monster : new ArrayList<>(sceneManager.getCurrentScreen().getMonsters())) {
             monster.draw(g);
         }
 
-        // BULLETS
+        // BULLETS (iterate over a copy to avoid concurrent modification during update)
         if (bullets != null) {
-            for (Bullet bullet : bullets) {
+            for (Bullet bullet : new ArrayList<>(bullets)) {
                 bullet.render(g);
             }
         }
@@ -229,6 +230,8 @@ public class GameWorld {
 
         if (spawnInitialItems && sceneManager != null) {
             sceneManager.spawnRandomItems(120, worldWidth, worldHeight);
+            // spawn monsters distributed across the map (cap 20)
+            sceneManager.spawnMonsters(20, worldWidth, worldHeight);
         }
     }
 

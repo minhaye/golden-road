@@ -1,0 +1,24 @@
+monster_1/
+├── idle/
+│   ├── idle_0.png
+│   └── idle_1.png
+├── move/
+│   ├── move_0.png
+│   ├── move_1.png
+│   ├── move_2.png
+│   ├── move_3.png
+│   ├── move_4.png
+│   └── move_5.png
+├── attack/
+│   ├── attack_0.png
+│   ├── attack_1.png
+│   ├── attack_2.png
+│   └── attack_3.png
+├── hurt/
+│   ├── hurt_0.png
+│   └── hurt_1.png
+└── death/
+    ├── death_0.png
+    ├── death_1.png
+    ├── death_2.png
+    └── death_3.png

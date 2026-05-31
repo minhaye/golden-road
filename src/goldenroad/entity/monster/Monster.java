@@ -1,507 +1,509 @@
 package goldenroad.entity.monster;
 
+import goldenroad.entity.Entity;
 import goldenroad.entity.player.Player;
 import goldenroad.entity.projectile.Bullet;
 import goldenroad.map.CollisionMap;
-import goldenroad.map.GridPathfinder;
+import goldenroad.util.AssetLoader;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.Point;
 import java.awt.Rectangle;
-import java.util.ArrayDeque;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
-public class Monster {
-    public enum State {
-        IDLE,
-        PATROL,
-        CHASE,
-        ATTACK,
-        RETREAT
+import javax.imageio.ImageIO;
+
+public class Monster extends Entity {
+    protected int hp;
+    protected int damage;
+    protected float attackSpeed;
+    protected float moveSpeed;
+    protected int width;
+    protected int height;
+    protected float spawnX;
+    protected float spawnY;
+    protected float moveRange;
+    protected float detectRange;
+    protected float attackRange;
+    protected final Map<MonsterState, List<BufferedImage>> assets = new EnumMap<>(MonsterState.class);
+    protected MonsterState currentState = MonsterState.IDLE;
+    protected Direction direction = Direction.RIGHT;
+    protected int currentFrame;
+    protected float frameTimer;
+    protected float frameDuration = 8f;
+    protected boolean isDead;
+    protected boolean isAttacking;
+    protected MonsterType monsterType = MonsterType.GROUND;
+    protected MonsterBehavior behavior;
+    protected BufferedImage fallbackSprite;
+    protected BufferedImage projectileSprite;
+    private int attackCooldownTicks;
+    private int attackCooldownRemaining;
+
+    public Monster(float x, float y, int width, int height, Color color, int hp) {
+        this(x, y, width, height, color, hp, 6, 1.6f, 1.0f, 64f, 120f, 36f, 8f, MonsterType.GROUND);
     }
 
-    public enum Type {
-        GROUND
+    protected Monster(
+            float x,
+            float y,
+            int width,
+            int height,
+            Color color,
+            int hp,
+            int damage,
+            float moveSpeed,
+            float attackSpeed,
+            float moveRange,
+            float detectRange,
+            float attackRange,
+            float frameDuration,
+            MonsterType monsterType
+    ) {
+        super(x, y);
+        this.width = width;
+        this.height = height;
+        this.hp = hp;
+        this.damage = damage;
+        this.moveSpeed = moveSpeed;
+        this.attackSpeed = attackSpeed;
+        this.moveRange = moveRange;
+        this.detectRange = detectRange;
+        this.attackRange = attackRange;
+        this.frameDuration = Math.max(1f, frameDuration);
+        this.monsterType = monsterType;
+        this.spawnX = x;
+        this.spawnY = y;
+        this.fallbackSprite = createFallbackSprite(color, width, height);
+        this.attackCooldownTicks = Math.max(1, Math.round(60f / Math.max(0.1f, attackSpeed)));
+        loadDefaultAssets();
     }
 
-    private static final int ATTACK_ACTIVE_FRAMES = 12;
-    private static final int ATTACK_DAMAGE = 3;
-    private static final int ATTACK_COOLDOWN_FRAMES = 60;
-    private static final int RETREAT_DURATION_FRAMES = 120;
-    private static final int PATH_REFRESH_FRAMES = 18;
-    private static final int PATROL_IDLE_FRAMES = 35;
-    private static final int MAX_SEARCH_NODES = 300;
-    private static final double ARRIVE_DISTANCE = 4.0;
-    private static final double DETECTION_RANGE = 260.0;
-    private static final double ATTACK_RANGE = 48.0;
-    private static final double PATROL_RANGE = 120.0;
-    private static final double MOVE_SPEED = 2.0;
-    private static final double LOW_HEALTH_RETREAT_RATIO = 0.4;
-
-    private final Rectangle bounds;
-    private final Color color;
-    private final Type type;
-    private final MonsterMotion motion;
-    private final GridPathfinder pathfinder = new GridPathfinder(16);
-    private final int maxHealth;
-    private final int retreatHealthThreshold;
-    private int health;
-
-    private State state = State.IDLE;
-    private int idleTimer = PATROL_IDLE_FRAMES;
-    private int attackCooldownTimer = 0;
-    private int attackActiveTimer = 0;
-    private int retreatTimer = 0;
-    private int pathRefreshTimer = 0;
-
-    private final List<Point> path = new ArrayList<>();
-    private int pathIndex = 0;
-    public Monster(int x, int y, int width, int height, Color color) {
-        this(x, y, width, height, color, 3, Type.GROUND);
+    protected Monster(
+            float x,
+            float y,
+            int width,
+            int height,
+            Color color,
+            int hp,
+            int damage,
+            float moveSpeed,
+            float attackSpeed,
+            float moveRange,
+            float detectRange,
+            float attackRange,
+            float frameDuration,
+            MonsterType monsterType,
+            String assetBasePath
+    ) {
+        this(x, y, width, height, color, hp, damage, moveSpeed, attackSpeed, moveRange, detectRange, attackRange, frameDuration, monsterType);
+        loadAssets(assetBasePath);
     }
 
-    public Monster(int x, int y, int width, int height, Color color, int health) {
-        this(x, y, width, height, color, health, Type.GROUND);
+    public MonsterType getMonsterType() {
+        return monsterType;
     }
 
-    public Monster(int x, int y, int width, int height, Color color, int health, Type type) {
-        this.bounds = new Rectangle(x, y, width, height);
-        this.color = color;
-        this.type = type;
-        this.health = Math.max(1, health);
-        this.maxHealth = this.health;
-        this.retreatHealthThreshold = Math.max(1, (int)Math.ceil(this.maxHealth * LOW_HEALTH_RETREAT_RATIO));
-        this.motion = new MonsterMotion(x, y, width, height, PATROL_RANGE);
-    }
-    private MonsterBehavior behavior = null;
-
-    public int update(Player player, CollisionMap map) {
-        return update(player, map, Collections.emptyList());
+    public int getHp() {
+        return hp;
     }
 
-    public int update(Player player, CollisionMap map, List<Bullet> bullets) {
-        if (behavior != null) {
-            return behavior.update(this, player, map, bullets);
-        }
-        return performDefaultUpdate(player, map, bullets);
-    }
-
-    /**
-     * Existing default update logic extracted so behaviors can delegate or replace it.
-     */
-    int performDefaultUpdate(Player player, CollisionMap map, List<Bullet> bullets) {
-        if (player == null || map == null || health <= 0) {
-            return 0;
-        }
-
-        motion.resolvePlacement(map);
-        updateTimers();
-        motion.refreshGroundState(map);
-        motion.startDodgeIfThreatened(bullets);
-
-        if (motion.isDodgeActive()) {
-            state = State.RETREAT;
-            motion.updateDodgeStep(map);
-            return 0;
-        }
-
-        chooseState(player);
-
-        int damage = 0;
-        switch (state) {
-            case IDLE -> updateIdle();
-            case PATROL -> updatePatrol(map);
-            case CHASE -> updateChase(player, map);
-            case ATTACK -> damage = updateAttack(player);
-            case RETREAT -> updateRetreat(player, map);
-        }
-
-        applyVerticalPhysics(map);
-        updateBounds();
+    public int getDamage() {
         return damage;
+    }
+
+    public float getMoveSpeed() {
+        return moveSpeed;
+    }
+
+    public float getDetectRange() {
+        return detectRange;
+    }
+
+    public float getAttackRange() {
+        return attackRange;
+    }
+
+    public float getMoveRange() {
+        return moveRange;
+    }
+
+    public float getSpawnX() {
+        return spawnX;
+    }
+
+    public float getSpawnY() {
+        return spawnY;
+    }
+
+    public Direction getDirection() {
+        return direction;
+    }
+
+    public MonsterState getCurrentState() {
+        return currentState;
     }
 
     public void setBehavior(MonsterBehavior behavior) {
         this.behavior = behavior;
     }
 
-    public MonsterBehavior getBehavior() {
-        return this.behavior;
-    }
+    public void setSprite(BufferedImage sprite) {
+        if (sprite == null) return;
 
-    public void draw(Graphics2D g) {
-        Rectangle r = getBounds();
-        g.setColor(getRenderColor());
-        g.fillRect(r.x, r.y, r.width, r.height);
+        // replace fallback sprite and update any asset lists that were using the old fallback
+        BufferedImage previousFallback = this.fallbackSprite;
+        this.fallbackSprite = sprite;
 
-        if (isAttackActive()) {
-            g.setColor(Color.WHITE);
-            g.drawRect(r.x - 2, r.y - 2, r.width + 4, r.height + 4);
-        }
+        if (assets != null) {
+            for (MonsterState state : MonsterState.values()) {
+                List<BufferedImage> frames = assets.get(state);
+                if (frames == null || frames.isEmpty()) {
+                    List<BufferedImage> newList = new ArrayList<>();
+                    newList.add(sprite);
+                    assets.put(state, newList);
+                    continue;
+                }
 
-        if (health < maxHealth) {
-            int barWidth = r.width;
-            int barHeight = 4;
-            int hpWidth = Math.max(1, (int)Math.round(barWidth * getHealthRatio()));
-
-            g.setColor(new Color(35, 20, 25));
-            g.fillRect(r.x, r.y - 8, barWidth, barHeight);
-            g.setColor(new Color(80, 220, 120));
-            g.fillRect(r.x, r.y - 8, hpWidth, barHeight);
-        }
-    }
-
-    public void render(Graphics2D g) {
-        draw(g);
-    }
-
-    private void updateTimers() {
-        if (attackCooldownTimer > 0) {
-            attackCooldownTimer--;
-        }
-        if (attackActiveTimer > 0) {
-            attackActiveTimer--;
-        }
-        if (pathRefreshTimer > 0) {
-            pathRefreshTimer--;
-        }
-        motion.updateTimers();
-    }
-
-    private void chooseState(Player player) {
-        double distance = distanceToPlayer(player);
-
-        if (isLowHealth() && distance <= DETECTION_RANGE * 1.35) {
-            enterState(State.RETREAT);
-            retreatTimer = Math.max(retreatTimer, RETREAT_DURATION_FRAMES);
-            return;
-        }
-
-        if (distance <= ATTACK_RANGE) {
-            enterState(State.ATTACK);
-            return;
-        }
-
-        if (distance <= DETECTION_RANGE) {
-            enterState(State.CHASE);
-            return;
-        }
-
-        if (state == State.CHASE || state == State.ATTACK || state == State.RETREAT) {
-            enterState(State.IDLE);
-        }
-    }
-
-    private void updateIdle() {
-        if (idleTimer > 0) {
-            idleTimer--;
-            return;
-        }
-
-        state = State.PATROL;
-        motion.setPatrolTargetX(motion.getSpawnX() + motion.getPatrolDirection() * PATROL_RANGE);
-    }
-
-    private void updatePatrol(CollisionMap map) {
-        boolean reachedTarget = Math.abs(getCenterX() - motion.getPatrolTargetX()) <= ARRIVE_DISTANCE;
-        if (reachedTarget) {
-            pauseAndReversePatrol();
-            return;
-        }
-
-        double direction = Math.signum(motion.getPatrolTargetX() - getCenterX());
-        if (direction == 0) {
-            direction = motion.getPatrolDirection();
-        }
-
-        motion.setFacingDirection(direction);
-        boolean moved = motion.moveHorizontal(direction * MOVE_SPEED, map, true);
-        if (!moved) {
-            pauseAndReversePatrol();
-        }
-    }
-
-    private void updateChase(Player player, CollisionMap map) {
-        if (shouldRefreshPath()) {
-            path.clear();
-            path.addAll(pathfinder.findPath(
-                map,
-                bounds.width,
-                bounds.height,
-                getCenterX(),
-                getCenterY(),
-                playerCenterX(player),
-                playerCenterY(player),
-                MAX_SEARCH_NODES
-            ));
-            pathIndex = 0;
-            pathRefreshTimer = PATH_REFRESH_FRAMES;
-        }
-
-        if (!followPath(map)) {
-            moveTowardPoint(
-                playerCenterX(player) - bounds.width / 2.0,
-                player.getY() + player.getHeight() - bounds.height,
-                MOVE_SPEED,
-                map,
-                false
-            );
-        }
-    }
-
-    private int updateAttack(Player player) {
-        clearPath();
-        faceTarget(playerCenterX(player));
-
-        if (distanceToPlayer(player) > ATTACK_RANGE * 1.15) {
-            enterState(State.CHASE);
-            return 0;
-        }
-
-        if (attackCooldownTimer <= 0) {
-            attackActiveTimer = ATTACK_ACTIVE_FRAMES;
-            attackCooldownTimer = ATTACK_COOLDOWN_FRAMES;
-            return ATTACK_DAMAGE;
-        }
-
-        return 0;
-    }
-
-    private void updateRetreat(Player player, CollisionMap map) {
-        clearPath();
-        retreatTimer--;
-
-        double away = Math.signum(getCenterX() - playerCenterX(player));
-        if (away == 0) {
-            away = -motion.getFacingDirection();
-        }
-
-        motion.setFacingDirection(away);
-        boolean moved = motion.moveHorizontal(away * 2.6, map, true);
-        if (!moved) {
-            moveTowardPoint(motion.getSpawnX(), motion.getSpawnY(), MOVE_SPEED, map, false);
-        }
-
-        if (retreatTimer <= 0 && distanceToPlayer(player) > DETECTION_RANGE) {
-            enterState(State.IDLE);
-        }
-    }
-
-    private boolean shouldRefreshPath() {
-        return pathRefreshTimer <= 0 || path.isEmpty();
-    }
-
-    private boolean followPath(CollisionMap map) {
-        if (path.isEmpty() || pathIndex >= path.size()) {
-            return false;
-        }
-
-        Point next = path.get(pathIndex);
-        double targetX = next.x - bounds.width / 2.0;
-        double targetY = next.y - bounds.height;
-
-        if (Math.hypot(targetX - motion.getX(), targetY - motion.getY()) <= ARRIVE_DISTANCE) {
-            pathIndex++;
-            if (pathIndex >= path.size()) {
-                return true;
+                for (int i = 0; i < frames.size(); i++) {
+                    if (frames.get(i) == previousFallback) {
+                        frames.set(i, sprite);
+                    }
+                }
             }
-            next = path.get(pathIndex);
-            targetX = next.x - bounds.width / 2.0;
-            targetY = next.y - bounds.height;
-        }
-
-        return moveTowardPoint(targetX, targetY, MOVE_SPEED, map, false);
-    }
-
-    private boolean moveTowardPoint(double targetX, double targetY, double speed, CollisionMap map, boolean needsSupport) {
-        double dx = targetX - motion.getX();
-        if (Math.abs(dx) <= ARRIVE_DISTANCE && Math.abs(targetY - motion.getY()) <= ARRIVE_DISTANCE) {
-            return true;
-        }
-
-        double direction = Math.signum(dx);
-        if (direction == 0) {
-            return false;
-        }
-
-        faceTarget(targetX + bounds.width / 2.0);
-        return motion.moveHorizontal(direction * speed, map, needsSupport);
-    }
-
-    boolean moveHorizontal(double dx, CollisionMap map, boolean needsSupport) {
-        return motion.moveHorizontal(dx, map, needsSupport);
-    }
-
-    void applyVerticalPhysics(CollisionMap map) {
-        motion.applyVerticalPhysics(map);
-    }
-
-    void setFacingDirection(double direction) {
-        motion.setFacingDirection(direction);
-    }
-
-    double getFacingDirection() {
-        return motion.getFacingDirection();
-    }
-
-    int getMonsterWidth() {
-        return motion.getMonsterWidth();
-    }
-
-    int getMonsterHeight() {
-        return motion.getMonsterHeight();
-    }
-
-    private void pauseAndReversePatrol() {
-        motion.setPatrolDirection(motion.getPatrolDirection() * -1);
-        idleTimer = PATROL_IDLE_FRAMES;
-        state = State.IDLE;
-        clearPath();
-    }
-
-    private void clearPath() {
-        path.clear();
-        pathIndex = 0;
-        pathRefreshTimer = 0;
-    }
-
-    private void enterState(State nextState) {
-        if (state == nextState) {
-            return;
-        }
-
-        state = nextState;
-        clearPath();
-        if (state == State.IDLE) {
-            idleTimer = PATROL_IDLE_FRAMES;
-        }
-        if (state == State.RETREAT) {
-            retreatTimer = Math.max(retreatTimer, RETREAT_DURATION_FRAMES);
         }
     }
 
-    private void faceTarget(double targetCenterX) {
-        double direction = Math.signum(targetCenterX - getCenterX());
-        if (direction != 0) {
-            motion.setFacingDirection(direction);
+    public void setProjectileSprite(BufferedImage sprite) {
+        this.projectileSprite = sprite;
+    }
+
+    public void setPosition(float x, float y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public void setDirection(Direction direction) {
+        if (direction != null) {
+            this.direction = direction;
         }
     }
 
-    private void updateBounds() {
-        bounds.x = (int)Math.round(motion.getX());
-        bounds.y = (int)Math.round(motion.getY());
-    }
-
-    private double distanceToPlayer(Player player) {
-        return Math.hypot(playerCenterX(player) - getCenterX(), playerCenterY(player) - getCenterY());
-    }
-
-    private double clamp(double value, double min, double max) {
-        if (max < min) {
-            return min;
+    public void setState(MonsterState newState) {
+        if (newState != null && currentState != newState) {
+            currentState = newState;
+            currentFrame = 0;
+            frameTimer = 0;
         }
-        return Math.max(min, Math.min(max, value));
     }
 
-    private double playerCenterX(Player player) {
-        return player.getX() + player.getWidth() / 2.0;
-    }
-
-    private double playerCenterY(Player player) {
-        return player.getY() + player.getHeight() / 2.0;
-    }
-
-    private double getCenterX() {
-        return motion.getX() + bounds.width / 2.0;
-    }
-
-    private double getCenterY() {
-        return motion.getY() + bounds.height / 2.0;
+    public boolean isDead() {
+        return isDead;
     }
 
     public Rectangle getBounds() {
-        return bounds;
+        return new Rectangle((int) Math.round(x), (int) Math.round(y), width, height);
     }
 
-    public Color getColor() {
-        return color;
+    @Override
+    public double getWidth() {
+        return width;
     }
 
-    public Color getRenderColor() {
-        return switch (state) {
-            case IDLE -> color.darker();
-            case PATROL -> color;
-            case CHASE -> new Color(235, 145, 70);
-            case ATTACK -> new Color(245, 70, 70);
-            case RETREAT -> isLowHealth() ? new Color(80, 150, 240) : new Color(110, 180, 235);
-        };
+    @Override
+    public double getHeight() {
+        return height;
     }
 
-    public Type getType() {
-        return type;
+    public int update(Player player, CollisionMap collisionMap, List<Bullet> bullets) {
+        if (isDead) {
+            return 0;
+        }
+
+        if (attackCooldownRemaining > 0) {
+            attackCooldownRemaining--;
+        }
+
+        if (behavior != null) {
+            behavior.update(this, player, collisionMap);
+        } else {
+            move(player, collisionMap);
+        }
+
+        int damageDealt = 0;
+        if (player != null && !isDead) {
+            float distance = distanceTo(player.getX(), player.getY());
+            if (distance <= attackRange && attackCooldownRemaining == 0) {
+                damageDealt = attack(player);
+            }
+        }
+
+        updateAnimation();
+        return damageDealt;
     }
 
-    public int getHealth() {
-        return health;
+    public void draw(Graphics2D g) {
+        if (g == null || isDead) {
+            return;
+        }
+
+        BufferedImage image = getCurrentImage();
+        if (image != null) {
+            if (direction == Direction.LEFT) {
+                g.drawImage(image, (int) Math.round(x + width), (int) Math.round(y), -width, height, null);
+            } else {
+                g.drawImage(image, (int) Math.round(x), (int) Math.round(y), width, height, null);
+            }
+            return;
+        }
+
+        g.setColor(colorForState());
+        g.fillRect((int) Math.round(x), (int) Math.round(y), width, height);
     }
 
-    public int getMaxHealth() {
-        return maxHealth;
+    protected void move(Player player, CollisionMap collisionMap) {
+        if (player == null) {
+            setState(MonsterState.IDLE);
+            return;
+        }
+
+        float dx = player.getX() - x;
+        float dy = player.getY() - y;
+        float distance = (float) Math.hypot(dx, dy);
+
+        if (distance <= detectRange) {
+            if (dx < 0) {
+                direction = Direction.LEFT;
+            } else if (dx > 0) {
+                direction = Direction.RIGHT;
+            }
+            setState(MonsterState.MOVE);
+            x += clampStep(dx, moveSpeed);
+            y += clampStep(dy, moveSpeed);
+        } else {
+            setState(MonsterState.IDLE);
+        }
     }
 
-    public double getHealthRatio() {
-        return Math.max(0, Math.min(1, health / (double)maxHealth));
+    protected int attack(Player player) {
+        isAttacking = true;
+        setState(MonsterState.ATTACK);
+        attackCooldownRemaining = attackCooldownTicks;
+        return damage;
     }
 
-    public boolean isLowHealth() {
-        return health <= retreatHealthThreshold && health < maxHealth;
-    }
-
-    public State getState() {
-        return state;
-    }
-
-    public double getX() {
-        return motion.getX();
-    }
-
-    public double getY() {
-        return motion.getY();
-    }
-
-    public double getDetectionRange() {
-        return DETECTION_RANGE;
-    }
-
-    public double getAttackRange() {
-        return ATTACK_RANGE;
-    }
-
-    public boolean isAttackActive() {
-        return attackActiveTimer > 0;
-    }
-
-    void clearPathAndDodge() {
-        clearPath();
-        motion.clearDodgeState();
-    }
-
-    void syncBoundsFromMotion() {
-        updateBounds();
-    }
-
-    public boolean takeDamage(int damage) {
-        if (damage <= 0 || health <= 0) {
+    public boolean takeDamage(int incomingDamage) {
+        if (isDead || incomingDamage <= 0) {
             return false;
         }
 
-        health = Math.max(0, health - damage);
-        if (isLowHealth()) {
-            enterState(State.RETREAT);
+        hp -= incomingDamage;
+        if (hp <= 0) {
+            die();
+            return true;
         }
-        return health <= 0;
+
+        setState(MonsterState.HURT);
+        return false;
+    }
+
+    protected void die() {
+        isDead = true;
+        setState(MonsterState.DEATH);
+    }
+
+    protected void updateAnimation() {
+        List<BufferedImage> frames = assets.get(currentState);
+        if (frames == null || frames.isEmpty()) {
+            return;
+        }
+        // Use a smaller increment so animations progress slower per game tick
+        frameTimer += 0.5f;
+        if (frameTimer < frameDuration) {
+            return;
+        }
+
+        frameTimer -= frameDuration;
+        currentFrame++;
+
+        if (currentFrame >= frames.size()) {
+            if (currentState == MonsterState.ATTACK) {
+                isAttacking = false;
+                setState(MonsterState.IDLE);
+            } else if (currentState == MonsterState.HURT) {
+                setState(MonsterState.IDLE);
+            } else if (currentState == MonsterState.DEATH) {
+                isDead = true;
+                currentFrame = frames.size() - 1;
+            } else {
+                currentFrame = 0;
+            }
+        }
+    }
+
+    protected float distanceTo(float targetX, float targetY) {
+        return (float) Math.hypot(targetX - x, targetY - y);
+    }
+
+    protected boolean canDetectPlayer(Player player) {
+        return player != null && distanceTo(player.getX(), player.getY()) <= detectRange;
+    }
+
+    protected boolean isPlayerInAttackRange(Player player) {
+        return player != null && distanceTo(player.getX(), player.getY()) <= attackRange;
+    }
+
+    protected void moveToward(float targetX, float targetY) {
+        moveToward(targetX, targetY, moveSpeed);
+    }
+
+    protected void moveToward(float targetX, float targetY, float speed) {
+        float dx = targetX - x;
+        float dy = targetY - y;
+        float distance = (float) Math.hypot(dx, dy);
+        if (distance == 0f) {
+            return;
+        }
+        float appliedSpeed = Math.max(0f, speed);
+
+        // If we're very close to the target, snap to it to avoid oscillation
+        if (distance <= appliedSpeed * 0.5f) {
+            x = targetX;
+            y = targetY;
+            return;
+        }
+
+        float stepX = (dx / distance) * appliedSpeed;
+        float stepY = (dy / distance) * appliedSpeed;
+
+        // Only update facing direction when there's a meaningful horizontal movement
+        if (Math.abs(stepX) > 0.01f) {
+            direction = stepX < 0 ? Direction.LEFT : Direction.RIGHT;
+        }
+
+        x += stepX;
+        y += stepY;
+    }
+
+    protected void moveHorizontallyToward(float targetX) {
+        float dx = targetX - x;
+        if (Math.abs(dx) < 0.5f) {
+            return;
+        }
+
+        direction = dx < 0 ? Direction.LEFT : Direction.RIGHT;
+        x += Math.signum(dx) * moveSpeed;
+    }
+
+    protected void moveVerticallyToward(float targetY) {
+        float dy = targetY - y;
+        if (Math.abs(dy) < 0.5f) {
+            return;
+        }
+
+        y += Math.signum(dy) * moveSpeed;
+    }
+
+    protected float clampStep(float delta, float speed) {
+        float step = Math.min(Math.abs(delta), speed);
+        return Math.copySign(step, delta);
+    }
+
+    protected BufferedImage getCurrentImage() {
+        List<BufferedImage> frames = assets.get(currentState);
+        if (frames != null && !frames.isEmpty()) {
+            int safeIndex = Math.min(currentFrame, frames.size() - 1);
+            return frames.get(safeIndex);
+        }
+
+        return fallbackSprite;
+    }
+
+    protected void loadDefaultAssets() {
+        for (MonsterState state : MonsterState.values()) {
+            assets.put(state, new ArrayList<>());
+        }
+
+        assets.get(MonsterState.IDLE).add(fallbackSprite);
+        assets.get(MonsterState.MOVE).add(fallbackSprite);
+        assets.get(MonsterState.ATTACK).add(fallbackSprite);
+        assets.get(MonsterState.HURT).add(fallbackSprite);
+        assets.get(MonsterState.DEATH).add(fallbackSprite);
+    }
+
+    protected void loadAssets(String basePath) {
+        if (basePath == null || basePath.isBlank()) {
+            return;
+        }
+
+        for (MonsterState state : MonsterState.values()) {
+            assets.put(state, loadFrames(basePath, state));
+        }
+
+        if (assets.values().stream().allMatch(List::isEmpty)) {
+            loadDefaultAssets();
+        }
+    }
+
+    private List<BufferedImage> loadFrames(String basePath, MonsterState state) {
+        List<BufferedImage> frames = new ArrayList<>();
+        String folder = state.name().toLowerCase();
+
+        for (int index = 0; index < 16; index++) {
+            String candidate = basePath + "/" + folder + "/" + folder + "_" + index + ".png";
+            BufferedImage frame = readImageSilently(candidate);
+            if (frame == null) {
+                if (!frames.isEmpty()) {
+                    break;
+                }
+                continue;
+            }
+            frames.add(frame);
+        }
+
+        if (frames.isEmpty()) {
+            frames.add(fallbackSprite);
+        }
+
+        return frames;
+    }
+
+    private BufferedImage readImageSilently(String resourcePath) {
+        try (InputStream stream = AssetLoader.open(resourcePath)) {
+            if (stream == null) {
+                return null;
+            }
+
+            return ImageIO.read(stream);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    private BufferedImage createFallbackSprite(Color color, int width, int height) {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = image.createGraphics();
+        g.setColor(color == null ? new Color(180, 80, 80) : color);
+        g.fillRoundRect(0, 0, width, height, 10, 10);
+        g.setColor(new Color(20, 20, 20, 100));
+        g.drawRoundRect(0, 0, width - 1, height - 1, 10, 10);
+        g.dispose();
+        return image;
+    }
+
+    private Color colorForState() {
+        return switch (currentState) {
+            case ATTACK -> new Color(235, 120, 90);
+            case HURT -> new Color(245, 220, 90);
+            case DEATH -> new Color(70, 70, 70);
+            case MOVE -> new Color(120, 210, 130);
+            case IDLE -> new Color(200, 80, 90);
+        };
     }
 }

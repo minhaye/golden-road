@@ -47,4 +47,9 @@ public class Screen {
         if (item == null) return;
         items.add(item);
     }
+
+    public void addMonster(Monster monster) {
+        if (monster == null) return;
+        monsters.add(monster);
+    }
 }

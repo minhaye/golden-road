@@ -120,6 +120,7 @@ public class GamePanel extends JPanel implements Runnable {
         setBackground(new Color(20, 26, 38));
         setDoubleBuffered(true);
         setFocusable(true);
+        setFocusTraversalKeysEnabled(false);
         addKeyListener(keyHandler);
         addMouseListener(mouseHandler);
         addMouseMotionListener(mouseHandler);
@@ -459,7 +460,7 @@ private void drawParallax(Graphics2D g2) {
         }
 
         if (!menu.isPaused() && minimapVisible) {
-            overlayRenderer.renderMinimap(bufferG, world, player, camera.getX(), camera.getY(), SCREEN_WIDTH, SCREEN_HEIGHT);
+            overlayRenderer.renderMinimap(bufferG, world, sceneManager, player, camera.getX(), camera.getY(), SCREEN_WIDTH, SCREEN_HEIGHT);
         }
     }
 
