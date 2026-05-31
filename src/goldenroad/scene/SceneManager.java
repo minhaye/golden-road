@@ -14,6 +14,7 @@ import goldenroad.entity.monster.PatrolBehavior;
 import goldenroad.entity.monster.AirborneBehavior;
 import goldenroad.entity.monster.MonsterConfig;
 import goldenroad.entity.monster.MonsterFactory;
+import goldenroad.entity.monster.MonsterType;
 import goldenroad.map.CollisionMap;
 import goldenroad.map.GridPathfinder;
 import goldenroad.util.AssetLoader;
@@ -23,6 +24,14 @@ public class SceneManager {
     private static final int TILE_SIZE = 16;
     private static final int AIRBORNE_MONSTER_WIDTH = 80;
     private static final int AIRBORNE_MONSTER_HEIGHT = 68;
+    private static final int AIRBORNE_MONSTER_COUNT = 12;
+
+    private static final MonsterConfig[] AIRBORNE_POOL = new MonsterConfig[] {
+        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_1", 16, 7, 1.2f, 1.0f, 40, 34, 240f, 340f, 42f, 32f, "/assets/monster/airborne-monster/monster_1"),
+        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_2", 18, 8, 1.2f, 1.05f, 40, 34, 260f, 360f, 42f, 32f, "/assets/monster/airborne-monster/monster_2"),
+        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_3", 20, 9, 1.3f, 1.1f, 40, 34, 280f, 380f, 42f, 32f, "/assets/monster/airborne-monster/monster_3"),
+        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_4", 22, 10, 1.3f, 1.15f, 40, 34, 300f, 400f, 42f, 32f, "/assets/monster/airborne-monster/monster_4")
+    };
 
     private final List<Floor> floors = new ArrayList<>();
     private final MonsterSpawnPlanner monsterSpawnPlanner = new MonsterSpawnPlanner();
@@ -152,41 +161,8 @@ public class SceneManager {
         return null;
     }
 
-    private Monster createAirborneMonster(int x, int y, int leftBoundary, int rightBoundary) {
-        // Use a MonsterConfig so assets are loaded from airborne folders and frameDuration can be adjusted.
-        // Increase size (double) and slow animation (higher frameDuration).
-        String[] airbornePaths = new String[] {
-            "/assets/monster/airborne-monster/monster_1",
-            "/assets/monster/airborne-monster/monster_2",
-            "/assets/monster/airborne-monster/monster_3",
-            "/assets/monster/airborne-monster/monster_4"
-        };
-        java.util.Random rnd = new java.util.Random();
-        String chosen = airbornePaths[rnd.nextInt(airbornePaths.length)];
-
-        // scale up size and slow frames & movement
-        int width = 80; // was 40
-        int height = 68; // was 34
-        float frameDuration = 32f; // much slower than default 8f
-        
-        goldenroad.entity.monster.MonsterConfig cfg = new goldenroad.entity.monster.MonsterConfig(
-            goldenroad.entity.monster.MonsterType.AIRBORNE,
-            "airborne_scaled",
-            4, // hp
-            4, // damage
-            1.2f, // attackSpeed
-            1.0f, // moveSpeed (slower)
-            width,
-            height,
-            120f, // moveRange
-            220f, // detectRange
-            42f, // attackRange
-            frameDuration,
-            chosen
-        );
-
-        goldenroad.entity.monster.Monster monster = goldenroad.entity.monster.MonsterFactory.createFromConfig(cfg, x, y, leftBoundary, rightBoundary);
-        // ensure airborne behavior parameters are appropriate for scaled monster
+    private Monster createAirborneMonster(MonsterConfig config, int x, int y, int leftBoundary, int rightBoundary) {
+        Monster monster = MonsterFactory.createFromConfig(config, x, y, leftBoundary, rightBoundary);
         monster.setBehavior(new goldenroad.entity.monster.AirborneBehavior(leftBoundary, rightBoundary, 1.35, 220f, 120f, 1.15f, 36f));
         return monster;
     }
@@ -258,7 +234,7 @@ public class SceneManager {
     ) {
         if (count <= 0 || worldWidth <= 0 || worldHeight <= 0) return;
 
-        int cap = Math.min(20, count); // hard cap at 20 as requested
+        int cap = Math.min(AIRBORNE_MONSTER_COUNT, count);
         Random rnd = new Random();
         Screen screen = getCurrentScreen();
         GridPathfinder pathfinder = new GridPathfinder(TILE_SIZE);
@@ -272,9 +248,15 @@ public class SceneManager {
             screen.removeMonster(m);
         }
 
+        MonsterConfig[] spawnOrder = new MonsterConfig[AIRBORNE_MONSTER_COUNT];
+        for (int i = 0; i < spawnOrder.length; i++) {
+            spawnOrder[i] = AIRBORNE_POOL[i % AIRBORNE_POOL.length];
+        }
+
         // Distribute spawn by splitting width into segments
         for (int i = 0; i < cap; i++) {
             Monster monster = null;
+            MonsterConfig config = spawnOrder[i];
 
             for (int attempt = 0; attempt < 32 && monster == null; attempt++) {
                 double slotCenter = (double) (i + 1) * worldWidth / (cap + 1);
@@ -282,18 +264,18 @@ public class SceneManager {
                 int x = clamp(
                     (int) Math.round(slotCenter + (rnd.nextInt(jitterX * 2 + 1) - jitterX)),
                     0,
-                    Math.max(0, worldWidth - AIRBORNE_MONSTER_WIDTH)
+                    Math.max(0, worldWidth - config.width)
                 );
 
                 int minY = Math.max(0, worldHeight / 10);
                 int maxY = Math.max(minY + 1, worldHeight - worldHeight / 10);
-                int y = clamp(minY + rnd.nextInt(maxY - minY), 0, Math.max(0, worldHeight - AIRBORNE_MONSTER_HEIGHT));
+                int y = clamp(minY + rnd.nextInt(maxY - minY), 0, Math.max(0, worldHeight - config.height));
 
-                if (!isReachableSpawn(collisionMap, pathfinder, playerCenterX, playerCenterY, x, y)) {
+                if (!isReachableSpawn(collisionMap, pathfinder, playerCenterX, playerCenterY, x, y, config.width, config.height)) {
                     continue;
                 }
 
-                monster = createAirborneMonster(x, y, Math.max(0, x - 80), Math.min(worldWidth, x + 80));
+                monster = createAirborneMonster(config, x, y, Math.max(0, x - 80), Math.min(worldWidth, x + 80));
             }
 
             if (monster != null) {
@@ -308,18 +290,20 @@ public class SceneManager {
         double playerCenterX,
         double playerCenterY,
         int x,
-        int y
+        int y,
+        int monsterWidth,
+        int monsterHeight
     ) {
         if (collisionMap == null || !collisionMap.isLoaded()) {
             return true;
         }
 
-        if (collisionMap.isAreaSolid(x, y, AIRBORNE_MONSTER_WIDTH, AIRBORNE_MONSTER_HEIGHT)) {
+        if (collisionMap.isAreaSolid(x, y, monsterWidth, monsterHeight)) {
             return false;
         }
 
-        double monsterCenterX = x + AIRBORNE_MONSTER_WIDTH / 2.0;
-        double monsterCenterY = y + AIRBORNE_MONSTER_HEIGHT / 2.0;
+        double monsterCenterX = x + monsterWidth / 2.0;
+        double monsterCenterY = y + monsterHeight / 2.0;
         if (Math.round(playerCenterX) == Math.round(monsterCenterX) && Math.round(playerCenterY) == Math.round(monsterCenterY)) {
             return false;
         }

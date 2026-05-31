@@ -39,6 +39,12 @@ import java.awt.image.BufferedImage;
 import java.awt.RenderingHints;
 import javax.imageio.ImageIO;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.EnumMap;
@@ -64,6 +70,7 @@ public class GamePanel extends JPanel implements Runnable {
     // x6 = 3840x2160 = 4K
     private static final int TARGET_FPS = 60;
 
+    private static final Path SAVE_FILE = Paths.get(System.getProperty("user.home"), ".golden-road-save");
     // CAMERA
     private final Camera camera = new Camera();
     
@@ -187,8 +194,33 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
+    public void startNewGame() {
+        loadMap(MapId.MAP_0);
+    }
+
+    public void continueGame() {
+        loadMap(loadSavedMap());
+    }
+
+    private void loadMap(MapId mapId) {
+        try {
+            world.loadMap(mapId, sceneManager, player, true);
+            syncWorldStateFromGameWorld();
+            saveCurrentMap(currentMapId);
+            camera.reset();
+            player.getAttack().resetCooldowns();
+            bullets.clear();
+            menu.setPaused(false);
+            inventoryPanel.close();
+            requestFocusInWindow();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     public void switchMap() {
         world.switchMap(sceneManager, player, false);
+        saveCurrentMap(currentMapId);
         syncWorldStateFromGameWorld();
         camera.reset();
         player.getAttack().resetCooldowns();
@@ -505,6 +537,33 @@ private void drawParallax(Graphics2D g2) {
                 repaint();
                 delta--;
             }
+        }
+    }
+
+    private MapId loadSavedMap() {
+        try {
+            if (Files.exists(SAVE_FILE)) {
+                List<String> lines = Files.readAllLines(SAVE_FILE, StandardCharsets.UTF_8);
+                if (!lines.isEmpty()) {
+                    return MapId.valueOf(lines.get(0).trim());
+                }
+            }
+        } catch (Exception e) {
+            // fall back to the current in-memory/default map
+        }
+
+        return currentMapId;
+    }
+
+    private void saveCurrentMap(MapId mapId) {
+        if (mapId == null) {
+            return;
+        }
+
+        try {
+            Files.write(SAVE_FILE, List.of(mapId.name()), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            // ignore save failures so the game keeps running
         }
     }
 }

@@ -200,12 +200,20 @@ public class GameWorld {
         loadMap(currentMapId, sceneManager, player, spawnInitialItems);
     }
 
-    public void switchMap(SceneManager sceneManager, Player player, boolean spawnInitialItems) {
-        MapId nextMapId = currentMapId == null ? MapId.MAP_0 : currentMapId.next();
-        loadMap(nextMapId, sceneManager, player, spawnInitialItems);
+    public void loadMap(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems) {
+        if (mapId == null) {
+            mapId = MapId.MAP_0;
+        }
+
+        loadMapInternal(mapId, sceneManager, player, spawnInitialItems);
     }
 
-    private void loadMap(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems) {
+    public void switchMap(SceneManager sceneManager, Player player, boolean spawnInitialItems) {
+        MapId nextMapId = currentMapId == null ? MapId.MAP_0 : currentMapId.next();
+        loadMapInternal(nextMapId, sceneManager, player, spawnInitialItems);
+    }
+
+    private void loadMapInternal(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems) {
         currentMapId = mapId;
         applyMap(MapCatalog.get(mapId), sceneManager, player, spawnInitialItems);
     }
@@ -252,9 +260,9 @@ public class GameWorld {
 
         if (spawnInitialItems && sceneManager != null) {
             sceneManager.spawnRandomItems(120, worldWidth, worldHeight);
-            // spawn monsters distributed across the map (cap 20)
+            // spawn monsters distributed across the map (12 total: 3 of each airborne type)
             sceneManager.spawnMonsters(
-                20,
+                12,
                 worldWidth,
                 worldHeight,
                 collisionMap,
