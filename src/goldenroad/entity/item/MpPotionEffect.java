@@ -1,7 +1,5 @@
 package goldenroad.entity.item;
 
-import goldenroad.entity.player.Player;
-
 public class MpPotionEffect implements ItemEffect {
     private final int restoreAmount;
 
@@ -10,10 +8,12 @@ public class MpPotionEffect implements ItemEffect {
     }
 
     @Override
-    public boolean apply(Player player, Inventory inventory) {
-        if (player.getMp() >= player.getMaxMp()) return false;
-        player.restoreMp(restoreAmount);
-        return true;
+    public ItemUseResult apply(ItemUseContext ctx) {
+        if (ctx.player().getMp() >= ctx.player().getMaxMp()) {
+            return ItemUseResult.fail("MP da day, khong the dung");
+        }
+        ctx.player().restoreMp(restoreAmount);
+        return ItemUseResult.ok("Hoi +" + restoreAmount + " MP");
     }
 
     @Override

@@ -19,6 +19,8 @@ public class KeyHandler implements KeyListener {
     private boolean mapSwitchArmed;
     private boolean minimapToggleJustPressed;
     private boolean minimapToggleArmed;
+    private boolean killAllMonstersJustPressed;
+    private boolean killAllMonstersArmed;
     private final boolean[] quickUseJustPressed = new boolean[3];
 
 
@@ -65,6 +67,14 @@ public class KeyHandler implements KeyListener {
     public boolean consumeMapSwitchJustPressed() {
         if (mapSwitchJustPressed) {
             mapSwitchJustPressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean consumeKillAllMonstersJustPressed() {
+        if (killAllMonstersJustPressed) {
+            killAllMonstersJustPressed = false;
             return true;
         }
         return false;
@@ -152,6 +162,12 @@ public class KeyHandler implements KeyListener {
             minimapToggleArmed = true;
         }
 
+        if (code == KeyEvent.VK_X && e.isAltDown() && !killAllMonstersArmed) {
+            e.consume();
+            killAllMonstersJustPressed = true;
+            killAllMonstersArmed = true;
+        }
+
         if (code >= KeyEvent.VK_1 && code <= KeyEvent.VK_3) {
             quickUseJustPressed[code - KeyEvent.VK_1] = true;
         }
@@ -186,6 +202,10 @@ public class KeyHandler implements KeyListener {
 
         if (code == KeyEvent.VK_ALT || code == KeyEvent.VK_M) {
             mapSwitchArmed = false;
+        }
+
+        if (code == KeyEvent.VK_ALT || code == KeyEvent.VK_X) {
+            killAllMonstersArmed = false;
         }
 
         if (code == KeyEvent.VK_ALT || code == KeyEvent.VK_N) {

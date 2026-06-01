@@ -97,8 +97,8 @@ public class PlayerMovement {
         if (coyoteTime > 0) coyoteTime--;
         if (dropDownTimer > 0) dropDownTimer--;
 
-        // dash
-        if (input.dashPressed && !dashUsed && dashOnAirCount < MAX_DASH_ON_AIR) {
+        // dash — chi kich hoat khi nhan Shift (edge), khong dash khi giu phim
+        if (input.consumeDashJustPressed() && !dashUsed && dashOnAirCount < MAX_DASH_ON_AIR) {
             if (coyoteTime == 0) dashOnAirCount++;
             dashUsed = true;
             dashDuration = DASH_DURATION;

@@ -96,6 +96,12 @@ public class MouseHandler implements MouseListener, MouseMotionListener {
         return false;
     }
 
+    public void suppressGameplayMouse() {
+        leftJustPressed = false;
+        leftPressed = false;
+        rightPressed = false;
+    }
+
     public boolean isLeftJustPressed() {
         return leftJustPressed;
     }

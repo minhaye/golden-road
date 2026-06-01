@@ -39,7 +39,12 @@ public class GameWorld {
         return currentMapId;
     }
 
-    public void handleItemPickup(Player player, Inventory inventory, SceneManager sceneManager) {
+    public void handleItemPickup(
+        Player player,
+        Inventory inventory,
+        SceneManager sceneManager,
+        java.util.function.Consumer<String> toast
+    ) {
         if (player == null || inventory == null || sceneManager == null) return;
 
         Screen currentScreen = sceneManager.getCurrentScreen();
@@ -57,8 +62,19 @@ public class GameWorld {
                 inventory.addItem(item.getType(), 1);
                 item.collect();
                 currentScreen.removeItem(item);
+                if (toast != null) {
+                    toast.accept(pickupMessage(item.getType()));
+                }
             }
         }
+    }
+
+    private String pickupMessage(Item.ItemType type) {
+        return switch (type) {
+            case HP_POTION -> "Nhat duoc HP Potion";
+            case MP_POTION -> "Nhat duoc MP Potion";
+            case KEY -> "Nhat duoc Key";
+        };
     }
 
     public void updateMonsters(Player player, SceneManager sceneManager, List<Bullet> bullets) {
@@ -145,7 +161,7 @@ public class GameWorld {
             BufferedImage sprite = itemSprites == null ? null : itemSprites.get(item.getType());
 
             if (sprite != null) {
-                g.drawImage(sprite, r.x, r.y, 64, 64, null);
+                g.drawImage(sprite, r.x, r.y, Item.ITEM_SIZE, Item.ITEM_SIZE, null);
             } else {
                 g.setColor(item.getColor());
                 if (item.getShape() == Item.Shape.OVAL) {
@@ -260,9 +276,7 @@ public class GameWorld {
             player.setOnGround(true);
         }
 
-        if (spawnInitialItems && sceneManager != null) {
-            sceneManager.spawnRandomItems(120, worldWidth, worldHeight);
-            // spawn monsters distributed across the map (25 total: 5 of each airborne type)
+        if (spawnInitialItems && sceneManager != null && player != null) {
             sceneManager.spawnMonsters(
                 25,
                 worldWidth,
@@ -273,6 +287,18 @@ public class GameWorld {
                 player.getWidth(),
                 player.getHeight()
             );
+            sceneManager.spawnMapItems(
+                sceneManager.getLastSpawnedMonsterCount(),
+                worldWidth,
+                worldHeight,
+                collisionMap,
+                player.getX(),
+                player.getY(),
+                player.getWidth(),
+                player.getHeight()
+            );
+        } else if (sceneManager != null) {
+            sceneManager.getCurrentScreen().clearItems();
         }
     }
 

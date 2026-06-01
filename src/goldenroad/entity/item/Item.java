@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.awt.Rectangle;
 
 public class Item {
+    public static final int ITEM_SIZE = 32;
+
     public enum Shape {
         RECTANGLE,
         OVAL
@@ -38,9 +40,9 @@ public class Item {
     private boolean collected = false;
 
     public Item(int x, int y, int width, int height, Color color, Shape shape, ItemType type) {
-        width = 60;
-        height = 48;
-        this.bounds = new Rectangle(x, y, width, height);
+        int drawSize = width > 0 ? width : ITEM_SIZE;
+        int drawHeight = height > 0 ? height : ITEM_SIZE;
+        this.bounds = new Rectangle(x, y, drawSize, drawHeight);
         this.color = color;
         this.shape = shape;
         this.type = type;
@@ -56,6 +58,10 @@ public class Item {
             type.getDefaultShape(),
             type
         );
+    }
+
+    public static Item ofType(int x, int y, ItemType type) {
+        return ofType(x, y, ITEM_SIZE, ITEM_SIZE, type);
     }
 
     public Item(int x, int y, int width, int height, Color color, Shape shape) {

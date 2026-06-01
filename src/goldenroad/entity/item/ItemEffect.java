@@ -1,8 +1,7 @@
 package goldenroad.entity.item;
 
-import goldenroad.entity.player.Player;
-
 public interface ItemEffect {
-    boolean apply(Player player, Inventory inventory);
+    ItemUseResult apply(ItemUseContext ctx);
+
     String getDescription();
 }

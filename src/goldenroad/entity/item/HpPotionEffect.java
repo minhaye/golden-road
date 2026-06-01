@@ -1,7 +1,5 @@
 package goldenroad.entity.item;
 
-import goldenroad.entity.player.Player;
-
 public class HpPotionEffect implements ItemEffect {
     private final int healAmount;
 
@@ -10,10 +8,12 @@ public class HpPotionEffect implements ItemEffect {
     }
 
     @Override
-    public boolean apply(Player player, Inventory inventory) {
-        if (player.getHp() >= player.getMaxHp()) return false;
-        player.heal(healAmount);
-        return true;
+    public ItemUseResult apply(ItemUseContext ctx) {
+        if (ctx.player().getHp() >= ctx.player().getMaxHp()) {
+            return ItemUseResult.fail("HP da day, khong the dung");
+        }
+        ctx.player().heal(healAmount);
+        return ItemUseResult.ok("Hoi +" + healAmount + " HP");
     }
 
     @Override

@@ -52,4 +52,8 @@ public class Screen {
         if (monster == null) return;
         monsters.add(monster);
     }
+
+    public void clearItems() {
+        items.clear();
+    }
 }
