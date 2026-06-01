@@ -64,10 +64,15 @@ public class GameWorld {
     public void updateMonsters(Player player, SceneManager sceneManager, List<Bullet> bullets) {
         if (sceneManager == null || collisionMap == null) return;
 
-        for (Monster monster : sceneManager.getCurrentScreen().getMonsters()) {
+        List<Monster> monsters = new ArrayList<>(sceneManager.getCurrentScreen().getMonsters());
+        for (Monster monster : monsters) {
             int damage = monster.update(player, collisionMap, bullets == null ? java.util.Collections.emptyList() : bullets);
             if (damage > 0) {
                 player.takeDamage(damage);
+            }
+
+            if (monster.shouldBeRemoved()) {
+                sceneManager.getCurrentScreen().removeMonster(monster);
             }
         }
     }
@@ -94,10 +99,7 @@ public class GameWorld {
             List<Monster> monstersCopy = new ArrayList<>(sceneManager.getCurrentScreen().getMonsters());
             for (Monster monster : monstersCopy) {
                 if (bounds.intersects(monster.getBounds())) {
-                    if (monster.takeDamage(bullet.getDamage())) {
-                        // remove from the underlying screen list via provided API
-                        sceneManager.getCurrentScreen().removeMonster(monster);
-                    }
+                    monster.takeDamage(bullet.getDamage());
                     it.remove();
                     hitMonster = true;
                     break;

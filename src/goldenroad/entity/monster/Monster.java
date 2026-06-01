@@ -213,6 +213,15 @@ public class Monster extends Entity {
         return isDead;
     }
 
+    public boolean shouldBeRemoved() {
+        if (!isDead || currentState != MonsterState.DEATH) {
+            return false;
+        }
+
+        List<BufferedImage> frames = assets.get(MonsterState.DEATH);
+        return frames != null && !frames.isEmpty() && currentFrame >= frames.size() - 1;
+    }
+
     public Rectangle getBounds() {
         return new Rectangle((int) Math.round(x), (int) Math.round(y), width, height);
     }
@@ -245,8 +254,7 @@ public class Monster extends Entity {
 
         int damageDealt = 0;
         if (player != null && !isDead) {
-            float distance = distanceTo(player.getX(), player.getY());
-            if (distance <= attackRange && attackCooldownRemaining == 0) {
+            if (isInAttackRange(player) && attackCooldownRemaining == 0) {
                 damageDealt = attack(player);
             }
         }
@@ -329,6 +337,21 @@ public class Monster extends Entity {
         return currentState == MonsterState.ATTACK
                 || currentState == MonsterState.HURT
                 || currentState == MonsterState.DEATH;
+    }
+
+    protected boolean isInAttackRange(Player player) {
+        if (player == null) {
+            return false;
+        }
+
+        float monsterCenterX = x + width * 0.5f;
+        float monsterCenterY = y + height * 0.5f;
+        float playerCenterX = player.getX() + (float) (player.getWidth() * 0.5);
+        float playerCenterY = player.getY() + (float) (player.getHeight() * 0.5);
+
+        float centerDistance = (float) Math.hypot(playerCenterX - monsterCenterX, playerCenterY - monsterCenterY);
+        float reach = attackRange + (float) ((player.getWidth() + width) * 0.25);
+        return centerDistance <= reach;
     }
 
     protected void updateAnimation() {
