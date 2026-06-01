@@ -11,7 +11,9 @@ public class AggressiveBehavior implements MonsterBehavior {
             return;
         }
 
-        monster.moveToward(player.getX(), player.getY());
+        float targetCenterX = monster.getPlayerCenterX(player);
+        float targetCenterY = monster.getPlayerCenterY(player);
+        monster.moveToward(targetCenterX, targetCenterY, monster.getMoveSpeed(), monster.getPlayerStopDistance(player));
         monster.setState(MonsterState.MOVE);
     }
 }

@@ -20,6 +20,7 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 
 public class Monster extends Entity {
+    private static final int MAX_ANIMATION_FRAMES = 64;
     protected int hp;
     protected int damage;
     protected float attackSpeed;
@@ -323,13 +324,14 @@ public class Monster extends Entity {
         if (frames == null || frames.isEmpty()) {
             return;
         }
-        // Use a smaller increment so animations progress slower per game tick
-        frameTimer += 0.5f;
-        if (frameTimer < frameDuration) {
+
+        float frameStep = Math.max(1f, frameDuration / Math.max(1, frames.size()));
+        frameTimer += 1f;
+        if (frameTimer < frameStep) {
             return;
         }
 
-        frameTimer -= frameDuration;
+        frameTimer -= frameStep;
         currentFrame++;
 
         if (currentFrame >= frames.size()) {
@@ -364,12 +366,31 @@ public class Monster extends Entity {
     }
 
     protected void moveToward(float targetX, float targetY, float speed) {
+        moveToward(targetX, targetY, speed, 0f);
+    }
+
+    protected void moveToward(float targetX, float targetY, float speed, float stopDistance) {
         float dx = targetX - x;
         float dy = targetY - y;
         float distance = (float) Math.hypot(dx, dy);
         if (distance == 0f) {
             return;
         }
+
+        float safeStopDistance = Math.max(0f, stopDistance);
+        if (safeStopDistance > 0f) {
+            float targetDistance = Math.max(0f, distance - safeStopDistance);
+            if (targetDistance == 0f) {
+                return;
+            }
+
+            targetX = x + (dx / distance) * targetDistance;
+            targetY = y + (dy / distance) * targetDistance;
+            dx = targetX - x;
+            dy = targetY - y;
+            distance = (float) Math.hypot(dx, dy);
+        }
+
         float appliedSpeed = Math.max(0f, speed);
 
         // If we're very close to the target, snap to it to avoid oscillation
@@ -392,13 +413,52 @@ public class Monster extends Entity {
     }
 
     protected void moveHorizontallyToward(float targetX) {
+        moveHorizontallyToward(targetX, 0f);
+    }
+
+    protected void moveHorizontallyToward(float targetX, float targetWidth) {
         float dx = targetX - x;
         if (Math.abs(dx) < 0.5f) {
             return;
         }
 
-        direction = dx < 0 ? Direction.LEFT : Direction.RIGHT;
-        x += Math.signum(dx) * moveSpeed;
+        float stopDistance = Math.max(0f, (targetWidth + width) * 0.5f);
+        float directionStep = Math.signum(dx);
+        float desiredX = targetX;
+
+        if (stopDistance > 0f) {
+            if (Math.abs(dx) <= stopDistance) {
+                return;
+            }
+
+            desiredX -= directionStep * stopDistance;
+        }
+
+        float distanceToDesired = Math.abs(desiredX - x);
+        if (distanceToDesired <= moveSpeed * 0.5f) {
+            x = desiredX;
+            direction = directionStep < 0 ? Direction.LEFT : Direction.RIGHT;
+            return;
+        }
+
+        direction = directionStep < 0 ? Direction.LEFT : Direction.RIGHT;
+        x += Math.signum(desiredX - x) * moveSpeed;
+    }
+
+    protected float getPlayerStopDistance(Player player) {
+        if (player == null) {
+            return 0f;
+        }
+
+        return (float) ((player.getWidth() + width) * 0.5);
+    }
+
+    protected float getPlayerCenterX(Player player) {
+        return player == null ? x : player.getX() + (float) (player.getWidth() * 0.5);
+    }
+
+    protected float getPlayerCenterY(Player player) {
+        return player == null ? y : player.getY() + (float) (player.getHeight() * 0.5);
     }
 
     protected void moveVerticallyToward(float targetY) {
@@ -455,16 +515,12 @@ public class Monster extends Entity {
         List<BufferedImage> frames = new ArrayList<>();
         String folder = state.name().toLowerCase();
 
-        for (int index = 0; index < 16; index++) {
+        for (int index = 0; index < MAX_ANIMATION_FRAMES; index++) {
             String candidate = basePath + "/" + folder + "/" + folder + "_" + index + ".png";
             BufferedImage frame = readImageSilently(candidate);
-            if (frame == null) {
-                if (!frames.isEmpty()) {
-                    break;
-                }
-                continue;
+            if (frame != null) {
+                frames.add(frame);
             }
-            frames.add(frame);
         }
 
         if (frames.isEmpty()) {

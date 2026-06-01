@@ -260,9 +260,9 @@ public class GameWorld {
 
         if (spawnInitialItems && sceneManager != null) {
             sceneManager.spawnRandomItems(120, worldWidth, worldHeight);
-            // spawn monsters distributed across the map (12 total: 3 of each airborne type)
+            // spawn monsters distributed across the map (25 total: 5 of each airborne type)
             sceneManager.spawnMonsters(
-                12,
+                25,
                 worldWidth,
                 worldHeight,
                 collisionMap,

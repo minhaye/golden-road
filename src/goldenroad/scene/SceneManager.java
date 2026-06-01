@@ -24,13 +24,14 @@ public class SceneManager {
     private static final int TILE_SIZE = 16;
     private static final int AIRBORNE_MONSTER_WIDTH = 80;
     private static final int AIRBORNE_MONSTER_HEIGHT = 68;
-    private static final int AIRBORNE_MONSTER_COUNT = 12;
+    private static final int AIRBORNE_MONSTER_COUNT = 25;
 
     private static final MonsterConfig[] AIRBORNE_POOL = new MonsterConfig[] {
         new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_1", 16, 7, 1.2f, 1.0f, 40, 34, 240f, 340f, 42f, 32f, "/assets/monster/airborne-monster/monster_1"),
         new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_2", 18, 8, 1.2f, 1.05f, 40, 34, 260f, 360f, 42f, 32f, "/assets/monster/airborne-monster/monster_2"),
         new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_3", 20, 9, 1.3f, 1.1f, 40, 34, 280f, 380f, 42f, 32f, "/assets/monster/airborne-monster/monster_3"),
-        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_4", 22, 10, 1.3f, 1.15f, 40, 34, 300f, 400f, 42f, 32f, "/assets/monster/airborne-monster/monster_4")
+        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_4", 22, 10, 1.3f, 1.15f, 40, 34, 300f, 400f, 42f, 32f, "/assets/monster/airborne-monster/monster_4"),
+        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_5", 24, 11, 1.35f, 1.2f, 40, 34, 320f, 420f, 42f, 32f, "/assets/monster/airborne-monster/monster_5")
     };
 
     private final List<Floor> floors = new ArrayList<>();
