@@ -29,7 +29,7 @@ public class GroundMonster extends Monster {
     @Override
     protected void move(Player player, CollisionMap collisionMap) {
         if (player != null && canDetectPlayer(player)) {
-            moveHorizontallyToward(player.getX());
+            moveHorizontallyToward(player.getX(), (float) player.getWidth());
             setState(MonsterState.MOVE);
             return;
         }

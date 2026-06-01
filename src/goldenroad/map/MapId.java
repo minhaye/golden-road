@@ -4,10 +4,8 @@ public enum MapId {
     MAP_0,
     MAP_1,
     MAP_2,
-<<<<<<< HEAD
-    MAP_3
-=======
     MAP_3;
+
 
     public MapId next() {
         return switch (this) {
@@ -26,5 +24,4 @@ public enum MapId {
             case MAP_3 -> "MAP 3";
         };
     }
->>>>>>> 89a5f5e9a7ba89e9ab01cb20fad02a2219406844
 }

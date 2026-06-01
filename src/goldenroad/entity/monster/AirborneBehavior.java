@@ -23,7 +23,15 @@ public class AirborneBehavior implements MonsterBehavior {
         if (player != null) {
             float distance = monster.distanceTo(player.getX(), player.getY());
             if (distance <= monster.getDetectRange()) {
-                monster.moveToward(player.getX(), player.getY(), monster.getMoveSpeed() * speedMultiplier);
+
+                float targetCenterX = monster.getPlayerCenterX(player);
+                float targetCenterY = monster.getPlayerCenterY(player);
+                monster.moveToward(
+                        targetCenterX,
+                        targetCenterY,
+                        monster.getMoveSpeed() * speedMultiplier,
+                        monster.getPlayerStopDistance(player)
+                );
                 monster.setState(MonsterState.MOVE);
                 return;
             }

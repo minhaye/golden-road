@@ -29,7 +29,12 @@ public class AirborneMonster extends Monster {
     @Override
     protected void move(Player player, CollisionMap collisionMap) {
         if (player != null && canDetectPlayer(player)) {
-            moveToward(player.getX(), player.getY());
+            moveToward(
+                    getPlayerCenterX(player),
+                    getPlayerCenterY(player),
+                    getMoveSpeed(),
+                    getPlayerStopDistance(player)
+            );
             setState(MonsterState.MOVE);
             return;
         }
