@@ -627,7 +627,25 @@ public class Monster extends Entity {
 
         if (assets.values().stream().allMatch(List::isEmpty)) {
             loadDefaultAssets();
+            return;
         }
+
+        applyInitialAssetSize();
+    }
+
+    private void applyInitialAssetSize() {
+        List<BufferedImage> idleFrames = assets.get(MonsterState.IDLE);
+        if (idleFrames == null || idleFrames.isEmpty()) {
+            return;
+        }
+
+        BufferedImage initialFrame = idleFrames.get(0);
+        if (initialFrame == null || initialFrame == fallbackSprite) {
+            return;
+        }
+
+        width = initialFrame.getWidth();
+        height = initialFrame.getHeight();
     }
 
     private List<BufferedImage> loadFrames(String basePath, MonsterState state) {
