@@ -74,19 +74,19 @@ public class GameInputController {
             panel.requestFocusInWindow();
         }
 
-        if (inventoryPanel.isOpen()) {
+        boolean inventoryOpen = inventoryPanel.isOpen();
+        if (inventoryOpen) {
             inventoryPanel.update(keyHandler, mouseHandler, panel);
             mouseHandler.suppressGameplayMouse();
-            return true;
-        }
+        } else {
+            handleHudMouseInput(panel);
 
-        handleHudMouseInput(panel);
-
-        if (keyHandler.consumeEscapeJustPressed()) {
-            menu.setPaused(true);
-            inventoryPanel.close();
-            panel.requestFocusInWindow();
-            return true;
+            if (keyHandler.consumeEscapeJustPressed()) {
+                menu.setPaused(true);
+                inventoryPanel.close();
+                panel.requestFocusInWindow();
+                return true;
+            }
         }
 
         if (consumeQuickUse(0, player, panel)) {

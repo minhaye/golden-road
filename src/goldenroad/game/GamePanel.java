@@ -161,6 +161,11 @@ public class GamePanel extends JPanel implements Runnable {
             }
 
             @Override
+            public MapId getCurrentMapId() {
+                return world.getCurrentMapId();
+            }
+
+            @Override
             public void advanceToNextMap() {
                 advanceMapWithSpawn();
             }

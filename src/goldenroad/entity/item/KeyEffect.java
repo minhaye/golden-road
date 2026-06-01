@@ -1,5 +1,7 @@
 package goldenroad.entity.item;
 
+import goldenroad.map.MapId;
+
 public class KeyEffect implements ItemEffect {
     @Override
     public ItemUseResult apply(ItemUseContext ctx) {
@@ -8,7 +10,9 @@ public class KeyEffect implements ItemEffect {
         }
 
         ctx.advanceToNextMap();
-        return ItemUseResult.ok("Da mo cua, chuyen sang map tiep theo");
+        MapId mapId = ctx.getCurrentMapId();
+        String mapName = mapId == null ? "map moi" : mapId.displayName();
+        return ItemUseResult.ok("Dang chuyen sang " + mapName);
     }
 
     @Override
