@@ -90,12 +90,13 @@ public class GameWorld {
             }
 
             boolean hitMonster = false;
-            Iterator<Monster> monsterIterator = sceneManager.getCurrentScreen().getMonsters().iterator();
-            while (monsterIterator.hasNext()) {
-                Monster monster = monsterIterator.next();
+            // iterate over a copy because Screen.getMonsters() returns an unmodifiable view
+            List<Monster> monstersCopy = new ArrayList<>(sceneManager.getCurrentScreen().getMonsters());
+            for (Monster monster : monstersCopy) {
                 if (bounds.intersects(monster.getBounds())) {
                     if (monster.takeDamage(bullet.getDamage())) {
-                        monsterIterator.remove();
+                        // remove from the underlying screen list via provided API
+                        sceneManager.getCurrentScreen().removeMonster(monster);
                     }
                     it.remove();
                     hitMonster = true;
@@ -153,14 +154,14 @@ public class GameWorld {
             }
         }
 
-        // MONSTERS
-        for (Monster monster : sceneManager.getCurrentScreen().getMonsters()) {
+        // MONSTERS (iterate over a copy to avoid concurrent modification during update)
+        for (Monster monster : new ArrayList<>(sceneManager.getCurrentScreen().getMonsters())) {
             monster.draw(g);
         }
 
-        // BULLETS
+        // BULLETS (iterate over a copy to avoid concurrent modification during update)
         if (bullets != null) {
-            for (Bullet bullet : bullets) {
+            for (Bullet bullet : new ArrayList<>(bullets)) {
                 bullet.render(g);
             }
         }
@@ -199,19 +200,27 @@ public class GameWorld {
         loadMap(currentMapId, sceneManager, player, spawnInitialItems);
     }
 
-    public void switchMap(SceneManager sceneManager, Player player, boolean spawnInitialItems) {
-        MapId nextMapId = currentMapId == MapId.MAP_1 ? MapId.MAP_2 : MapId.MAP_1;
-        loadMap(nextMapId, sceneManager, player, spawnInitialItems);
+    public void loadMap(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems) {
+        if (mapId == null) {
+            mapId = MapId.MAP_0;
+        }
+
+        loadMapInternal(mapId, sceneManager, player, spawnInitialItems);
     }
 
-    private void loadMap(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems) {
+    public void switchMap(SceneManager sceneManager, Player player, boolean spawnInitialItems) {
+        MapId nextMapId = currentMapId == null ? MapId.MAP_0 : currentMapId.next();
+        loadMapInternal(nextMapId, sceneManager, player, spawnInitialItems);
+    }
+
+    private void loadMapInternal(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems) {
         currentMapId = mapId;
         applyMap(MapCatalog.get(mapId), sceneManager, player, spawnInitialItems);
     }
 
     private void applyMap(MapDefinition mapDefinition, SceneManager sceneManager, Player player, boolean spawnInitialItems) {
         mapImage = AssetLoader.loadImage(mapDefinition.getBackgroundPath());
-        hiddenImage = AssetLoader.loadImage(mapDefinition.getHiddenPath());
+        hiddenImage = mapDefinition.getHiddenPath() == null ? null : AssetLoader.loadImage(mapDefinition.getHiddenPath());
 
         collisionMap = new CollisionMap();
         collisionMap.load(mapDefinition.getCollisionPath());
@@ -221,14 +230,47 @@ public class GameWorld {
         worldHeight = mapDefinition.getWorldHeight();
 
         if (player != null) {
-            player.setX(clamp(mapDefinition.getSpawnX(), 0, Math.max(0, worldWidth - 1)));
-            player.setY(clamp(mapDefinition.getSpawnY(), 0, Math.max(0, worldHeight - 1)));
+            double spawnX = clamp(mapDefinition.getSpawnX(), 0, Math.max(0, worldWidth - 1));
+            double spawnY = clamp(mapDefinition.getSpawnY(), 0, Math.max(0, worldHeight - 1));
+            double resolvedX = spawnX;
+            double resolvedY = spawnY;
+
+            if (collisionMap != null && collisionMap.isLoaded()) {
+                double[] nearestSpawn = findNearestStandableSpawn(
+                    collisionMap,
+                    spawnX,
+                    spawnY,
+                    player.getWidth(),
+                    player.getHeight(),
+                    worldWidth,
+                    worldHeight
+                );
+
+                if (nearestSpawn != null) {
+                    resolvedX = nearestSpawn[0];
+                    resolvedY = nearestSpawn[1];
+                }
+            }
+
+            player.setX(resolvedX);
+            player.setY(resolvedY);
             player.setVelocityY(0);
             player.setOnGround(true);
         }
 
         if (spawnInitialItems && sceneManager != null) {
             sceneManager.spawnRandomItems(120, worldWidth, worldHeight);
+            // spawn monsters distributed across the map (12 total: 3 of each airborne type)
+            sceneManager.spawnMonsters(
+                12,
+                worldWidth,
+                worldHeight,
+                collisionMap,
+                player.getX(),
+                player.getY(),
+                player.getWidth(),
+                player.getHeight()
+            );
         }
     }
 
@@ -237,5 +279,50 @@ public class GameWorld {
             return min;
         }
         return Math.max(min, Math.min(value, max));
+    }
+
+    private double[] findNearestStandableSpawn(
+        CollisionMap collisionMap,
+        double desiredX,
+        double desiredY,
+        double entityWidth,
+        double entityHeight,
+        int worldWidth,
+        int worldHeight
+    ) {
+        if (collisionMap == null || !collisionMap.isLoaded()) {
+            return null;
+        }
+
+        if (collisionMap.canStandAt(desiredX, desiredY, entityWidth, entityHeight)) {
+            return new double[] { desiredX, desiredY };
+        }
+
+        int step = 8;
+        int maxDistance = Math.max(worldWidth, worldHeight);
+        double bestDistance = Double.MAX_VALUE;
+        double bestX = desiredX;
+        double bestY = desiredY;
+
+        for (int y = 0; y <= Math.max(0, worldHeight - (int) Math.ceil(entityHeight)); y += step) {
+            for (int x = 0; x <= Math.max(0, worldWidth - (int) Math.ceil(entityWidth)); x += step) {
+                if (!collisionMap.canStandAt(x, y, entityWidth, entityHeight)) {
+                    continue;
+                }
+
+                double distance = Math.abs(x - desiredX) + Math.abs(y - desiredY);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestX = x;
+                    bestY = y;
+                }
+            }
+        }
+
+        if (bestDistance == Double.MAX_VALUE) {
+            return null;
+        }
+
+        return new double[] { bestX, bestY };
     }
 }

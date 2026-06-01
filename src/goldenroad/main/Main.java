@@ -14,7 +14,6 @@ public class Main {
                 window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
                 GamePanel gamePanel = new GamePanel();
-                gamePanel.loadMap();
                 gamePanel.loadParallax();
 
                 window.setExtendedState(JFrame.MAXIMIZED_BOTH);

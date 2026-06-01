@@ -5,9 +5,15 @@ public final class MapCatalog {
 
     private static final MapDefinition MAP_0 = new MapDefinition(
         MapId.MAP_0,
+<<<<<<< HEAD
         "/assets/map/ROOM_1.png",
         "/assets/map/ROOM_1_HIDDEN.png",
         "/assets/map/ROOM_1_COLLISION.png",
+=======
+        "/assets/map/ROOM_0.png",
+        null,
+        "/assets/map/ROOM_0_COLLISION.png",
+>>>>>>> 89a5f5e9a7ba89e9ab01cb20fad02a2219406844
         280 * TILE_SIZE,
         160 * TILE_SIZE,
         400,
@@ -51,6 +57,7 @@ public final class MapCatalog {
     }
 
     public static MapDefinition get(MapId mapId) {
+<<<<<<< HEAD
         if (mapId == MapId.MAP_0) {
             return MAP_0;
         }
@@ -61,5 +68,17 @@ public final class MapCatalog {
             return MAP_2;
         }
         return MAP_3;
+=======
+        if (mapId == null) {
+            return MAP_0;
+        }
+
+        return switch (mapId) {
+            case MAP_0 -> MAP_0;
+            case MAP_1 -> MAP_1;
+            case MAP_2 -> MAP_2;
+            case MAP_3 -> MAP_3;
+        };
+>>>>>>> 89a5f5e9a7ba89e9ab01cb20fad02a2219406844
     }
 }

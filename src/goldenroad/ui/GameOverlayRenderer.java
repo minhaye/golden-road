@@ -8,6 +8,10 @@ import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.geom.Ellipse2D;
+
+import goldenroad.entity.monster.Monster;
+import goldenroad.scene.SceneManager;
 
 public class GameOverlayRenderer {
     private static final int MINIMAP_MAX_WIDTH = 160;
@@ -39,8 +43,8 @@ public class GameOverlayRenderer {
         g2.drawString(toastMessage, x + (boxWidth - textWidth) / 2, y + 19);
     }
 
-    public void renderMinimap(Graphics2D g2, GameWorld world, Player player, double cameraX, double cameraY, int viewportWidth, int viewportHeight) {
-        if (world == null || player == null || world.getWorldWidth() <= 0 || world.getWorldHeight() <= 0) {
+    public void renderMinimap(Graphics2D g2, GameWorld world, SceneManager sceneManager, Player player, double cameraX, double cameraY, int viewportWidth, int viewportHeight) {
+        if (world == null || sceneManager == null || player == null || world.getWorldWidth() <= 0 || world.getWorldHeight() <= 0) {
             return;
         }
 
@@ -71,6 +75,21 @@ public class GameOverlayRenderer {
             g2.drawImage(world.getMapImage(), miniX, miniY, miniW, miniH, null);
         }
 
+        if (sceneManager.getCurrentScreen() != null) {
+            g2.setColor(new Color(255, 170, 70, 200));
+            for (Monster monster : sceneManager.getCurrentScreen().getMonsters()) {
+                if (monster == null || monster.isDead()) {
+                    continue;
+                }
+
+                double monsterRatioX = clampDouble(monster.getX() / Math.max(1.0, world.getWorldWidth()), 0.0, 1.0);
+                double monsterRatioY = clampDouble(monster.getY() / Math.max(1.0, world.getWorldHeight()), 0.0, 1.0);
+                int monsterX = miniX + (int) Math.round(monsterRatioX * miniW);
+                int monsterY = miniY + (int) Math.round(monsterRatioY * miniH);
+                g2.fill(new Ellipse2D.Double(monsterX - 2, monsterY - 2, 4, 4));
+            }
+        }
+
         double playerRatioX = clampDouble(player.getX() / Math.max(1.0, world.getWorldWidth()), 0.0, 1.0);
         double playerRatioY = clampDouble(player.getY() / Math.max(1.0, world.getWorldHeight()), 0.0, 1.0);
         int playerX = miniX + (int) Math.round(playerRatioX * miniW);
@@ -97,7 +116,7 @@ public class GameOverlayRenderer {
         g2.setFont(UiTheme.FONT_HUD_SMALL);
         g2.setColor(UiTheme.TEXT);
         MapId mapId = world.getCurrentMapId();
-        String label = mapId == MapId.MAP_1 ? "MAP 1" : "MAP 2";
+        String label = mapId == null ? "MAP ?" : mapId.displayName();
         g2.drawString(label, miniX + 8, miniY + miniH + 16);
     }
 

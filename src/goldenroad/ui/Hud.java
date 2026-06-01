@@ -30,6 +30,15 @@ public class Hud {
 
     public void render(Graphics2D g2) {
         UiTheme.enableTextAntialiasing(g2);
+        // Monster count (top-left)
+        try {
+            int alive = panel.getAliveMonsterCount();
+            g2.setFont(UiTheme.FONT_HUD_SMALL);
+            g2.setColor(UiTheme.TEXT);
+            String s = "Monsters: " + alive;
+            g2.drawString(s, PADDING, PADDING - 4);
+        } catch (Exception ignored) {
+        }
 
         renderResourceBar(g2, PADDING, PADDING, "HP",
             player.getHp(), player.getMaxHp(), UiTheme.HP_FILL);
