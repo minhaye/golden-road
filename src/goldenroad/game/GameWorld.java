@@ -184,10 +184,6 @@ public class GameWorld {
             }
         }
 
-        // HIDDEN LAYER
-        if (hiddenImage != null) {
-            g.drawImage(hiddenImage, 0, 0, null);
-        }
     }
 
     public CollisionMap getCollisionMap() {
@@ -238,7 +234,7 @@ public class GameWorld {
 
     private void applyMap(MapDefinition mapDefinition, SceneManager sceneManager, Player player, boolean spawnInitialItems) {
         mapImage = AssetLoader.loadImage(mapDefinition.getBackgroundPath());
-        hiddenImage = mapDefinition.getHiddenPath() == null ? null : AssetLoader.loadImage(mapDefinition.getHiddenPath());
+        hiddenImage = null;
 
         collisionMap = new CollisionMap();
         collisionMap.load(mapDefinition.getCollisionPath());
@@ -275,6 +271,8 @@ public class GameWorld {
             player.setVelocityY(0);
             player.setOnGround(true);
         }
+
+        hiddenImage = mapDefinition.getHiddenPath() == null ? null : AssetLoader.loadImage(mapDefinition.getHiddenPath());
 
         if (spawnInitialItems && sceneManager != null && player != null) {
             sceneManager.spawnMonsters(

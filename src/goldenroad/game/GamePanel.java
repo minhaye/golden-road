@@ -29,14 +29,17 @@ import goldenroad.util.AssetLoader;
 
 
 import java.awt.AlphaComposite;
-import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Composite;
+import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.KeyboardFocusManager;
+import java.awt.Point;
 import java.awt.Rectangle;
-import java.util.Collections;
+import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
 import java.awt.RenderingHints;
 import javax.imageio.ImageIO;
@@ -136,6 +139,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         initPlayer();
         loadItemSprites();
+        loadCustomCursor();
         inputController = new GameInputController(keyHandler, mouseHandler, sceneManager, menu, inventory, inventoryPanel);
     }
 
@@ -175,6 +179,23 @@ public class GamePanel extends JPanel implements Runnable {
     private BufferedImage loadSprite(String resourcePath) {
         return AssetLoader.loadImage(resourcePath);
     }
+
+    private void loadCustomCursor() {
+        try {
+            BufferedImage cursorImage = loadSprite("/assets/crosshair/crosshair.png");
+            if (cursorImage == null) {
+                return;
+            }
+
+            Point hotspot = new Point(cursorImage.getWidth() / 2, cursorImage.getHeight() / 2);
+            Cursor crosshairCursor = Toolkit.getDefaultToolkit().createCustomCursor(cursorImage, hotspot, "Crosshair");
+            setCursor(crosshairCursor);
+             System.out.println("crosshair OK");
+        } catch (Exception e) {
+            // ignore if custom cursor cannot be created
+        }
+    }
+
     private void loadItemSprites() {
         hpItemSprite = loadSprite("/assets/item/hp.png");
         mpItemSprite = loadSprite("/assets/item/mp.png");
@@ -541,8 +562,20 @@ private void drawParallax(Graphics2D g2) {
             && !inventoryPanel.isOpen()
             && (mouseHandler.isLeftPressed() || mouseHandler.isRightPressed());
         player.draw(bufferG, aiming, getMouseWorldX(), getMouseWorldY());
+        drawHiddenLayer(bufferG);
 
         bufferG.setTransform(new java.awt.geom.AffineTransform());
+    }
+
+    private void drawHiddenLayer(Graphics2D bufferG) {
+        if (hiddenImage == null) {
+            return;
+        }
+
+        Composite previousComposite = bufferG.getComposite();
+        bufferG.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+        bufferG.drawImage(hiddenImage, 0, 0, null);
+        bufferG.setComposite(previousComposite);
     }
 
     private void drawHudAndOverlays(Graphics2D bufferG) {
