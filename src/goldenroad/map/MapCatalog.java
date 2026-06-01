@@ -33,7 +33,7 @@ public final class MapCatalog {
         180 * TILE_SIZE,
         300 * TILE_SIZE,
         400,
-        1995
+        3995
     );
 
     private static final MapDefinition MAP_3 = new MapDefinition(

@@ -44,7 +44,7 @@ public class PlayerAttack {
         double len = Math.sqrt(dirX*dirX + dirY*dirY);
         if (len == 0) dirX = 1; else { dirX /= len; dirY /= len; }
 
-        out.add(new BulletSpec(originX - (LASER_DIAMETER/2.0), originY - (LASER_DIAMETER/2.0), dirX, dirY, LASER_SPEED, LASER_DIAMETER, LASER_COLOR, LASER_DAMAGE, Bullet.BulletType.LASER));
+        out.add(new BulletSpec(originX, originY, dirX, dirY, LASER_SPEED, LASER_DIAMETER, LASER_COLOR, LASER_DAMAGE, Bullet.BulletType.LASER));
         leftCooldown = LEFT_SHOOT_DELAY;
         return out;
     }
@@ -71,7 +71,7 @@ public class PlayerAttack {
             double spawnOffsetX = (Math.random() - 0.5) * 8;
             double spawnOffsetY = (Math.random() - 0.5) * 8;
 
-            out.add(new BulletSpec(originX + spawnOffsetX - (CLUSTER_BULLET_DIAMETER/2.0), originY + spawnOffsetY - (CLUSTER_BULLET_DIAMETER/2.0), dirX, dirY, speed, CLUSTER_BULLET_DIAMETER, CLUSTER_COLOR, CLUSTER_BULLET_DAMAGE, Bullet.BulletType.SHOTGUN));
+            out.add(new BulletSpec(originX + spawnOffsetX, originY + spawnOffsetY, dirX, dirY, speed, CLUSTER_BULLET_DIAMETER, CLUSTER_COLOR, CLUSTER_BULLET_DAMAGE, Bullet.BulletType.SHOTGUN));
         }
 
         rightCooldown = RIGHT_SHOOT_DELAY;

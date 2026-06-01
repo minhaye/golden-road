@@ -20,14 +20,20 @@ public class AirborneBehavior implements MonsterBehavior {
 
     @Override
     public void update(Monster monster, Player player, CollisionMap collisionMap) {
+        if (monster.isActionState()) {
+            return;
+        }
+
         if (player != null) {
             float distance = monster.distanceTo(player.getX(), player.getY());
             if (distance <= monster.getDetectRange()) {
+
                 float targetCenterX = monster.getPlayerCenterX(player);
                 float targetCenterY = monster.getPlayerCenterY(player);
-                monster.moveToward(
+                monster.moveTowardAvoidingSolid(
                         targetCenterX,
-                        targetCenterY,
+                        targetCenterY -20,
+                        collisionMap,
                         monster.getMoveSpeed() * speedMultiplier,
                         monster.getPlayerStopDistance(player)
                 );
@@ -39,7 +45,12 @@ public class AirborneBehavior implements MonsterBehavior {
         float t = (float) ((System.nanoTime() / 1_000_000.0) * phaseSpeed);
         float targetX = monster.getSpawnX() + (float) Math.cos(t) * altitudeRange;
         float targetY = monster.getSpawnY() + (float) Math.sin(t * 1.3f) * (verticalDrift + idleRadius);
-        monster.moveToward(targetX, targetY, monster.getMoveSpeed() * (speedMultiplier * 0.75f));
+        monster.moveTowardAvoidingSolid(
+                targetX + (float) (monster.getWidth() * 0.5),
+                targetY + (float) (monster.getHeight() * 0.5),
+                collisionMap,
+                monster.getMoveSpeed() * (speedMultiplier * 0.75f)
+        );
         monster.setState(MonsterState.MOVE);
     }
 }

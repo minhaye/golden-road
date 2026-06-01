@@ -6,6 +6,7 @@ public enum MapId {
     MAP_2,
     MAP_3;
 
+
     public MapId next() {
         return switch (this) {
             case MAP_0 -> MAP_1;

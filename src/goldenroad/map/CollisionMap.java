@@ -7,6 +7,7 @@ import java.awt.image.BufferedImage;
 public class CollisionMap {
 
     private boolean[][] solid;
+    private boolean[][] laser;
     private int width;
     private int height;
     private BufferedImage img;
@@ -18,12 +19,14 @@ public class CollisionMap {
                 width = 0;
                 height = 0;
                 solid = null;
+                laser = null;
                 return;
             }
 
             width = img.getWidth();
             height = img.getHeight();
             solid = new boolean[width][height];
+            laser = new boolean[width][height];
 
             for (int x = 0; x < width; x++) {
                 for (int y = 0; y < height; y++) {
@@ -32,13 +35,18 @@ public class CollisionMap {
                     int g = (pixel >> 8) & 0xff;
                     int b = pixel & 0xff;
 
-                    solid[x][y] = (r > 250 && g > 250 && b > 250);
+                    boolean whiteSolid = r > 250 && g > 250 && b > 250;
+                    boolean redLaser = r > 200 && g < 80 && b < 80;
+
+                    laser[x][y] = redLaser;
+                    solid[x][y] = whiteSolid || redLaser;
                 }
             }
         } catch (RuntimeException e) {
             width = 0;
             height = 0;
             solid = null;
+            laser = null;
             img = null;
             e.printStackTrace();
         }
@@ -49,6 +57,13 @@ public class CollisionMap {
             return false;
         }
         return solid[x][y];
+    }
+
+    public boolean isLaser(int x, int y) {
+        if (laser == null || x < 0 || y < 0 || x >= width || y >= height) {
+            return false;
+        }
+        return laser[x][y];
     }
 
     public boolean isLoaded() {
@@ -103,6 +118,31 @@ public class CollisionMap {
         for (int tx = left; tx <= right; tx++) {
             for (int ty = top; ty <= bottom; ty++) {
                 if (solid[tx][ty]) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public boolean isAreaLaser(double x, double y, double areaWidth, double areaHeight) {
+        if (laser == null || areaWidth <= 0 || areaHeight <= 0) {
+            return false;
+        }
+
+        int left = (int)Math.floor(x);
+        int right = (int)Math.floor(x + areaWidth - 1);
+        int top = (int)Math.floor(y);
+        int bottom = (int)Math.floor(y + areaHeight - 1);
+
+        if (left < 0 || top < 0 || right >= width || bottom >= height) {
+            return false;
+        }
+
+        for (int tx = left; tx <= right; tx++) {
+            for (int ty = top; ty <= bottom; ty++) {
+                if (laser[tx][ty]) {
                     return true;
                 }
             }

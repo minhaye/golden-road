@@ -79,7 +79,7 @@ public class GamePanel extends JPanel implements Runnable {
     private final RenderSystem renderSystem = new RenderSystem(SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // MAP
-    private MapId currentMapId = MapId.MAP_2;
+    private MapId currentMapId = MapId.MAP_3;
     private CollisionMap collisionMap;
     private CollisionHandler collisionHandler;
     private BufferedImage mapImage,hiddenImage;
@@ -367,10 +367,11 @@ private void drawParallax(Graphics2D g2) {
 
 // Handle shooting input and bullet spawning
     private void handleShootingInput() {
-        double originX = player.getX() + 10;
-        double originY = player.getY() + 15;
         double worldMouseX = getMouseWorldX();
         double worldMouseY = getMouseWorldY();
+        java.awt.geom.Point2D.Double gunCenter = player.getGunCenter(worldMouseX, worldMouseY);
+        double originX = gunCenter.x;
+        double originY = gunCenter.y;
 
         if (mouseHandler.isLeftPressed()) {
             for (goldenroad.entity.projectile.BulletSpec spec : player.getAttack().tryLeftShoot(originX, originY, worldMouseX, worldMouseY)) {
@@ -432,13 +433,15 @@ private void drawParallax(Graphics2D g2) {
     }
 
     private double getMouseWorldX() {
-        double mouseX = (mouseHandler.getMouseX() - renderOffsetX)/ renderScale;
+        double scale = renderScale <= 0 ? 1.0 : renderScale;
+        double mouseX = (mouseHandler.getMouseX() - renderOffsetX)/ scale;
         return mouseX + camera.getX();
     }
 
     private double getMouseWorldY() {
 
-        double mouseY = (mouseHandler.getMouseY() - renderOffsetY) / renderScale;
+        double scale = renderScale <= 0 ? 1.0 : renderScale;
+        double mouseY = (mouseHandler.getMouseY() - renderOffsetY) / scale;
         return mouseY + camera.getY();
     }
 
@@ -483,7 +486,7 @@ private void drawParallax(Graphics2D g2) {
         );
 
         world.render(bufferG, player, bullets, sceneManager, itemSprites);
-        player.draw(bufferG);
+        player.draw(bufferG, mouseHandler.isLeftPressed() || mouseHandler.isRightPressed(), getMouseWorldX(), getMouseWorldY());
 
         bufferG.setTransform(new java.awt.geom.AffineTransform());
     }

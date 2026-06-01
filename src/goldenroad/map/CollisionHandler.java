@@ -5,6 +5,7 @@ import goldenroad.entity.player.Player;
 public class CollisionHandler {
     
     private static final int TILE_SIZE = 16;
+    private static final int LASER_DAMAGE = 20;
     private CollisionMap map;
 
     public CollisionHandler(CollisionMap map) {
@@ -12,12 +13,15 @@ public class CollisionHandler {
     }
 
     public void move(Player player, double dx, double dy) {
+        applyLaserDamage(player, player.getX(), player.getY());
 
         // ===== HORIZONTAL =====
         moveHorizontal(player, dx);
 
         // ===== VERTICAL =====
         moveVertical(player, dy);
+
+        applyLaserDamage(player, player.getX(), player.getY());
     }
 
     private void moveHorizontal(Player player, double dx) {
@@ -30,6 +34,7 @@ public class CollisionHandler {
             if (!collides(player, nextX, player.getY())) {
                 player.setX(nextX);
             } else {
+                applyLaserDamage(player, nextX, player.getY());
                 break; // đụng tường thì dừng
             }
         }
@@ -47,6 +52,7 @@ public class CollisionHandler {
 
             // ===== SOLID =====
             if (collides(player, player.getX(), nextY)) {
+                applyLaserDamage(player, player.getX(), nextY);
 
                 if (step > 0) {
                     player.setOnGround(true);
@@ -114,5 +120,11 @@ public class CollisionHandler {
         }
 
         return false;
+    }
+
+    private void applyLaserDamage(Player player, double x, double y) {
+        if (map != null && map.isAreaLaser(x, y, player.getWidth(), player.getHeight())) {
+            player.takeDamage(LASER_DAMAGE);
+        }
     }
 }

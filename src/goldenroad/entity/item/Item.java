@@ -38,6 +38,8 @@ public class Item {
     private boolean collected = false;
 
     public Item(int x, int y, int width, int height, Color color, Shape shape, ItemType type) {
+        width = 60;
+        height = 48;
         this.bounds = new Rectangle(x, y, width, height);
         this.color = color;
         this.shape = shape;
