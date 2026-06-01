@@ -20,6 +20,10 @@ public class AirborneBehavior implements MonsterBehavior {
 
     @Override
     public void update(Monster monster, Player player, CollisionMap collisionMap) {
+        if (monster.isActionState()) {
+            return;
+        }
+
         if (player != null) {
             float distance = monster.distanceTo(player.getX(), player.getY());
             if (distance <= monster.getDetectRange()) {

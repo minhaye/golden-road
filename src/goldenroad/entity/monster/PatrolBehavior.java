@@ -16,6 +16,10 @@ public class PatrolBehavior implements MonsterBehavior {
 
     @Override
     public void update(Monster monster, Player player, CollisionMap collisionMap) {
+        if (monster.isActionState()) {
+            return;
+        }
+
         if (player != null && monster.canDetectPlayer(player)) {
             monster.moveHorizontallyToward(player.getX());
             monster.setState(MonsterState.MOVE);

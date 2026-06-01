@@ -229,6 +229,7 @@ public class Monster extends Entity {
 
     public int update(Player player, CollisionMap collisionMap, List<Bullet> bullets) {
         if (isDead) {
+            updateAnimation();
             return 0;
         }
 
@@ -255,7 +256,7 @@ public class Monster extends Entity {
     }
 
     public void draw(Graphics2D g) {
-        if (g == null || isDead) {
+        if (g == null || (isDead && currentState != MonsterState.DEATH)) {
             return;
         }
 
@@ -322,6 +323,12 @@ public class Monster extends Entity {
     protected void die() {
         isDead = true;
         setState(MonsterState.DEATH);
+    }
+
+    protected boolean isActionState() {
+        return currentState == MonsterState.ATTACK
+                || currentState == MonsterState.HURT
+                || currentState == MonsterState.DEATH;
     }
 
     protected void updateAnimation() {

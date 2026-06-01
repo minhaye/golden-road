@@ -6,6 +6,10 @@ import goldenroad.map.CollisionMap;
 public class AggressiveBehavior implements MonsterBehavior {
     @Override
     public void update(Monster monster, Player player, CollisionMap collisionMap) {
+        if (monster.isActionState()) {
+            return;
+        }
+
         if (player == null) {
             monster.setState(MonsterState.IDLE);
             return;
