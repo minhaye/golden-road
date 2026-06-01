@@ -29,9 +29,10 @@ public class AirborneMonster extends Monster {
     @Override
     protected void move(Player player, CollisionMap collisionMap) {
         if (player != null && canDetectPlayer(player)) {
-            moveToward(
+            moveTowardAvoidingSolid(
                     getPlayerCenterX(player),
                     getPlayerCenterY(player),
+                    collisionMap,
                     getMoveSpeed(),
                     getPlayerStopDistance(player)
             );
@@ -43,7 +44,7 @@ public class AirborneMonster extends Monster {
         float orbitX = spawnX + (float) Math.cos(angle) * moveRange;
         float orbitY = spawnY + (float) Math.sin(angle * 1.3f) * (moveRange * 0.5f);
 
-        moveToward(orbitX, orbitY);
+        moveTowardAvoidingSolid(orbitX + width * 0.5f, orbitY + height * 0.5f, collisionMap);
         setState(MonsterState.MOVE);
     }
 }

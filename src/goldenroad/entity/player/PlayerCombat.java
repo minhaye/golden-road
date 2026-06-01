@@ -23,7 +23,7 @@ public class PlayerCombat {
         if (damage <= 0) return false;
         if (isInvulnerable()) return false;
 
-        resources.takeDamage(1);
+        resources.takeDamage(damage);
         invulnerabilityTimer = INVULNERABILITY_DURATION;
         return true;
     }

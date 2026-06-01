@@ -110,6 +110,12 @@ public class GridPathfinder {
                     continue;
                 }
 
+                if (direction[0] != 0 && direction[1] != 0
+                        && (isCellBlocked(map, current.x + direction[0], current.y, actorWidth, actorHeight, cellsWide, blockedCellCache)
+                        || isCellBlocked(map, current.x, current.y + direction[1], actorWidth, actorHeight, cellsWide, blockedCellCache))) {
+                    continue;
+                }
+
                 double stepCost = direction[0] != 0 && direction[1] != 0 ? 1.414 : 1.0;
                 double nextCost = current.cost + stepCost;
                 int nextKey = key(nextX, nextY, cellsWide);

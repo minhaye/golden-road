@@ -4,10 +4,12 @@ import goldenroad.entity.Entity;
 import goldenroad.entity.player.Player;
 import goldenroad.entity.projectile.Bullet;
 import goldenroad.map.CollisionMap;
+import goldenroad.map.GridPathfinder;
 import goldenroad.util.AssetLoader;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -21,6 +23,9 @@ import javax.imageio.ImageIO;
 
 public class Monster extends Entity {
     private static final int MAX_ANIMATION_FRAMES = 64;
+    private static final int PATH_TILE_SIZE = 16;
+    private static final int PATH_MAX_VISITED_NODES = 2500;
+    private static final GridPathfinder PATHFINDER = new GridPathfinder(PATH_TILE_SIZE);
     protected int hp;
     protected int damage;
     protected float attackSpeed;
@@ -410,6 +415,90 @@ public class Monster extends Entity {
 
         x += stepX;
         y += stepY;
+    }
+
+    protected void moveTowardAvoidingSolid(float targetCenterX, float targetCenterY, CollisionMap collisionMap) {
+        moveTowardAvoidingSolid(targetCenterX, targetCenterY, collisionMap, moveSpeed, 0f);
+    }
+
+    protected void moveTowardAvoidingSolid(float targetCenterX, float targetCenterY, CollisionMap collisionMap, float speed) {
+        moveTowardAvoidingSolid(targetCenterX, targetCenterY, collisionMap, speed, 0f);
+    }
+
+    protected void moveTowardAvoidingSolid(float targetCenterX, float targetCenterY, CollisionMap collisionMap, float speed, float stopDistance) {
+        if (collisionMap == null || !collisionMap.isLoaded()) {
+            moveToward(targetCenterX - width * 0.5f, targetCenterY - height * 0.5f, speed, stopDistance);
+            return;
+        }
+
+        float currentCenterX = x + width * 0.5f;
+        float currentCenterY = y + height * 0.5f;
+        float dx = targetCenterX - currentCenterX;
+        float dy = targetCenterY - currentCenterY;
+        float distance = (float) Math.hypot(dx, dy);
+
+        if (distance <= Math.max(0f, stopDistance)) {
+            return;
+        }
+
+        float desiredDistance = distance - Math.max(0f, stopDistance);
+        float desiredCenterX = currentCenterX + (dx / distance) * desiredDistance;
+        float desiredCenterY = currentCenterY + (dy / distance) * desiredDistance;
+
+        if (!collisionMap.isSegmentBlocked(currentCenterX, currentCenterY, desiredCenterX, desiredCenterY, width, height)) {
+            moveCenterTowardIfOpen(desiredCenterX, desiredCenterY, collisionMap, speed);
+            return;
+        }
+
+        List<Point> path = PATHFINDER.findPath(
+                collisionMap,
+                width,
+                height,
+                currentCenterX,
+                currentCenterY,
+                desiredCenterX,
+                desiredCenterY,
+                PATH_MAX_VISITED_NODES
+        );
+
+        if (path.isEmpty()) {
+            return;
+        }
+
+        Point waypoint = path.get(0);
+        if (path.size() > 1 && Math.hypot(waypoint.x - currentCenterX, waypoint.y - currentCenterY) < PATH_TILE_SIZE * 0.35) {
+            waypoint = path.get(1);
+        }
+
+        moveCenterTowardIfOpen(waypoint.x, waypoint.y, collisionMap, speed);
+    }
+
+    private void moveCenterTowardIfOpen(float targetCenterX, float targetCenterY, CollisionMap collisionMap, float speed) {
+        float currentCenterX = x + width * 0.5f;
+        float currentCenterY = y + height * 0.5f;
+        float dx = targetCenterX - currentCenterX;
+        float dy = targetCenterY - currentCenterY;
+        float distance = (float) Math.hypot(dx, dy);
+
+        if (distance == 0f) {
+            return;
+        }
+
+        float appliedSpeed = Math.max(0f, speed);
+        float stepDistance = Math.min(distance, appliedSpeed);
+        float nextX = x + (dx / distance) * stepDistance;
+        float nextY = y + (dy / distance) * stepDistance;
+
+        if (collisionMap.isAreaSolid(nextX, nextY, width, height)) {
+            return;
+        }
+
+        if (Math.abs(dx) > 0.01f) {
+            direction = dx < 0 ? Direction.LEFT : Direction.RIGHT;
+        }
+
+        x = nextX;
+        y = nextY;
     }
 
     protected void moveHorizontallyToward(float targetX) {

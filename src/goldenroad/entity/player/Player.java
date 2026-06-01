@@ -3,6 +3,7 @@ package goldenroad.entity.player;
 import goldenroad.entity.Entity;
 import goldenroad.input.KeyHandler;
 import java.awt.*;
+import java.awt.geom.Point2D;
 
 public class Player extends Entity {
 
@@ -130,8 +131,20 @@ public class Player extends Entity {
         renderer.render(g);
     }
 
+    public void render(Graphics2D g, boolean aiming, double aimX, double aimY) {
+        renderer.render(g, aiming, aimX, aimY);
+    }
+
     public void draw(Graphics2D g) {
         render(g);
+    }
+
+    public void draw(Graphics2D g, boolean aiming, double aimX, double aimY) {
+        render(g, aiming, aimX, aimY);
+    }
+
+    public Point2D.Double getGunCenter(double aimX, double aimY) {
+        return renderer.getGunCenter(aimX, aimY);
     }
 
     int getAnimationStateKey() {
