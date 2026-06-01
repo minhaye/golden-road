@@ -2,6 +2,8 @@ package goldenroad.game;
 
 import goldenroad.entity.item.Inventory;
 import goldenroad.entity.item.Item;
+import goldenroad.entity.item.ItemUseContext;
+import goldenroad.entity.item.ItemUseResult;
 import goldenroad.entity.monster.Monster;
 import goldenroad.entity.player.Player;
 import goldenroad.entity.projectile.Bullet;
@@ -142,6 +144,27 @@ public class GamePanel extends JPanel implements Runnable {
         player.update(keyHandler);
         hud = new Hud(this, player, inventory);
         inventoryPanel = new InventoryPanel(inventory, player);
+        inventory.setUseContext(new ItemUseContext() {
+            @Override
+            public Player player() {
+                return player;
+            }
+
+            @Override
+            public Inventory inventory() {
+                return inventory;
+            }
+
+            @Override
+            public boolean isCurrentMapClear() {
+                return sceneManager.isCurrentMapClear();
+            }
+
+            @Override
+            public void advanceToNextMap() {
+                advanceMapWithSpawn();
+            }
+        });
     }
 
     private BufferedImage loadSprite(String resourcePath) {
@@ -231,6 +254,24 @@ public class GamePanel extends JPanel implements Runnable {
         requestFocusInWindow();
     }
 
+    public void advanceMapWithSpawn() {
+        world.switchMap(sceneManager, player, true);
+        saveCurrentMap(currentMapId);
+        syncWorldStateFromGameWorld();
+        camera.reset();
+        player.getAttack().resetCooldowns();
+        bullets.clear();
+        menu.setPaused(false);
+        inventoryPanel.close();
+        requestFocusInWindow();
+    }
+
+    public void killAllMonstersOnCurrentMap() {
+        sceneManager.killAllMonstersOnCurrentMap();
+        showToast("Da tieu diet tat ca quai (cheat)");
+        requestFocusInWindow();
+    }
+
     public void toggleMinimap() {
         minimapVisible = !minimapVisible;
         showToast(minimapVisible ? "Minimap bat" : "Minimap tat");
@@ -317,7 +358,7 @@ private void drawParallax(Graphics2D g2) {
     }
 
     private void handleItemPickup() {
-        world.handleItemPickup(player, inventory, sceneManager);
+        world.handleItemPickup(player, inventory, sceneManager, this::showToast);
     }
 
     private void updateMonsters() {
@@ -367,6 +408,10 @@ private void drawParallax(Graphics2D g2) {
 
 // Handle shooting input and bullet spawning
     private void handleShootingInput() {
+        if (menu.isActive() || menu.isPaused() || inventoryPanel.isOpen()) {
+            return;
+        }
+
         double worldMouseX = getMouseWorldX();
         double worldMouseY = getMouseWorldY();
         java.awt.geom.Point2D.Double gunCenter = player.getGunCenter(worldMouseX, worldMouseY);
@@ -486,7 +531,11 @@ private void drawParallax(Graphics2D g2) {
         );
 
         world.render(bufferG, player, bullets, sceneManager, itemSprites);
-        player.draw(bufferG, mouseHandler.isLeftPressed() || mouseHandler.isRightPressed(), getMouseWorldX(), getMouseWorldY());
+        boolean aiming = !menu.isActive()
+            && !menu.isPaused()
+            && !inventoryPanel.isOpen()
+            && (mouseHandler.isLeftPressed() || mouseHandler.isRightPressed());
+        player.draw(bufferG, aiming, getMouseWorldX(), getMouseWorldY());
 
         bufferG.setTransform(new java.awt.geom.AffineTransform());
     }

@@ -37,8 +37,8 @@ public class SceneManager {
     private final List<Floor> floors = new ArrayList<>();
     private final MonsterSpawnPlanner monsterSpawnPlanner = new MonsterSpawnPlanner();
 
-    private static final int ITEM_WIDTH = 12;
-    private static final int ITEM_HEIGHT = 24;
+    private static final int ITEM_MIN_DISTANCE = 80;
+    private static final int ITEM_SPAWN_ATTEMPTS = 48;
 
     private int currentFloorIndex = 0;
     private int currentScreenIndex = 0;
@@ -57,11 +57,7 @@ public class SceneManager {
                 new Rectangle(560, 340, 170, 20) 
             ),
             List.of(),
-            List.of(
-                Item.ofType(280, 355, ITEM_WIDTH, ITEM_HEIGHT, Item.ItemType.HP_POTION),
-                Item.ofType(320, 355, ITEM_WIDTH, ITEM_HEIGHT, Item.ItemType.MP_POTION),
-                Item.ofType(360, 355, ITEM_WIDTH, ITEM_HEIGHT, Item.ItemType.KEY)
-            )
+            List.of()
         ));
 
         floors.add(new Floor(floor1Screens));
@@ -204,22 +200,139 @@ public class SceneManager {
         return true;
     }
 
-    public void spawnRandomItems(int count, int worldWidth, int worldHeight) {
-        if (count <= 0) return;
-        Random rnd = new Random();
-        Screen screen = getCurrentScreen();
+    public boolean isCurrentMapClear() {
+        for (Monster monster : getCurrentScreen().getMonsters()) {
+            if (monster != null && !monster.isDead()) {
+                return false;
+            }
+        }
+        return true;
+    }
 
-        Item.ItemType[] types = Item.ItemType.values();
-
-        for (int i = 0; i < count; i++) {
-            int x = rnd.nextInt(Math.max(1, worldWidth - ITEM_WIDTH));
-            int y = rnd.nextInt(Math.max(1, worldHeight - ITEM_HEIGHT));
-
-            Item.ItemType type = types[rnd.nextInt(types.length)];
-            Item item = Item.ofType(x, y, ITEM_WIDTH, ITEM_HEIGHT, type);
-            screen.addItem(item);
+    public void killAllMonstersOnCurrentMap() {
+        List<Monster> monsters = new ArrayList<>(getCurrentScreen().getMonsters());
+        for (Monster monster : monsters) {
+            if (monster == null || monster.isDead()) {
+                continue;
+            }
+            monster.takeDamage(Integer.MAX_VALUE / 2);
         }
     }
+
+    public int spawnMapItems(
+        int monsterCount,
+        int worldWidth,
+        int worldHeight,
+        CollisionMap collisionMap,
+        double playerX,
+        double playerY,
+        double playerWidth,
+        double playerHeight
+    ) {
+        Screen screen = getCurrentScreen();
+        screen.clearItems();
+
+        int potionCount = Math.min(8, Math.max(2, Math.round(monsterCount * 0.4f)));
+        List<Item.ItemType> spawnOrder = new ArrayList<>();
+        spawnOrder.add(Item.ItemType.KEY);
+        for (int i = 0; i < potionCount; i++) {
+            spawnOrder.add(Item.ItemType.HP_POTION);
+        }
+        for (int i = 0; i < potionCount; i++) {
+            spawnOrder.add(Item.ItemType.MP_POTION);
+        }
+
+        GridPathfinder pathfinder = new GridPathfinder(TILE_SIZE);
+        double playerCenterX = playerX + playerWidth / 2.0;
+        double playerCenterY = playerY + playerHeight / 2.0;
+        List<int[]> placedPositions = new ArrayList<>();
+        Random rnd = new Random();
+        int spawned = 0;
+
+        for (Item.ItemType type : spawnOrder) {
+            Item item = trySpawnItem(
+                type,
+                worldWidth,
+                worldHeight,
+                collisionMap,
+                pathfinder,
+                playerCenterX,
+                playerCenterY,
+                placedPositions,
+                rnd
+            );
+            if (item != null) {
+                screen.addItem(item);
+                placedPositions.add(new int[] { item.getBounds().x, item.getBounds().y });
+                spawned++;
+            }
+        }
+
+        return spawned;
+    }
+
+    private Item trySpawnItem(
+        Item.ItemType type,
+        int worldWidth,
+        int worldHeight,
+        CollisionMap collisionMap,
+        GridPathfinder pathfinder,
+        double playerCenterX,
+        double playerCenterY,
+        List<int[]> placedPositions,
+        Random rnd
+    ) {
+        int size = Item.ITEM_SIZE;
+
+        for (int attempt = 0; attempt < ITEM_SPAWN_ATTEMPTS; attempt++) {
+            int x = rnd.nextInt(Math.max(1, worldWidth - size));
+            int y = rnd.nextInt(Math.max(1, worldHeight - size));
+
+            if (collisionMap != null
+                && collisionMap.isLoaded()
+                && collisionMap.isAreaSolid(x, y, size, size)) {
+                continue;
+            }
+
+            if (!isFarEnoughFromOthers(x, y, placedPositions)) {
+                continue;
+            }
+
+            if (!isReachableSpawn(
+                collisionMap,
+                pathfinder,
+                playerCenterX,
+                playerCenterY,
+                x,
+                y,
+                size,
+                size
+            )) {
+                continue;
+            }
+
+            return Item.ofType(x, y, type);
+        }
+
+        return null;
+    }
+
+    private boolean isFarEnoughFromOthers(int x, int y, List<int[]> placedPositions) {
+        for (int[] pos : placedPositions) {
+            double dx = x - pos[0];
+            double dy = y - pos[1];
+            if (Math.hypot(dx, dy) < ITEM_MIN_DISTANCE) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public int getLastSpawnedMonsterCount() {
+        return lastSpawnedMonsterCount;
+    }
+
+    private int lastSpawnedMonsterCount = 0;
 
     // Spawn up to `count` monsters distributed evenly across the map area.
     // This should be called after the map/world dimensions are known.
@@ -236,6 +349,7 @@ public class SceneManager {
         if (count <= 0 || worldWidth <= 0 || worldHeight <= 0) return;
 
         int cap = Math.min(AIRBORNE_MONSTER_COUNT, count);
+        lastSpawnedMonsterCount = 0;
         Random rnd = new Random();
         Screen screen = getCurrentScreen();
         GridPathfinder pathfinder = new GridPathfinder(TILE_SIZE);
@@ -281,6 +395,7 @@ public class SceneManager {
 
             if (monster != null) {
                 screen.addMonster(monster);
+                lastSpawnedMonsterCount++;
             }
         }
     }

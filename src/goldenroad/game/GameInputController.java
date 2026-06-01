@@ -2,6 +2,7 @@ package goldenroad.game;
 
 import goldenroad.entity.item.Inventory;
 import goldenroad.entity.item.Item;
+import goldenroad.entity.item.ItemUseResult;
 import goldenroad.entity.player.Player;
 import goldenroad.input.KeyHandler;
 import goldenroad.input.MouseHandler;
@@ -45,8 +46,14 @@ public class GameInputController {
             return true;
         }
 
+        if (keyHandler.consumeKillAllMonstersJustPressed()) {
+            panel.killAllMonstersOnCurrentMap();
+            return false;
+        }
+
         if (menu.isActive()) {
             menu.update(mouseHandler);
+            mouseHandler.suppressGameplayMouse();
             return true;
         }
 
@@ -56,12 +63,11 @@ public class GameInputController {
                 menu.setPaused(false);
                 panel.requestFocusInWindow();
             }
+            mouseHandler.suppressGameplayMouse();
             return true;
         }
 
         menu.update(mouseHandler);
-
-        handleHudMouseInput(panel);
 
         if (keyHandler.consumeInventoryJustPressed()) {
             inventoryPanel.toggle();
@@ -70,8 +76,11 @@ public class GameInputController {
 
         if (inventoryPanel.isOpen()) {
             inventoryPanel.update(keyHandler, mouseHandler, panel);
+            mouseHandler.suppressGameplayMouse();
             return true;
         }
+
+        handleHudMouseInput(panel);
 
         if (keyHandler.consumeEscapeJustPressed()) {
             menu.setPaused(true);
@@ -99,9 +108,8 @@ public class GameInputController {
             default -> Item.ItemType.KEY;
         };
 
-        if (inventory.useItem(type, player)) {
-            panel.showToast("Ban da dung " + getShortLabel(type));
-        }
+        ItemUseResult result = inventory.useItem(type);
+        panel.showToast(result.message());
         return true;
     }
 
@@ -124,13 +132,5 @@ public class GameInputController {
         mouseHandler.consumeLeftJustPressed();
         inventoryPanel.toggle();
         panel.requestFocusInWindow();
-    }
-
-    private String getShortLabel(Item.ItemType type) {
-        return switch (type) {
-            case HP_POTION -> "HP";
-            case MP_POTION -> "MP";
-            case KEY -> "Key";
-        };
     }
 }

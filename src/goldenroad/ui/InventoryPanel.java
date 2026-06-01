@@ -10,6 +10,7 @@ import javax.imageio.ImageIO;
 
 import goldenroad.entity.item.Inventory;
 import goldenroad.entity.item.Item;
+import goldenroad.entity.item.ItemUseResult;
 import goldenroad.entity.player.Player;
 import goldenroad.game.GamePanel;
 import goldenroad.input.KeyHandler;
@@ -141,22 +142,35 @@ public class InventoryPanel {
         };
     }
 
+    private void useItemAtIndex(int index, GamePanel panel) {
+        if (index < 0 || index >= SLOT_TYPES.length) {
+            return;
+        }
+
+        Item.ItemType type = SLOT_TYPES[index];
+        if (inventory.getCount(type) <= 0) {
+            return;
+        }
+
+        ItemUseResult result = inventory.useItem(type);
+        panel.showToast(result.message());
+
+        if (result.success() && inventory.getCount(type) <= 0 && index == selectedIndex) {
+            selectedIndex = findNextSelectedIndex((index + 1) % SLOT_TYPES.length, 1);
+        }
+    }
+
     private boolean useSelectedItem(GamePanel panel) {
         if (selectedIndex < 0 || selectedIndex >= SLOT_TYPES.length) {
             return false;
         }
 
         Item.ItemType type = SLOT_TYPES[selectedIndex];
-        if (!inventory.useItem(type, player)) {
+        if (inventory.getCount(type) <= 0) {
             return false;
         }
 
-        panel.showToast("Ban da dung " + getShortLabel(type));
-
-        if (inventory.getCount(type) <= 0) {
-            selectedIndex = findNextSelectedIndex((selectedIndex + 1) % SLOT_TYPES.length, 1);
-        }
-
+        useItemAtIndex(selectedIndex, panel);
         return true;
     }
 
@@ -182,12 +196,7 @@ public class InventoryPanel {
 
         for (int i = 0; i < SLOT_TYPES.length; i++) {
             if (keyHandler.consumeQuickUseJustPressed(i)) {
-                if (inventory.useItem(SLOT_TYPES[i], player)) {
-                    panel.showToast("Ban da dung " + getShortLabel(SLOT_TYPES[i]));
-                    if (inventory.getCount(SLOT_TYPES[i]) <= 0 && i == selectedIndex) {
-                        selectedIndex = findNextSelectedIndex((i + 1) % SLOT_TYPES.length, 1);
-                    }
-                }
+                useItemAtIndex(i, panel);
             }
         }
 
@@ -208,6 +217,9 @@ public class InventoryPanel {
             Rectangle slot = getSlotBounds(i);
             if (slot.contains(mx, my)) {
                 selectSlot(i);
+                if (inventory.getCount(SLOT_TYPES[i]) > 0) {
+                    useItemAtIndex(i, panel);
+                }
                 return;
             }
         }

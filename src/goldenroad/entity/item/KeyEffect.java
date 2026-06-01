@@ -1,16 +1,18 @@
 package goldenroad.entity.item;
 
-import goldenroad.entity.player.Player;
-
 public class KeyEffect implements ItemEffect {
     @Override
-    public boolean apply(Player player, Inventory inventory) {
-        // Key currently has no immediate player-side effect; consuming is allowed
-        return true;
+    public ItemUseResult apply(ItemUseContext ctx) {
+        if (!ctx.isCurrentMapClear()) {
+            return ItemUseResult.fail("Con quai chua het, chua the dung Key");
+        }
+
+        ctx.advanceToNextMap();
+        return ItemUseResult.ok("Da mo cua, chuyen sang map tiep theo");
     }
 
     @Override
     public String getDescription() {
-        return "Key — Mo cua khoa";
+        return "Key — Mo cua khoa (can het quai)";
     }
 }

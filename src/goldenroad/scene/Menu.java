@@ -137,26 +137,32 @@ public class Menu {
             aboutOpen = false;
         }
 
-        if (mouse.consumeLeftJustPressed()) {
-            if (paused) {
-                for (int i = 0; i < pauseButtons.length; i++) {
-                    if (pauseButtons[i].contains(mx, my)) {
-                        handlePauseButton(i);
-                        return;
-                    }
-                }
-                return;
-            }
+        if (!mouse.isLeftJustPressed()) {
+            return;
+        }
 
-            if (!active) {
-                return;
-            }
+        if (!active && !paused) {
+            return;
+        }
 
-            for (int i = 0; i < buttons.length; i++) {
-                if (buttons[i].contains(mx, my)) {
-                    handleButton(i);
+        if (!mouse.consumeLeftJustPressed()) {
+            return;
+        }
+
+        if (paused) {
+            for (int i = 0; i < pauseButtons.length; i++) {
+                if (pauseButtons[i].contains(mx, my)) {
+                    handlePauseButton(i);
                     return;
                 }
+            }
+            return;
+        }
+
+        for (int i = 0; i < buttons.length; i++) {
+            if (buttons[i].contains(mx, my)) {
+                handleButton(i);
+                return;
             }
         }
     }
