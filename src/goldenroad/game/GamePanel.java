@@ -1,5 +1,6 @@
 package goldenroad.game;
 
+import goldenroad.audio.SoundEffect;
 import goldenroad.entity.Bullet;
 import goldenroad.entity.Inventory;
 import goldenroad.entity.Item;
@@ -81,6 +82,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     private int leftShootCooldown = 0;
     private int rightShootCooldown = 0;
+    private boolean leftShotFiredInCurrentPress = false;
 
     private static final int LEFT_SHOOT_DELAY = 30;
     private static final int RIGHT_SHOOT_DELAY = 120;
@@ -107,6 +109,9 @@ public class GamePanel extends JPanel implements Runnable {
     private final Menu menu = new Menu(this);
     private final List<Bullet> bullets = new ArrayList<>();
     private final Inventory inventory = new Inventory();
+    private final SoundEffect pistolSingleShotSound = new SoundEffect("/assets/audio/pistol-gun-1-shot.wav");
+    private final SoundEffect pistolMultiShotSound = new SoundEffect("/assets/audio/pistol-gun-multi-shot.wav");
+    private final SoundEffect shotgunSound = new SoundEffect("/assets/audio/shotgun.wav");
     private Hud hud;
     private InventoryPanel inventoryPanel;
 
@@ -490,9 +495,18 @@ public class GamePanel extends JPanel implements Runnable {
 
 // Handle shooting input and bullet spawning
     private void handleShootingInput() {
-        if (mouseHandler.isLeftPressed() && leftShootCooldown <= 0) {
+        boolean leftPressed = mouseHandler.isLeftPressed();
+        if (!leftPressed) {
+            leftShotFiredInCurrentPress = false;
+        } else if (mouseHandler.consumeLeftJustPressed()) {
+            leftShotFiredInCurrentPress = false;
+        }
+
+        if (leftPressed && leftShootCooldown <= 0) {
             if (player.spendMp(LEFT_SHOOT_MP_COST)) {
                 spawnLaserShot();
+                playPistolSound(leftShotFiredInCurrentPress);
+                leftShotFiredInCurrentPress = true;
                 leftShootCooldown = LEFT_SHOOT_DELAY;
             }
         }
@@ -500,8 +514,17 @@ public class GamePanel extends JPanel implements Runnable {
         if (mouseHandler.isRightPressed() && rightShootCooldown <= 0) {
             if (player.spendMp(RIGHT_SHOOT_MP_COST)) {
                 spawnClusterShot();
+                shotgunSound.play();
                 rightShootCooldown = RIGHT_SHOOT_DELAY;
             }
+        }
+    }
+
+    private void playPistolSound(boolean repeatedShotInPress) {
+        if (repeatedShotInPress) {
+            pistolMultiShotSound.play();
+        } else {
+            pistolSingleShotSound.play();
         }
     }
 
