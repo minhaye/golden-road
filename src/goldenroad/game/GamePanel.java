@@ -521,6 +521,10 @@ private void drawParallax(Graphics2D g2) {
         backgroundMusic.playLoop(MapCatalog.get(currentMapId).getMusicPath());
     }
 
+    public void playMenuMusic() {
+        backgroundMusic.playLoop("/assets/audio/Menu.wav");
+    }
+
     private void syncWorldStateFromGameWorld() {
         currentMapId = world.getCurrentMapId();
         collisionMap = world.getCollisionMap();

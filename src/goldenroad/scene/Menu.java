@@ -362,6 +362,7 @@ public class Menu {
         paused = false;
         resetSubmenuState();
         panel.requestFocusInWindow();
+        panel.playMenuMusic();
     }
 
     private void renderMenuBackground(Graphics2D g2, int alpha) {
