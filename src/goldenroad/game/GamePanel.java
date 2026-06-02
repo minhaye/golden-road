@@ -125,9 +125,12 @@ public class GamePanel extends JPanel implements Runnable {
     private Hud hud;
     private InventoryPanel inventoryPanel;
     private boolean gameOver = false;
+    private boolean victory = false;
     private java.awt.Rectangle gameOverRestartButton = new java.awt.Rectangle((SCREEN_WIDTH / 2) - 110, 170, 220, 44);
     private java.awt.Rectangle gameOverReturnButton = new java.awt.Rectangle((SCREEN_WIDTH / 2) - 110, 220, 220, 44);
     private java.awt.Rectangle gameOverExitButton = new java.awt.Rectangle((SCREEN_WIDTH / 2) - 110, 270, 220, 44);
+    private java.awt.Rectangle victoryReturnButton = new java.awt.Rectangle((SCREEN_WIDTH / 2) - 110, 220, 220, 44);
+    private java.awt.Rectangle victoryExitButton = new java.awt.Rectangle((SCREEN_WIDTH / 2) - 110, 280, 220, 44);
 
 
     private Thread gameThread;
@@ -239,6 +242,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void loadMap() {
         try {
+            victory = false;
             world.loadCurrentMap(sceneManager, player, true, settings.getDifficulty());
             syncWorldStateFromGameWorld();
             camera.reset();
@@ -251,6 +255,7 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void startNewGame() {
+        victory = false;
         inventory.clear();
         player.heal(10_000);
         player.restoreMp(10_000);
@@ -258,6 +263,7 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void continueGame() {
+        victory = false;
         loadMap(loadSavedMap());
     }
 
@@ -278,6 +284,7 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void switchMap() {
+        victory = false;
         world.switchMap(sceneManager, player, false, settings.getDifficulty());
         syncWorldStateFromGameWorld();
         saveCurrentMap(currentMapId);
@@ -291,6 +298,16 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void advanceMapWithSpawn() {
+        if (currentMapId == MapId.MAP_3) {
+            victory = true;
+            bullets.clear();
+            menu.setPaused(false);
+            inventoryPanel.close();
+            requestFocusInWindow();
+            return;
+        }
+
+        victory = false;
         world.switchMap(sceneManager, player, true, settings.getDifficulty());
         syncWorldStateFromGameWorld();
         saveCurrentMap(currentMapId);
@@ -375,6 +392,10 @@ private void drawParallax(Graphics2D g2) {
     private void update() {
         if (gameOver) {
             handleGameOverInput();
+            return;
+        }
+        if (victory) {
+            handleVictoryInput();
             return;
         }
         if (inputController.update(this, player)) {
@@ -622,6 +643,11 @@ private void drawParallax(Graphics2D g2) {
             return;
         }
 
+        if (victory) {
+            drawVictoryScreen(bufferG);
+            return;
+        }
+
         if (!menu.isPaused()) {
             inventoryPanel.render(bufferG);
         }
@@ -651,6 +677,26 @@ private void drawParallax(Graphics2D g2) {
         drawGameOverButton(g, gameOverReturnButton, "Return to Menu");
         // draw exit button
         drawGameOverButton(g, gameOverExitButton, "Exit Game");
+    }
+
+    private void drawVictoryScreen(Graphics2D g) {
+        g.setColor(new Color(8, 10, 12, 220));
+        g.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+        g.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 52));
+        g.setColor(new Color(190, 240, 160));
+        String title = "YOU WIN!";
+        int tw = g.getFontMetrics().stringWidth(title);
+        g.drawString(title, (SCREEN_WIDTH - tw) / 2, 140);
+
+        g.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 20));
+        g.setColor(new Color(220, 230, 240));
+        String message = "Congratulation! Ban da hoan thanh man cuoi cung.";
+        int mw = g.getFontMetrics().stringWidth(message);
+        g.drawString(message, (SCREEN_WIDTH - mw) / 2, 190);
+
+        drawGameOverButton(g, victoryReturnButton, "Return to Menu");
+        drawGameOverButton(g, victoryExitButton, "Exit Game");
     }
 
     private void drawGameOverButton(Graphics2D g, java.awt.Rectangle btn, String label) {
@@ -686,6 +732,25 @@ private void drawParallax(Graphics2D g2) {
             menu.open();
         } else if (gameOverExitButton.contains(mx, my)) {
             // exit game
+            System.exit(0);
+        }
+    }
+
+    private void handleVictoryInput() {
+        if (!mouseHandler.isLeftJustPressed()) return;
+        if (!mouseHandler.consumeLeftJustPressed()) return;
+
+        double scale = renderScale <= 0 ? 1.0 : renderScale;
+        int mx = (int) ((mouseHandler.getMouseX() - renderOffsetX) / scale);
+        int my = (int) ((mouseHandler.getMouseY() - renderOffsetY) / scale);
+
+        if (victoryReturnButton.contains(mx, my)) {
+            victory = false;
+            player.heal(10_000);
+            player.restoreMp(10_000);
+            bullets.clear();
+            menu.open();
+        } else if (victoryExitButton.contains(mx, my)) {
             System.exit(0);
         }
     }
