@@ -5,6 +5,7 @@ public final class MapDefinition {
     private final String backgroundPath;
     private final String hiddenPath;
     private final String collisionPath;
+    private final String musicPath;
     private final int worldWidth;
     private final int worldHeight;
     private final int spawnX;
@@ -15,6 +16,7 @@ public final class MapDefinition {
         String backgroundPath,
         String hiddenPath,
         String collisionPath,
+        String musicPath,
         int worldWidth,
         int worldHeight,
         int spawnX,
@@ -24,6 +26,7 @@ public final class MapDefinition {
         this.backgroundPath = backgroundPath;
         this.hiddenPath = hiddenPath;
         this.collisionPath = collisionPath;
+        this.musicPath = musicPath;
         this.worldWidth = worldWidth;
         this.worldHeight = worldHeight;
         this.spawnX = spawnX;
@@ -44,6 +47,10 @@ public final class MapDefinition {
 
     public String getCollisionPath() {
         return collisionPath;
+    }
+
+    public String getMusicPath() {
+        return musicPath;
     }
 
     public int getWorldWidth() {

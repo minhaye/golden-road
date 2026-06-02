@@ -151,6 +151,7 @@ public class Menu {
         }
 
         if (view == View.BUTTONS && aboutButton.contains(mx, my)) {
+            panel.playMenuClickSound();
             aboutOpen = !aboutOpen;
             return;
         }
@@ -166,6 +167,7 @@ public class Menu {
 
         if (view == View.TUTORIAL) {
             if (backButton.contains(mx, my)) {
+                panel.playMenuClickSound();
                 resetSubmenuState();
             }
             return;
@@ -174,6 +176,7 @@ public class Menu {
         if (paused) {
             for (int i = 0; i < pauseButtons.length; i++) {
                 if (pauseButtons[i].contains(mx, my)) {
+                    panel.playMenuClickSound();
                     handlePauseButton(i);
                     return;
                 }
@@ -183,6 +186,7 @@ public class Menu {
 
         for (int i = 0; i < buttons.length; i++) {
             if (buttons[i].contains(mx, my)) {
+                panel.playMenuClickSound();
                 handleButton(i);
                 return;
             }
@@ -269,12 +273,14 @@ public class Menu {
 
     private void handleSettingsClick(int mx, int my) {
         if (volumeMinusButton.contains(mx, my)) {
+            panel.playMenuClickSound();
             settings.setVolume(settings.getVolume() - 10);
             panel.saveSettings();
             return;
         }
 
         if (volumePlusButton.contains(mx, my)) {
+            panel.playMenuClickSound();
             settings.setVolume(settings.getVolume() + 10);
             panel.saveSettings();
             return;
@@ -283,6 +289,7 @@ public class Menu {
         Difficulty[] difficulties = Difficulty.values();
         for (int i = 0; i < difficulties.length; i++) {
             if (difficultyButtons[i].contains(mx, my)) {
+                panel.playMenuClickSound();
                 settings.setDifficulty(difficulties[i]);
                 panel.saveSettings();
                 return;
@@ -290,6 +297,7 @@ public class Menu {
         }
 
         if (backButton.contains(mx, my)) {
+            panel.playMenuClickSound();
             resetSubmenuState();
         }
     }
