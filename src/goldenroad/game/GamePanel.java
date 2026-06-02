@@ -1,5 +1,7 @@
 package goldenroad.game;
 
+import goldenroad.audio.BackgroundMusicPlayer;
+import goldenroad.audio.SoundEffectPlayer;
 import goldenroad.entity.item.Inventory;
 import goldenroad.entity.item.Item;
 import goldenroad.entity.item.ItemUseContext;
@@ -76,6 +78,16 @@ public class GamePanel extends JPanel implements Runnable {
     // x4 = 2560x1440 = 1440p
     // x6 = 3840x2160 = 4K
     private static final int TARGET_FPS = 60;
+    private static final String LEFT_SHOT_SOUND = "/assets/audio/pistol-gun-1-shot.wav";
+    private static final String LEFT_HOLD_SOUND = "/assets/audio/pistol-gun-multi-shot.wav";
+    private static final String RIGHT_SHOT_SOUND = "/assets/audio/shotgun.WAV";
+    private static final String MENU_CLICK_SOUND = "/assets/audio/back_003.wav";
+    private static final String PLAYER_DEATH_SOUND = "/assets/audio/death.wav";
+    private static final String ENEMY_DEATH_SOUND = "/assets/audio/enemy_death.wav";
+    private static final String HP_HEAL_SOUND = "/assets/audio/heart_heal.wav";
+    private static final String MP_HEAL_SOUND = "/assets/audio/mp_heal.wav";
+    private static final String PLAYER_HURT_SOUND = "/assets/audio/player_hurt.wav";
+    private static final String PAUSE_SOUND = "/assets/audio/pause.wav";
 
     private static final Path SAVE_FILE = Paths.get(System.getProperty("user.home"), ".golden-road-save");
     // CAMERA
@@ -117,6 +129,8 @@ public class GamePanel extends JPanel implements Runnable {
     private final SceneManager sceneManager = new SceneManager();
     private final GameWorld world = new GameWorld();
     private final GameSettings settings = SettingsStore.load();
+    private final BackgroundMusicPlayer backgroundMusic = new BackgroundMusicPlayer(settings.getVolume());
+    private final SoundEffectPlayer soundEffects = new SoundEffectPlayer(settings.getVolume());
     private final Menu menu = new Menu(this, settings);
     private final GameOverlayRenderer overlayRenderer = new GameOverlayRenderer();
     private final GameInputController inputController;
@@ -129,6 +143,7 @@ public class GamePanel extends JPanel implements Runnable {
     private Thread gameThread;
 
     private Player player;
+    private boolean leftShotDuringCurrentPress;
 
     public GamePanel() {
         setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
@@ -144,6 +159,19 @@ public class GamePanel extends JPanel implements Runnable {
         loadItemSprites();
         loadCustomCursor();
         inputController = new GameInputController(keyHandler, mouseHandler, sceneManager, menu, inventory, inventoryPanel);
+        soundEffects.preload(
+            LEFT_SHOT_SOUND,
+            LEFT_HOLD_SOUND,
+            RIGHT_SHOT_SOUND,
+            MENU_CLICK_SOUND,
+            PLAYER_DEATH_SOUND,
+            ENEMY_DEATH_SOUND,
+            HP_HEAL_SOUND,
+            MP_HEAL_SOUND,
+            PLAYER_HURT_SOUND,
+            PAUSE_SOUND
+        );
+        backgroundMusic.playLoop("/assets/audio/Menu.wav");
     }
 
     public void initPlayer() {
@@ -267,6 +295,7 @@ public class GamePanel extends JPanel implements Runnable {
             bullets.clear();
             menu.setPaused(false);
             inventoryPanel.close();
+            playCurrentMapMusic();
             requestFocusInWindow();
         } catch (Exception e) {
             e.printStackTrace();
@@ -282,6 +311,7 @@ public class GamePanel extends JPanel implements Runnable {
         bullets.clear();
         menu.setPaused(false);
         inventoryPanel.close();
+        playCurrentMapMusic();
         showToast("Da chuyen sang " + currentMapId.displayName().toLowerCase());
         requestFocusInWindow();
     }
@@ -295,11 +325,14 @@ public class GamePanel extends JPanel implements Runnable {
         bullets.clear();
         menu.setPaused(false);
         inventoryPanel.close();
+        playCurrentMapMusic();
         requestFocusInWindow();
     }
 
     public void killAllMonstersOnCurrentMap() {
-        sceneManager.killAllMonstersOnCurrentMap();
+        if (sceneManager.killAllMonstersOnCurrentMap() > 0) {
+            soundEffects.play(ENEMY_DEATH_SOUND);
+        }
         showToast("Da tieu diet tat ca quai (cheat)");
         requestFocusInWindow();
     }
@@ -370,11 +403,13 @@ private void drawParallax(Graphics2D g2) {
 
     private void update() {
         if (inputController.update(this, player)) {
+            stopContinuousWeaponSounds();
             return;
         }
 
         player.update(keyHandler);
         player.updateResources();
+        int hpBeforeDamage = player.getHp();
 
         collisionHandler.move(
             player,
@@ -384,9 +419,10 @@ private void drawParallax(Graphics2D g2) {
 
         handleItemPickup();
         updateMonsters();
+        playPlayerDamageSound(hpBeforeDamage);
         camera.update(player, SCREEN_WIDTH, SCREEN_HEIGHT, world.getWorldWidth(), world.getWorldHeight());
         handleShootingInput();
-        world.updateBullets(bullets, sceneManager);
+        playEnemyDeathSounds(world.updateBullets(bullets, sceneManager));
     }
 
     private void handleItemPickup() {
@@ -403,6 +439,47 @@ private void drawParallax(Graphics2D g2) {
 
     public void saveSettings() {
         SettingsStore.save(settings);
+        backgroundMusic.setVolume(settings.getVolume());
+        soundEffects.setVolume(settings.getVolume());
+    }
+
+    public void playMenuClickSound() {
+        soundEffects.play(MENU_CLICK_SOUND);
+    }
+
+    public void playPauseSound() {
+        soundEffects.play(PAUSE_SOUND);
+    }
+
+    public void playItemUseSound(Item.ItemType type, ItemUseResult result) {
+        if (type == null || result == null || !result.success()) {
+            return;
+        }
+
+        switch (type) {
+            case HP_POTION -> soundEffects.play(HP_HEAL_SOUND);
+            case MP_POTION -> soundEffects.play(MP_HEAL_SOUND);
+            case KEY -> {
+            }
+        }
+    }
+
+    private void playPlayerDamageSound(int hpBeforeDamage) {
+        if (hpBeforeDamage <= player.getHp()) {
+            return;
+        }
+
+        soundEffects.play(player.getHp() <= 0 ? PLAYER_DEATH_SOUND : PLAYER_HURT_SOUND);
+    }
+
+    private void playEnemyDeathSounds(int defeatedMonsterCount) {
+        for (int i = 0; i < defeatedMonsterCount; i++) {
+            soundEffects.play(ENEMY_DEATH_SOUND);
+        }
+    }
+
+    private void playCurrentMapMusic() {
+        backgroundMusic.playLoop(MapCatalog.get(currentMapId).getMusicPath());
     }
 
     private void syncWorldStateFromGameWorld() {
@@ -449,6 +526,7 @@ private void drawParallax(Graphics2D g2) {
 // Handle shooting input and bullet spawning
     private void handleShootingInput() {
         if (menu.isActive() || menu.isPaused() || inventoryPanel.isOpen()) {
+            stopContinuousWeaponSounds();
             return;
         }
 
@@ -459,16 +537,44 @@ private void drawParallax(Graphics2D g2) {
         double originY = gunCenter.y;
 
         if (mouseHandler.isLeftPressed()) {
-            for (goldenroad.entity.projectile.BulletSpec spec : player.getAttack().tryLeftShoot(originX, originY, worldMouseX, worldMouseY)) {
+            List<goldenroad.entity.projectile.BulletSpec> leftBullets =
+                player.getAttack().tryLeftShoot(originX, originY, worldMouseX, worldMouseY);
+
+            if (!leftBullets.isEmpty()) {
+                if (leftShotDuringCurrentPress) {
+                    soundEffects.playLoop(LEFT_HOLD_SOUND);
+                } else {
+                    soundEffects.play(LEFT_SHOT_SOUND);
+                    leftShotDuringCurrentPress = true;
+                }
+            } else if (player.getAttack().getLeftCooldown() == 0) {
+                soundEffects.stopLoop(LEFT_HOLD_SOUND);
+            }
+
+            for (goldenroad.entity.projectile.BulletSpec spec : leftBullets) {
                 spawnBullet(spec.originX, spec.originY, spec.dirX, spec.dirY, spec.speed, spec.diameter, spec.color, spec.damage, spec.type);
             }
+        } else {
+            stopContinuousWeaponSounds();
         }
 
         if (mouseHandler.isRightPressed()) {
-            for (goldenroad.entity.projectile.BulletSpec spec : player.getAttack().tryRightShoot(originX, originY, worldMouseX, worldMouseY)) {
+            List<goldenroad.entity.projectile.BulletSpec> rightBullets =
+                player.getAttack().tryRightShoot(originX, originY, worldMouseX, worldMouseY);
+
+            if (!rightBullets.isEmpty()) {
+                soundEffects.play(RIGHT_SHOT_SOUND);
+            }
+
+            for (goldenroad.entity.projectile.BulletSpec spec : rightBullets) {
                 spawnBullet(spec.originX, spec.originY, spec.dirX, spec.dirY, spec.speed, spec.diameter, spec.color, spec.damage, spec.type);
             }
         }
+    }
+
+    private void stopContinuousWeaponSounds() {
+        soundEffects.stopLoop(LEFT_HOLD_SOUND);
+        leftShotDuringCurrentPress = false;
     }
 
     // Old spawn helpers removed; shooting handled by `PlayerAttack` and `BulletSpec`.
