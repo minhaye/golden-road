@@ -5,6 +5,7 @@ import goldenroad.entity.player.Player;
 import goldenroad.entity.projectile.Bullet;
 import goldenroad.map.CollisionMap;
 import goldenroad.map.GridPathfinder;
+import goldenroad.settings.Difficulty;
 import goldenroad.util.AssetLoader;
 
 import java.awt.Color;
@@ -51,6 +52,7 @@ public class Monster extends Entity {
     protected BufferedImage projectileSprite;
     private int attackCooldownTicks;
     private int attackCooldownRemaining;
+    private Difficulty difficulty = Difficulty.NORMAL;
 
     public Monster(float x, float y, int width, int height, Color color, int hp) {
         this(x, y, width, height, color, hp, 6, 1.6f, 1.0f, 64f, 120f, 36f, 8f, MonsterType.GROUND);
@@ -125,7 +127,7 @@ public class Monster extends Entity {
     }
 
     public float getMoveSpeed() {
-        return moveSpeed;
+        return moveSpeed * difficulty.getMonsterMoveMultiplier();
     }
 
     public float getDetectRange() {
@@ -237,6 +239,12 @@ public class Monster extends Entity {
     }
 
     public int update(Player player, CollisionMap collisionMap, List<Bullet> bullets) {
+        return update(player, collisionMap, bullets, Difficulty.NORMAL);
+    }
+
+    public int update(Player player, CollisionMap collisionMap, List<Bullet> bullets, Difficulty difficulty) {
+        this.difficulty = difficulty == null ? Difficulty.NORMAL : difficulty;
+
         if (isDead) {
             updateAnimation();
             return 0;
@@ -299,8 +307,8 @@ public class Monster extends Entity {
                 direction = Direction.RIGHT;
             }
             setState(MonsterState.MOVE);
-            x += clampStep(dx, moveSpeed);
-            y += clampStep(dy, moveSpeed);
+            x += clampStep(dx, getMoveSpeed());
+            y += clampStep(dy, getMoveSpeed());
         } else {
             setState(MonsterState.IDLE);
         }
@@ -309,8 +317,13 @@ public class Monster extends Entity {
     protected int attack(Player player) {
         isAttacking = true;
         setState(MonsterState.ATTACK);
-        attackCooldownRemaining = attackCooldownTicks;
+        attackCooldownRemaining = getEffectiveAttackCooldownTicks();
         return damage;
+    }
+
+    private int getEffectiveAttackCooldownTicks() {
+        float attackMultiplier = difficulty.getMonsterAttackSpeedMultiplier();
+        return Math.max(1, Math.round(attackCooldownTicks / Math.max(0.1f, attackMultiplier)));
     }
 
     public boolean takeDamage(int incomingDamage) {
@@ -397,7 +410,7 @@ public class Monster extends Entity {
     }
 
     protected void moveToward(float targetX, float targetY) {
-        moveToward(targetX, targetY, moveSpeed);
+        moveToward(targetX, targetY, getMoveSpeed());
     }
 
     protected void moveToward(float targetX, float targetY, float speed) {
@@ -448,7 +461,7 @@ public class Monster extends Entity {
     }
 
     protected void moveTowardAvoidingSolid(float targetCenterX, float targetCenterY, CollisionMap collisionMap) {
-        moveTowardAvoidingSolid(targetCenterX, targetCenterY, collisionMap, moveSpeed, 0f);
+        moveTowardAvoidingSolid(targetCenterX, targetCenterY, collisionMap, getMoveSpeed(), 0f);
     }
 
     protected void moveTowardAvoidingSolid(float targetCenterX, float targetCenterY, CollisionMap collisionMap, float speed) {
@@ -554,14 +567,15 @@ public class Monster extends Entity {
         }
 
         float distanceToDesired = Math.abs(desiredX - x);
-        if (distanceToDesired <= moveSpeed * 0.5f) {
+        float speed = getMoveSpeed();
+        if (distanceToDesired <= speed * 0.5f) {
             x = desiredX;
             direction = directionStep < 0 ? Direction.LEFT : Direction.RIGHT;
             return;
         }
 
         direction = directionStep < 0 ? Direction.LEFT : Direction.RIGHT;
-        x += Math.signum(desiredX - x) * moveSpeed;
+        x += Math.signum(desiredX - x) * speed;
     }
 
     protected float getPlayerStopDistance(Player player) {
@@ -586,7 +600,7 @@ public class Monster extends Entity {
             return;
         }
 
-        y += Math.signum(dy) * moveSpeed;
+        y += Math.signum(dy) * getMoveSpeed();
     }
 
     protected float clampStep(float delta, float speed) {

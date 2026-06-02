@@ -14,6 +14,7 @@ import goldenroad.map.MapDefinition;
 import goldenroad.map.MapId;
 import goldenroad.scene.SceneManager;
 import goldenroad.scene.Screen;
+import goldenroad.settings.Difficulty;
 
 import java.awt.Rectangle;
 import java.util.ArrayList;
@@ -78,11 +79,20 @@ public class GameWorld {
     }
 
     public void updateMonsters(Player player, SceneManager sceneManager, List<Bullet> bullets) {
+        updateMonsters(player, sceneManager, bullets, Difficulty.NORMAL);
+    }
+
+    public void updateMonsters(Player player, SceneManager sceneManager, List<Bullet> bullets, Difficulty difficulty) {
         if (sceneManager == null || collisionMap == null) return;
 
         List<Monster> monsters = new ArrayList<>(sceneManager.getCurrentScreen().getMonsters());
         for (Monster monster : monsters) {
-            int damage = monster.update(player, collisionMap, bullets == null ? java.util.Collections.emptyList() : bullets);
+            int damage = monster.update(
+                player,
+                collisionMap,
+                bullets == null ? java.util.Collections.emptyList() : bullets,
+                difficulty
+            );
             if (damage > 0) {
                 player.takeDamage(damage);
             }
@@ -211,28 +221,40 @@ public class GameWorld {
     }
 
     public void loadCurrentMap(SceneManager sceneManager, Player player, boolean spawnInitialItems) {
-        loadMap(currentMapId, sceneManager, player, spawnInitialItems);
+        loadCurrentMap(sceneManager, player, spawnInitialItems, Difficulty.NORMAL);
+    }
+
+    public void loadCurrentMap(SceneManager sceneManager, Player player, boolean spawnInitialItems, Difficulty difficulty) {
+        loadMap(currentMapId, sceneManager, player, spawnInitialItems, difficulty);
     }
 
     public void loadMap(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems) {
+        loadMap(mapId, sceneManager, player, spawnInitialItems, Difficulty.NORMAL);
+    }
+
+    public void loadMap(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems, Difficulty difficulty) {
         if (mapId == null) {
             mapId = MapId.MAP_0;
         }
 
-        loadMapInternal(mapId, sceneManager, player, spawnInitialItems);
+        loadMapInternal(mapId, sceneManager, player, spawnInitialItems, difficulty);
     }
 
     public void switchMap(SceneManager sceneManager, Player player, boolean spawnInitialItems) {
+        switchMap(sceneManager, player, spawnInitialItems, Difficulty.NORMAL);
+    }
+
+    public void switchMap(SceneManager sceneManager, Player player, boolean spawnInitialItems, Difficulty difficulty) {
         MapId nextMapId = currentMapId == null ? MapId.MAP_0 : currentMapId.next();
-        loadMapInternal(nextMapId, sceneManager, player, spawnInitialItems);
+        loadMapInternal(nextMapId, sceneManager, player, spawnInitialItems, difficulty);
     }
 
-    private void loadMapInternal(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems) {
+    private void loadMapInternal(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems, Difficulty difficulty) {
         currentMapId = mapId;
-        applyMap(MapCatalog.get(mapId), sceneManager, player, spawnInitialItems);
+        applyMap(MapCatalog.get(mapId), sceneManager, player, spawnInitialItems, difficulty);
     }
 
-    private void applyMap(MapDefinition mapDefinition, SceneManager sceneManager, Player player, boolean spawnInitialItems) {
+    private void applyMap(MapDefinition mapDefinition, SceneManager sceneManager, Player player, boolean spawnInitialItems, Difficulty difficulty) {
         mapImage = AssetLoader.loadImage(mapDefinition.getBackgroundPath());
         hiddenImage = null;
 
@@ -293,7 +315,8 @@ public class GameWorld {
                 player.getX(),
                 player.getY(),
                 player.getWidth(),
-                player.getHeight()
+                player.getHeight(),
+                difficulty
             );
         } else if (sceneManager != null) {
             sceneManager.getCurrentScreen().clearItems();

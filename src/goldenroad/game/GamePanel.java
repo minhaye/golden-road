@@ -18,6 +18,8 @@ import goldenroad.map.MapId;
 import goldenroad.scene.SceneManager;
 import goldenroad.scene.Screen;
 import goldenroad.scene.Menu;
+import goldenroad.settings.GameSettings;
+import goldenroad.settings.SettingsStore;
 import goldenroad.render.Camera;
 import goldenroad.render.RenderSystem;
 import goldenroad.game.GameInputController;
@@ -114,7 +116,8 @@ public class GamePanel extends JPanel implements Runnable {
     private final MouseHandler mouseHandler = new MouseHandler();
     private final SceneManager sceneManager = new SceneManager();
     private final GameWorld world = new GameWorld();
-    private final Menu menu = new Menu(this);
+    private final GameSettings settings = SettingsStore.load();
+    private final Menu menu = new Menu(this, settings);
     private final GameOverlayRenderer overlayRenderer = new GameOverlayRenderer();
     private final GameInputController inputController;
     private final List<Bullet> bullets = new ArrayList<>();
@@ -232,7 +235,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void loadMap() {
         try {
-            world.loadCurrentMap(sceneManager, player, true);
+            world.loadCurrentMap(sceneManager, player, true, settings.getDifficulty());
             syncWorldStateFromGameWorld();
             camera.reset();
             player.getAttack().resetCooldowns();
@@ -244,6 +247,9 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void startNewGame() {
+        inventory.clear();
+        player.heal(10_000);
+        player.restoreMp(10_000);
         loadMap(MapId.MAP_0);
     }
 
@@ -253,7 +259,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     private void loadMap(MapId mapId) {
         try {
-            world.loadMap(mapId, sceneManager, player, true);
+            world.loadMap(mapId, sceneManager, player, true, settings.getDifficulty());
             syncWorldStateFromGameWorld();
             saveCurrentMap(currentMapId);
             camera.reset();
@@ -268,9 +274,9 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void switchMap() {
-        world.switchMap(sceneManager, player, false);
-        saveCurrentMap(currentMapId);
+        world.switchMap(sceneManager, player, false, settings.getDifficulty());
         syncWorldStateFromGameWorld();
+        saveCurrentMap(currentMapId);
         camera.reset();
         player.getAttack().resetCooldowns();
         bullets.clear();
@@ -281,9 +287,9 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void advanceMapWithSpawn() {
-        world.switchMap(sceneManager, player, true);
-        saveCurrentMap(currentMapId);
+        world.switchMap(sceneManager, player, true, settings.getDifficulty());
         syncWorldStateFromGameWorld();
+        saveCurrentMap(currentMapId);
         camera.reset();
         player.getAttack().resetCooldowns();
         bullets.clear();
@@ -388,7 +394,15 @@ private void drawParallax(Graphics2D g2) {
     }
 
     private void updateMonsters() {
-        world.updateMonsters(player, sceneManager, bullets);
+        world.updateMonsters(player, sceneManager, bullets, settings.getDifficulty());
+    }
+
+    public GameSettings getSettings() {
+        return settings;
+    }
+
+    public void saveSettings() {
+        SettingsStore.save(settings);
     }
 
     private void syncWorldStateFromGameWorld() {
