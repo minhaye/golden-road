@@ -48,8 +48,10 @@ public class Menu {
 
     private final String[] pauseLabels = {
         "Continue",
+        "Restart",
         "Settings",
         "Tutorial",
+        "Menu",
         "Exit"
     };
 
@@ -82,8 +84,8 @@ public class Menu {
 
     private void layoutPauseElements() {
         int btnW = 220;
-        int btnH = 44;
-        int gap = 14;
+        int btnH = 36;
+        int gap = 10;
 
         int totalH = (btnH * pauseLabels.length) + (gap * (pauseLabels.length - 1));
         int startY = (BASE_H / 2) - (totalH / 2) + 44;
@@ -240,14 +242,24 @@ public class Menu {
                 panel.requestFocusInWindow();
                 break;
             case 1:
+                panel.restartCurrentMap();
+                paused = false;
+                resetSubmenuState();
+                break;
+            case 2:
                 view = View.SETTINGS;
                 aboutOpen = false;
                 break;
-            case 2:
+            case 3:
                 view = View.TUTORIAL;
                 aboutOpen = false;
                 break;
-            case 3:
+            case 4:
+                panel.menu.open();
+                paused = false;
+                resetSubmenuState();
+                break;
+            case 5:
                 System.exit(0);
                 break;
             default:
@@ -318,7 +330,7 @@ public class Menu {
         } else if (view == View.TUTORIAL) {
             renderTutorial(g2);
         } else if (paused) {
-            renderButtonRow(g2, pauseButtons, pauseLabels);
+            renderPauseButtonRow(g2);
             renderAboutButton(g2);
         } else {
             renderButtonRow(g2, buttons, labels);
@@ -328,6 +340,13 @@ public class Menu {
         if (aboutOpen && view == View.BUTTONS) {
             renderAboutPanel(g2);
         }
+    }
+
+    public void open() {
+        active = true;
+        paused = false;
+        resetSubmenuState();
+        panel.requestFocusInWindow();
     }
 
     private void renderMenuBackground(Graphics2D g2, int alpha) {
@@ -347,6 +366,15 @@ public class Menu {
 
         for (int i = 0; i < row.length; i++) {
             renderButton(g2, row[i], rowLabels[i], false);
+        }
+    }
+
+    private void renderPauseButtonRow(Graphics2D g2) {
+        Font font = new Font("SansSerif", Font.BOLD, 16);
+        g2.setFont(font);
+
+        for (int i = 0; i < pauseButtons.length; i++) {
+            renderButton(g2, pauseButtons[i], pauseLabels[i], false);
         }
     }
 
