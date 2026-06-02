@@ -5,11 +5,13 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 
 import goldenroad.game.GamePanel;
 import goldenroad.input.MouseHandler;
 import goldenroad.settings.Difficulty;
 import goldenroad.settings.GameSettings;
+import goldenroad.util.AssetLoader;
 
 public class Menu {
     private enum View {
@@ -20,9 +22,11 @@ public class Menu {
 
     private static final int BASE_W = GamePanel.SCREEN_WIDTH;
     private static final int BASE_H = GamePanel.SCREEN_HEIGHT;
+    private static final String GAME_TITLE = "SCIENTIFIC WITCHERY";
 
     private final GamePanel panel;
     private final GameSettings settings;
+    private final BufferedImage menuBackground;
 
     private boolean active = true;
     private boolean paused = false;
@@ -58,6 +62,7 @@ public class Menu {
     public Menu(GamePanel panel, GameSettings settings) {
         this.panel = panel;
         this.settings = settings;
+        this.menuBackground = AssetLoader.loadImage("/assets/menu/Menu.png");
         layoutElements();
         layoutPauseElements();
         layoutSubmenuElements();
@@ -65,11 +70,11 @@ public class Menu {
 
     private void layoutElements() {
         int btnW = 220;
-        int btnH = 44;
-        int gap = 14;
+        int btnH = 40;
+        int gap = 10;
 
         int totalH = (btnH * labels.length) + (gap * (labels.length - 1));
-        int startY = (BASE_H / 2) - (totalH / 2);
+        int startY = (BASE_H / 2) - (totalH / 2) + 60;
         int centerX = BASE_W / 2;
 
         buttons = new Rectangle[labels.length];
@@ -313,6 +318,7 @@ public class Menu {
         );
 
         if (active) {
+            renderBackgroundImage(g2);
             renderMenuBackground(g2, 220);
         } else if (paused) {
             renderMenuBackground(g2, 200);
@@ -333,6 +339,7 @@ public class Menu {
             renderPauseButtonRow(g2);
             renderAboutButton(g2);
         } else {
+            renderTitle(g2);
             renderButtonRow(g2, buttons, labels);
             renderAboutButton(g2);
         }
@@ -350,8 +357,20 @@ public class Menu {
     }
 
     private void renderMenuBackground(Graphics2D g2, int alpha) {
-        g2.setColor(new Color(8, 10, 12, alpha));
+        g2.setColor(new Color(00, 50, 70, 150));
         g2.fillRect(0, 0, BASE_W, BASE_H);
+    }
+
+    private void renderBackgroundImage(Graphics2D g2) {
+        if (menuBackground != null) {
+            g2.drawImage(menuBackground, 0, 0, BASE_W, BASE_H, null);
+        }
+    }
+
+    private void renderTitle(Graphics2D g2) {
+        g2.setFont(new Font("SansSerif", Font.BOLD, 60));
+        g2.setColor(new Color(60, 220, 250));
+        drawCentered(g2, GAME_TITLE, 120);
     }
 
     private void renderPauseTitle(Graphics2D g2) {
