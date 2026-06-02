@@ -117,13 +117,17 @@ public class GamePanel extends JPanel implements Runnable {
     private final SceneManager sceneManager = new SceneManager();
     private final GameWorld world = new GameWorld();
     private final GameSettings settings = SettingsStore.load();
-    private final Menu menu = new Menu(this, settings);
+    public final Menu menu = new Menu(this, settings);
     private final GameOverlayRenderer overlayRenderer = new GameOverlayRenderer();
     private final GameInputController inputController;
     private final List<Bullet> bullets = new ArrayList<>();
     private final Inventory inventory = new Inventory();
     private Hud hud;
     private InventoryPanel inventoryPanel;
+    private boolean gameOver = false;
+    private java.awt.Rectangle gameOverRestartButton = new java.awt.Rectangle((SCREEN_WIDTH / 2) - 110, 170, 220, 44);
+    private java.awt.Rectangle gameOverReturnButton = new java.awt.Rectangle((SCREEN_WIDTH / 2) - 110, 220, 220, 44);
+    private java.awt.Rectangle gameOverExitButton = new java.awt.Rectangle((SCREEN_WIDTH / 2) - 110, 270, 220, 44);
 
 
     private Thread gameThread;
@@ -369,12 +373,24 @@ private void drawParallax(Graphics2D g2) {
 }
 
     private void update() {
+        if (gameOver) {
+            handleGameOverInput();
+            return;
+        }
         if (inputController.update(this, player)) {
             return;
         }
 
         player.update(keyHandler);
         player.updateResources();
+
+        if (player.getHp() <= 0 && !gameOver) {
+            gameOver = true;
+            // stop normal updates; allow the game over overlay to handle input
+            bullets.clear();
+            requestFocusInWindow();
+            return;
+        }
 
         collisionHandler.move(
             player,
@@ -601,6 +617,11 @@ private void drawParallax(Graphics2D g2) {
 
         overlayRenderer.renderToast(bufferG, toastMessage);
 
+        if (gameOver) {
+            drawGameOver(bufferG);
+            return;
+        }
+
         if (!menu.isPaused()) {
             inventoryPanel.render(bufferG);
         }
@@ -612,6 +633,85 @@ private void drawParallax(Graphics2D g2) {
         if (!menu.isPaused() && minimapVisible) {
             overlayRenderer.renderMinimap(bufferG, world, sceneManager, player, camera.getX(), camera.getY(), SCREEN_WIDTH, SCREEN_HEIGHT);
         }
+    }
+
+    private void drawGameOver(Graphics2D g) {
+        g.setColor(new Color(8, 10, 12, 220));
+        g.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+        g.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 48));
+        g.setColor(new Color(100, 228, 250));
+        String title = "CONSTRUCT DOWN";
+        int tw = g.getFontMetrics().stringWidth(title);
+        g.drawString(title, (SCREEN_WIDTH - tw) / 2, 140);
+
+        // draw restart button
+        drawGameOverButton(g, gameOverRestartButton, "Restart");
+        // draw return button
+        drawGameOverButton(g, gameOverReturnButton, "Return to Menu");
+        // draw exit button
+        drawGameOverButton(g, gameOverExitButton, "Exit Game");
+    }
+
+    private void drawGameOverButton(Graphics2D g, java.awt.Rectangle btn, String label) {
+        g.setColor(new Color(40, 45, 60));
+        g.fillRoundRect(btn.x, btn.y, btn.width, btn.height, 8, 8);
+        g.setColor(new Color(185, 210, 255));
+        g.drawRoundRect(btn.x, btn.y, btn.width, btn.height, 8, 8);
+        g.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 20));
+        int lw = g.getFontMetrics().stringWidth(label);
+        int lx = btn.x + (btn.width - lw) / 2;
+        int ly = btn.y + (btn.height / 2) + 7;
+        g.setColor(new Color(230, 230, 240));
+        g.drawString(label, lx, ly);
+    }
+
+    private void handleGameOverInput() {
+        if (!mouseHandler.isLeftJustPressed()) return;
+        if (!mouseHandler.consumeLeftJustPressed()) return;
+
+        double scale = renderScale <= 0 ? 1.0 : renderScale;
+        int mx = (int) ((mouseHandler.getMouseX() - renderOffsetX) / scale);
+        int my = (int) ((mouseHandler.getMouseY() - renderOffsetY) / scale);
+
+        if (gameOverRestartButton.contains(mx, my)) {
+            // restart current map
+            restartMap();
+        } else if (gameOverReturnButton.contains(mx, my)) {
+            // open main menu
+            gameOver = false;
+            player.heal(10_000);
+            player.restoreMp(10_000);
+            bullets.clear();
+            menu.open();
+        } else if (gameOverExitButton.contains(mx, my)) {
+            // exit game
+            System.exit(0);
+        }
+    }
+
+    private void restartMap() {
+        try {
+            gameOver = false;
+            player.heal(10_000);
+            player.restoreMp(10_000);
+            world.loadCurrentMap(sceneManager, player, true, settings.getDifficulty());
+            syncWorldStateFromGameWorld();
+            camera.reset();
+            player.getAttack().resetCooldowns();
+            bullets.clear();
+            inventoryPanel.close();
+            requestFocusInWindow();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void restartCurrentMap() {
+        if (menu.isPaused()) {
+            menu.setPaused(false);
+        }
+        restartMap();
     }
 
     // CAWL AND BAWLS 
