@@ -121,6 +121,7 @@ public class InventoryPanel {
 
         ItemUseResult result = inventory.useItem(type);
         panel.showToast(result.message());
+        panel.playItemUseSound(type, result);
         normalizeSelection();
     }
 

@@ -210,14 +210,18 @@ public class SceneManager {
         return true;
     }
 
-    public void killAllMonstersOnCurrentMap() {
+    public int killAllMonstersOnCurrentMap() {
         List<Monster> monsters = new ArrayList<>(getCurrentScreen().getMonsters());
+        int defeatedMonsterCount = 0;
         for (Monster monster : monsters) {
             if (monster == null || monster.isDead()) {
                 continue;
             }
-            monster.takeDamage(Integer.MAX_VALUE / 2);
+            if (monster.takeDamage(Integer.MAX_VALUE / 2)) {
+                defeatedMonsterCount++;
+            }
         }
+        return defeatedMonsterCount;
     }
 
     public int spawnMapItems(

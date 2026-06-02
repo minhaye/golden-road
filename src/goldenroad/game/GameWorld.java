@@ -103,9 +103,10 @@ public class GameWorld {
         }
     }
 
-    public void updateBullets(List<Bullet> bullets, SceneManager sceneManager) {
-        if (bullets == null || bullets.isEmpty() || sceneManager == null) return;
+    public int updateBullets(List<Bullet> bullets, SceneManager sceneManager) {
+        if (bullets == null || bullets.isEmpty() || sceneManager == null) return 0;
 
+        int defeatedMonsterCount = 0;
         Iterator<Bullet> it = bullets.iterator();
         while (it.hasNext()) {
             Bullet bullet = it.next();
@@ -125,7 +126,9 @@ public class GameWorld {
             List<Monster> monstersCopy = new ArrayList<>(sceneManager.getCurrentScreen().getMonsters());
             for (Monster monster : monstersCopy) {
                 if (bounds.intersects(monster.getBounds())) {
-                    monster.takeDamage(bullet.getDamage());
+                    if (monster.takeDamage(bullet.getDamage())) {
+                        defeatedMonsterCount++;
+                    }
                     it.remove();
                     hitMonster = true;
                     break;
@@ -138,6 +141,7 @@ public class GameWorld {
 
             bullet.update();
         }
+        return defeatedMonsterCount;
     }
 
     private boolean collidesWithSolidBlock(java.awt.Rectangle bounds) {

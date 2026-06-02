@@ -84,6 +84,7 @@ public class GameInputController {
             if (keyHandler.consumeEscapeJustPressed()) {
                 menu.setPaused(true);
                 inventoryPanel.close();
+                panel.playPauseSound();
                 panel.requestFocusInWindow();
                 return true;
             }
@@ -110,6 +111,7 @@ public class GameInputController {
 
         ItemUseResult result = inventory.useItem(type);
         panel.showToast(result.message());
+        panel.playItemUseSound(type, result);
         return true;
     }
 
