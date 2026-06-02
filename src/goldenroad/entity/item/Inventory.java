@@ -30,6 +30,12 @@ public class Inventory {
         counts.merge(type, quantity, Integer::sum);
     }
 
+    public void clear() {
+        for (Item.ItemType type : Item.ItemType.values()) {
+            counts.put(type, 0);
+        }
+    }
+
     public int getCount(Item.ItemType type) {
         return counts.getOrDefault(type, 0);
     }

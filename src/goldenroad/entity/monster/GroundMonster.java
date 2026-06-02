@@ -43,10 +43,11 @@ public class GroundMonster extends Monster {
             direction = Direction.LEFT;
         }
 
+        float speed = getMoveSpeed();
         if (direction == Direction.LEFT) {
-            x -= moveSpeed;
+            x -= speed;
         } else {
-            x += moveSpeed;
+            x += speed;
         }
 
         setState(MonsterState.MOVE);

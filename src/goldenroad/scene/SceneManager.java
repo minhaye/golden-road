@@ -17,6 +17,7 @@ import goldenroad.entity.monster.MonsterFactory;
 import goldenroad.entity.monster.MonsterType;
 import goldenroad.map.CollisionMap;
 import goldenroad.map.GridPathfinder;
+import goldenroad.settings.Difficulty;
 import goldenroad.util.AssetLoader;
 import java.awt.image.BufferedImage;
 
@@ -229,10 +230,37 @@ public class SceneManager {
         double playerWidth,
         double playerHeight
     ) {
+        return spawnMapItems(
+            monsterCount,
+            worldWidth,
+            worldHeight,
+            collisionMap,
+            playerX,
+            playerY,
+            playerWidth,
+            playerHeight,
+            Difficulty.NORMAL
+        );
+    }
+
+    public int spawnMapItems(
+        int monsterCount,
+        int worldWidth,
+        int worldHeight,
+        CollisionMap collisionMap,
+        double playerX,
+        double playerY,
+        double playerWidth,
+        double playerHeight,
+        Difficulty difficulty
+    ) {
         Screen screen = getCurrentScreen();
         screen.clearItems();
 
-        int potionCount = Math.min(8, Math.max(2, Math.round(monsterCount * 0.4f)));
+        Difficulty safeDifficulty = difficulty == null ? Difficulty.NORMAL : difficulty;
+        int basePotionCount = Math.min(8, Math.max(2, Math.round(monsterCount * 0.4f)));
+        int potionCount = Math.max(1, Math.round(basePotionCount * safeDifficulty.getHpMpItemMultiplier()));
+        potionCount = Math.min(10, potionCount);
         List<Item.ItemType> spawnOrder = new ArrayList<>();
         spawnOrder.add(Item.ItemType.KEY);
         for (int i = 0; i < potionCount; i++) {
