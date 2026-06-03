@@ -79,7 +79,6 @@ public class GamePanel extends JPanel implements Runnable {
     // x6 = 3840x2160 = 4K
     private static final int TARGET_FPS = 60;
     private static final String LEFT_SHOT_SOUND = "/assets/audio/pistol-gun-1-shot.wav";
-    private static final String LEFT_HOLD_SOUND = "/assets/audio/pistol-gun-multi-shot.wav";
     private static final String RIGHT_SHOT_SOUND = "/assets/audio/shotgun.WAV";
     private static final String MENU_CLICK_SOUND = "/assets/audio/back_003.wav";
     private static final String PLAYER_DEATH_SOUND = "/assets/audio/death.wav";
@@ -153,7 +152,6 @@ public class GamePanel extends JPanel implements Runnable {
     private Thread gameThread;
 
     private Player player;
-    private boolean leftShotDuringCurrentPress;
 
     public GamePanel() {
         setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
@@ -171,7 +169,6 @@ public class GamePanel extends JPanel implements Runnable {
         inputController = new GameInputController(keyHandler, mouseHandler, sceneManager, menu, inventory, inventoryPanel);
         soundEffects.preload(
             LEFT_SHOT_SOUND,
-            LEFT_HOLD_SOUND,
             RIGHT_SHOT_SOUND,
             MENU_CLICK_SOUND,
             PLAYER_DEATH_SOUND,
@@ -591,18 +588,8 @@ private void drawParallax(Graphics2D g2) {
             List<goldenroad.entity.projectile.BulletSpec> leftBullets =
                 player.getAttack().tryLeftShoot(originX, originY, worldMouseX, worldMouseY);
 
-            if (!leftBullets.isEmpty()) {
-                if (leftShotDuringCurrentPress) {
-                    soundEffects.playLoop(LEFT_HOLD_SOUND);
-                } else {
-                    soundEffects.play(LEFT_SHOT_SOUND);
-                    leftShotDuringCurrentPress = true;
-                }
-            } else if (player.getAttack().getLeftCooldown() == 0) {
-                soundEffects.stopLoop(LEFT_HOLD_SOUND);
-            }
-
             for (goldenroad.entity.projectile.BulletSpec spec : leftBullets) {
+                soundEffects.play(LEFT_SHOT_SOUND);
                 spawnBullet(spec.originX, spec.originY, spec.dirX, spec.dirY, spec.speed, spec.diameter, spec.color, spec.damage, spec.type);
             }
         } else {
@@ -624,8 +611,7 @@ private void drawParallax(Graphics2D g2) {
     }
 
     private void stopContinuousWeaponSounds() {
-        soundEffects.stopLoop(LEFT_HOLD_SOUND);
-        leftShotDuringCurrentPress = false;
+        // No continuous left-hold audio needed; each left click or hold bullet plays the shot sound.
     }
 
     // Old spawn helpers removed; shooting handled by `PlayerAttack` and `BulletSpec`.
