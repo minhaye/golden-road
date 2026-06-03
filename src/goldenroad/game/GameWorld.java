@@ -1,7 +1,5 @@
 package goldenroad.game;
 
-import java.awt.image.BufferedImage;
-
 import goldenroad.entity.item.Inventory;
 import goldenroad.entity.item.Item;
 import goldenroad.entity.monster.Monster;
@@ -15,17 +13,13 @@ import goldenroad.map.MapId;
 import goldenroad.scene.SceneManager;
 import goldenroad.scene.Screen;
 import goldenroad.settings.Difficulty;
-
-import java.awt.Rectangle;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.Iterator;
-import java.util.List;
 import goldenroad.util.AssetLoader;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
-import java.awt.Color;
-import java.awt.Graphics;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 public class GameWorld {
     private MapId currentMapId = MapId.MAP_2;
@@ -40,34 +34,37 @@ public class GameWorld {
         return currentMapId;
     }
 
-    public void handleItemPickup(
-        Player player,
-        Inventory inventory,
-        SceneManager sceneManager,
-        java.util.function.Consumer<String> toast
-    ) {
-        if (player == null || inventory == null || sceneManager == null) return;
+    public int handleItemPickup(
+            Player player,
+            Inventory inventory,
+            SceneManager sceneManager,
+            java.util.function.Consumer<String> toast) {
+        if (player == null || inventory == null || sceneManager == null)
+            return 0;
 
         Screen currentScreen = sceneManager.getCurrentScreen();
         Rectangle playerBounds = new Rectangle(
-            (int) player.getX(),
-            (int) player.getY(),
-            (int) player.getWidth(),
-            (int) player.getHeight()
-        );
+                (int) player.getX(),
+                (int) player.getY(),
+                (int) player.getWidth(),
+                (int) player.getHeight());
 
         List<Item> items = new ArrayList<>(currentScreen.getItems());
+        int collectedItemCount = 0;
         for (Item item : items) {
-            if (item.isCollected()) continue;
+            if (item.isCollected())
+                continue;
             if (playerBounds.intersects(item.getBounds())) {
                 inventory.addItem(item.getType(), 1);
                 item.collect();
                 currentScreen.removeItem(item);
+                collectedItemCount++;
                 if (toast != null) {
                     toast.accept(pickupMessage(item.getType()));
                 }
             }
         }
+        return collectedItemCount;
     }
 
     private String pickupMessage(Item.ItemType type) {
@@ -83,16 +80,16 @@ public class GameWorld {
     }
 
     public void updateMonsters(Player player, SceneManager sceneManager, List<Bullet> bullets, Difficulty difficulty) {
-        if (sceneManager == null || collisionMap == null) return;
+        if (sceneManager == null || collisionMap == null)
+            return;
 
         List<Monster> monsters = new ArrayList<>(sceneManager.getCurrentScreen().getMonsters());
         for (Monster monster : monsters) {
             int damage = monster.update(
-                player,
-                collisionMap,
-                bullets == null ? java.util.Collections.emptyList() : bullets,
-                difficulty
-            );
+                    player,
+                    collisionMap,
+                    bullets == null ? java.util.Collections.emptyList() : bullets,
+                    difficulty);
             if (damage > 0) {
                 player.takeDamage(damage);
             }
@@ -104,7 +101,8 @@ public class GameWorld {
     }
 
     public int updateBullets(List<Bullet> bullets, SceneManager sceneManager) {
-        if (bullets == null || bullets.isEmpty() || sceneManager == null) return 0;
+        if (bullets == null || bullets.isEmpty() || sceneManager == null)
+            return 0;
 
         int defeatedMonsterCount = 0;
         Iterator<Bullet> it = bullets.iterator();
@@ -154,13 +152,15 @@ public class GameWorld {
 
     private boolean isOutOfWorld(java.awt.Rectangle bounds) {
         return bounds.x + bounds.width < 0
-            || bounds.x > worldWidth
-            || bounds.y + bounds.height < 0
-            || bounds.y > worldHeight;
+                || bounds.x > worldWidth
+                || bounds.y + bounds.height < 0
+                || bounds.y > worldHeight;
     }
 
-    public void render(Graphics2D g, Player player, List<Bullet> bullets, SceneManager sceneManager, java.util.Map<Item.ItemType, BufferedImage> itemSprites) {
-        if (g == null || sceneManager == null) return;
+    public void render(Graphics2D g, Player player, List<Bullet> bullets, SceneManager sceneManager,
+            java.util.Map<Item.ItemType, BufferedImage> itemSprites) {
+        if (g == null || sceneManager == null)
+            return;
 
         // MAP
         if (mapImage != null) {
@@ -169,7 +169,8 @@ public class GameWorld {
 
         // ITEMS
         for (Item item : sceneManager.getCurrentScreen().getItems()) {
-            if (item.isCollected()) continue;
+            if (item.isCollected())
+                continue;
 
             java.awt.Rectangle r = item.getBounds();
             BufferedImage sprite = itemSprites == null ? null : itemSprites.get(item.getType());
@@ -228,7 +229,8 @@ public class GameWorld {
         loadCurrentMap(sceneManager, player, spawnInitialItems, Difficulty.NORMAL);
     }
 
-    public void loadCurrentMap(SceneManager sceneManager, Player player, boolean spawnInitialItems, Difficulty difficulty) {
+    public void loadCurrentMap(SceneManager sceneManager, Player player, boolean spawnInitialItems,
+            Difficulty difficulty) {
         loadMap(currentMapId, sceneManager, player, spawnInitialItems, difficulty);
     }
 
@@ -236,7 +238,8 @@ public class GameWorld {
         loadMap(mapId, sceneManager, player, spawnInitialItems, Difficulty.NORMAL);
     }
 
-    public void loadMap(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems, Difficulty difficulty) {
+    public void loadMap(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems,
+            Difficulty difficulty) {
         if (mapId == null) {
             mapId = MapId.MAP_0;
         }
@@ -253,12 +256,14 @@ public class GameWorld {
         loadMapInternal(nextMapId, sceneManager, player, spawnInitialItems, difficulty);
     }
 
-    private void loadMapInternal(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems, Difficulty difficulty) {
+    private void loadMapInternal(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems,
+            Difficulty difficulty) {
         currentMapId = mapId;
         applyMap(MapCatalog.get(mapId), sceneManager, player, spawnInitialItems, difficulty);
     }
 
-    private void applyMap(MapDefinition mapDefinition, SceneManager sceneManager, Player player, boolean spawnInitialItems, Difficulty difficulty) {
+    private void applyMap(MapDefinition mapDefinition, SceneManager sceneManager, Player player,
+            boolean spawnInitialItems, Difficulty difficulty) {
         mapImage = AssetLoader.loadImage(mapDefinition.getBackgroundPath());
         hiddenImage = null;
 
@@ -277,14 +282,13 @@ public class GameWorld {
 
             if (collisionMap != null && collisionMap.isLoaded()) {
                 double[] nearestSpawn = findNearestStandableSpawn(
-                    collisionMap,
-                    spawnX,
-                    spawnY,
-                    player.getWidth(),
-                    player.getHeight(),
-                    worldWidth,
-                    worldHeight
-                );
+                        collisionMap,
+                        spawnX,
+                        spawnY,
+                        player.getWidth(),
+                        player.getHeight(),
+                        worldWidth,
+                        worldHeight);
 
                 if (nearestSpawn != null) {
                     resolvedX = nearestSpawn[0];
@@ -298,30 +302,29 @@ public class GameWorld {
             player.setOnGround(true);
         }
 
-        hiddenImage = mapDefinition.getHiddenPath() == null ? null : AssetLoader.loadImage(mapDefinition.getHiddenPath());
+        hiddenImage = mapDefinition.getHiddenPath() == null ? null
+                : AssetLoader.loadImage(mapDefinition.getHiddenPath());
 
         if (spawnInitialItems && sceneManager != null && player != null) {
             sceneManager.spawnMonsters(
-                25,
-                worldWidth,
-                worldHeight,
-                collisionMap,
-                player.getX(),
-                player.getY(),
-                player.getWidth(),
-                player.getHeight()
-            );
+                    25,
+                    worldWidth,
+                    worldHeight,
+                    collisionMap,
+                    player.getX(),
+                    player.getY(),
+                    player.getWidth(),
+                    player.getHeight());
             sceneManager.spawnMapItems(
-                sceneManager.getLastSpawnedMonsterCount(),
-                worldWidth,
-                worldHeight,
-                collisionMap,
-                player.getX(),
-                player.getY(),
-                player.getWidth(),
-                player.getHeight(),
-                difficulty
-            );
+                    sceneManager.getLastSpawnedMonsterCount(),
+                    worldWidth,
+                    worldHeight,
+                    collisionMap,
+                    player.getX(),
+                    player.getY(),
+                    player.getWidth(),
+                    player.getHeight(),
+                    difficulty);
         } else if (sceneManager != null) {
             sceneManager.getCurrentScreen().clearItems();
         }
@@ -335,14 +338,13 @@ public class GameWorld {
     }
 
     private double[] findNearestStandableSpawn(
-        CollisionMap collisionMap,
-        double desiredX,
-        double desiredY,
-        double entityWidth,
-        double entityHeight,
-        int worldWidth,
-        int worldHeight
-    ) {
+            CollisionMap collisionMap,
+            double desiredX,
+            double desiredY,
+            double entityWidth,
+            double entityHeight,
+            int worldWidth,
+            int worldHeight) {
         if (collisionMap == null || !collisionMap.isLoaded()) {
             return null;
         }

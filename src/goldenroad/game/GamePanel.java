@@ -88,6 +88,7 @@ public class GamePanel extends JPanel implements Runnable {
     private static final String MP_HEAL_SOUND = "/assets/audio/mp_heal.wav";
     private static final String PLAYER_HURT_SOUND = "/assets/audio/player_hurt.wav";
     private static final String PAUSE_SOUND = "/assets/audio/pause.wav";
+    private static final String PICK_ITEM_SOUND = "/assets/audio/pick_item.wav";
 
     private static final Path SAVE_FILE = Paths.get(System.getProperty("user.home"), ".golden-road-save");
     // CAMERA
@@ -175,7 +176,8 @@ public class GamePanel extends JPanel implements Runnable {
             HP_HEAL_SOUND,
             MP_HEAL_SOUND,
             PLAYER_HURT_SOUND,
-            PAUSE_SOUND
+            PAUSE_SOUND,
+            PICK_ITEM_SOUND
         );
         backgroundMusic.playLoop("/assets/audio/Menu.wav");
     }
@@ -444,7 +446,7 @@ private void drawParallax(Graphics2D g2) {
     }
 
     private void handleItemPickup() {
-        world.handleItemPickup(player, inventory, sceneManager, this::showToast);
+        playItemPickupSounds(world.handleItemPickup(player, inventory, sceneManager, this::showToast));
     }
 
     private void updateMonsters() {
@@ -493,6 +495,12 @@ private void drawParallax(Graphics2D g2) {
     private void playEnemyDeathSounds(int defeatedMonsterCount) {
         for (int i = 0; i < defeatedMonsterCount; i++) {
             soundEffects.play(ENEMY_DEATH_SOUND);
+        }
+    }
+
+    private void playItemPickupSounds(int collectedItemCount) {
+        for (int i = 0; i < collectedItemCount; i++) {
+            soundEffects.play(PICK_ITEM_SOUND);
         }
     }
 
