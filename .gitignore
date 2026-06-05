@@ -35,3 +35,7 @@ desktop.ini
 
 # Local refactor tracking notes
 /refactor-progress.md
+
+.venv
+
+.claude
