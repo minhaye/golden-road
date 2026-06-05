@@ -1,64 +1,50 @@
 package goldenroad.game;
 
-import goldenroad.audio.BackgroundMusicPlayer;
-import goldenroad.audio.SoundEffectPlayer;
+import goldenroad.audio.GameAudio;
 import goldenroad.entity.item.Inventory;
 import goldenroad.entity.item.Item;
 import goldenroad.entity.item.ItemUseContext;
 import goldenroad.entity.item.ItemUseResult;
-import goldenroad.entity.monster.Monster;
 import goldenroad.entity.player.Player;
 import goldenroad.entity.projectile.Bullet;
-import goldenroad.entity.projectile.Bullet.BulletType;
 import goldenroad.input.KeyHandler;
 import goldenroad.input.MouseHandler;
 import goldenroad.map.CollisionHandler;
 import goldenroad.map.CollisionMap;
-import goldenroad.map.MapCatalog;
-import goldenroad.map.MapDefinition;
 import goldenroad.map.MapId;
 import goldenroad.scene.SceneManager;
-import goldenroad.scene.Screen;
 import goldenroad.scene.Menu;
 import goldenroad.settings.GameSettings;
 import goldenroad.settings.SettingsStore;
+import goldenroad.settings.MapProgressStore;
 import goldenroad.render.Camera;
 import goldenroad.render.RenderSystem;
+import goldenroad.render.ParallaxRenderer;
 import goldenroad.game.GameInputController;
 import goldenroad.ui.Hud;
 import goldenroad.ui.GameOverlayRenderer;
+import goldenroad.ui.ToastManager;
+import goldenroad.ui.EndScreenOverlay;
+import goldenroad.ui.EndScreenOverlay.EndScreenAction;
 import goldenroad.ui.InventoryPanel;
-import goldenroad.ui.UiTheme;
 import goldenroad.util.AssetLoader;
 
 
 import java.awt.AlphaComposite;
-import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Composite;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.KeyboardFocusManager;
 import java.awt.Point;
-import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
-import java.awt.RenderingHints;
-import javax.imageio.ImageIO;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.EnumMap;
 import java.util.List;
-import java.util.Random;
 import java.util.Map;
 
 import javax.swing.JPanel;
@@ -78,23 +64,10 @@ public class GamePanel extends JPanel implements Runnable {
     // x4 = 2560x1440 = 1440p
     // x6 = 3840x2160 = 4K
     private static final int TARGET_FPS = 60;
-    private static final String LEFT_SHOT_SOUND = "/assets/audio/pistol-gun-1-shot.wav";
-    private static final String RIGHT_SHOT_SOUND = "/assets/audio/shotgun.WAV";
-    private static final String MENU_CLICK_SOUND = "/assets/audio/back_003.wav";
-    private static final String PLAYER_DEATH_SOUND = "/assets/audio/death.wav";
-    private static final String ENEMY_DEATH_SOUND = "/assets/audio/enemy_death.wav";
-    private static final String HP_HEAL_SOUND = "/assets/audio/heart_heal.wav";
-    private static final String MP_HEAL_SOUND = "/assets/audio/mp_heal.wav";
-    private static final String PLAYER_HURT_SOUND = "/assets/audio/player_hurt.wav";
-    private static final String PAUSE_SOUND = "/assets/audio/pause.wav";
-    private static final String PICK_ITEM_SOUND = "/assets/audio/pick_item.wav";
-
-    private static final Path SAVE_FILE = Paths.get(System.getProperty("user.home"), ".golden-road-save");
     // CAMERA
     private final Camera camera = new Camera();
     
-    //PARALLAX
-    private BufferedImage[] parallaxLayers;
+    private final ParallaxRenderer parallaxRenderer = new ParallaxRenderer();
     private final RenderSystem renderSystem = new RenderSystem(SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // MAP
@@ -106,9 +79,6 @@ public class GamePanel extends JPanel implements Runnable {
     private BufferedImage mpItemSprite;
     private BufferedImage keyItemSprite;
     private final Map<Item.ItemType, BufferedImage> itemSprites = new EnumMap<>(Item.ItemType.class);
-
-    private String toastMessage = null;
-    private long toastExpireAtNanos = 0L;
 
     private boolean minimapVisible = true;
 
@@ -130,11 +100,13 @@ public class GamePanel extends JPanel implements Runnable {
     private final GameWorld world = new GameWorld();
     private final GameSettings settings = SettingsStore.load();
 
-    private final BackgroundMusicPlayer backgroundMusic = new BackgroundMusicPlayer(settings.getVolume());
-    private final SoundEffectPlayer soundEffects = new SoundEffectPlayer(settings.getVolume());
+    private final GameAudio gameAudio = new GameAudio(settings);
+    private final MapProgressStore progressStore = new MapProgressStore();
     public final Menu menu = new Menu(this, settings);
   
     private final GameOverlayRenderer overlayRenderer = new GameOverlayRenderer();
+    private final ToastManager toastManager = new ToastManager();
+    private final EndScreenOverlay endScreenOverlay = new EndScreenOverlay();
     private final GameInputController inputController;
     private final List<Bullet> bullets = new ArrayList<>();
     private final Inventory inventory = new Inventory();
@@ -142,11 +114,6 @@ public class GamePanel extends JPanel implements Runnable {
     private InventoryPanel inventoryPanel;
     private boolean gameOver = false;
     private boolean victory = false;
-    private java.awt.Rectangle gameOverRestartButton = new java.awt.Rectangle((SCREEN_WIDTH / 2) - 110, 170, 220, 44);
-    private java.awt.Rectangle gameOverReturnButton = new java.awt.Rectangle((SCREEN_WIDTH / 2) - 110, 220, 220, 44);
-    private java.awt.Rectangle gameOverExitButton = new java.awt.Rectangle((SCREEN_WIDTH / 2) - 110, 270, 220, 44);
-    private java.awt.Rectangle victoryReturnButton = new java.awt.Rectangle((SCREEN_WIDTH / 2) - 110, 220, 220, 44);
-    private java.awt.Rectangle victoryExitButton = new java.awt.Rectangle((SCREEN_WIDTH / 2) - 110, 280, 220, 44);
 
 
     private Thread gameThread;
@@ -167,19 +134,7 @@ public class GamePanel extends JPanel implements Runnable {
         loadItemSprites();
         loadCustomCursor();
         inputController = new GameInputController(keyHandler, mouseHandler, sceneManager, menu, inventory, inventoryPanel);
-        soundEffects.preload(
-            LEFT_SHOT_SOUND,
-            RIGHT_SHOT_SOUND,
-            MENU_CLICK_SOUND,
-            PLAYER_DEATH_SOUND,
-            ENEMY_DEATH_SOUND,
-            HP_HEAL_SOUND,
-            MP_HEAL_SOUND,
-            PLAYER_HURT_SOUND,
-            PAUSE_SOUND,
-            PICK_ITEM_SOUND
-        );
-        backgroundMusic.playLoop("/assets/audio/Menu.wav");
+        gameAudio.playMenuMusic();
     }
 
     public void initPlayer() {
@@ -252,12 +207,6 @@ public class GamePanel extends JPanel implements Runnable {
             case KEY -> keyItemSprite;
         };
     }
-    private int clamp(int value, int min, int max) {
-        if (max < min) {
-            return min;
-        }
-        return Math.max(min, Math.min(value, max));
-    }
 
 
     public void showToast(String message) {
@@ -265,8 +214,7 @@ public class GamePanel extends JPanel implements Runnable {
             return;
         }
 
-        toastMessage = message;
-        toastExpireAtNanos = System.nanoTime() + 2_000_000_000L;
+        toastManager.show(message);
     }
 
     public void loadMap() {
@@ -293,14 +241,14 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void continueGame() {
         victory = false;
-        loadMap(loadSavedMap());
+        loadMap(progressStore.load(currentMapId));
     }
 
     private void loadMap(MapId mapId) {
         try {
             world.loadMap(mapId, sceneManager, player, true, settings.getDifficulty());
             syncWorldStateFromGameWorld();
-            saveCurrentMap(currentMapId);
+            progressStore.save(currentMapId);
             camera.reset();
             player.getAttack().resetCooldowns();
             bullets.clear();
@@ -317,7 +265,7 @@ public class GamePanel extends JPanel implements Runnable {
         victory = false;
         world.switchMap(sceneManager, player, false, settings.getDifficulty());
         syncWorldStateFromGameWorld();
-        saveCurrentMap(currentMapId);
+        progressStore.save(currentMapId);
         camera.reset();
         player.getAttack().resetCooldowns();
         bullets.clear();
@@ -341,7 +289,7 @@ public class GamePanel extends JPanel implements Runnable {
         victory = false;
         world.switchMap(sceneManager, player, true, settings.getDifficulty());
         syncWorldStateFromGameWorld();
-        saveCurrentMap(currentMapId);
+        progressStore.save(currentMapId);
         camera.reset();
         player.getAttack().resetCooldowns();
         bullets.clear();
@@ -353,7 +301,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void killAllMonstersOnCurrentMap() {
         if (sceneManager.killAllMonstersOnCurrentMap() > 0) {
-            soundEffects.play(ENEMY_DEATH_SOUND);
+            gameAudio.playEnemyDeath();
         }
         showToast("Da tieu diet tat ca quai (cheat)");
         requestFocusInWindow();
@@ -366,62 +314,12 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void loadParallax() {
-    try {
-
-        parallaxLayers = new BufferedImage[4];
-
-        parallaxLayers[0] = ImageIO.read(
-            getClass().getResourceAsStream(
-                "/assets/background/parallax_layer1.png"
-            )
-        );
-
-        parallaxLayers[1] = ImageIO.read(
-            getClass().getResourceAsStream(
-                "/assets/background/parallax_layer2.png"
-            )
-        );
-
-        parallaxLayers[2] = ImageIO.read(
-            getClass().getResourceAsStream(
-                "/assets/background/parallax_layer3.png"
-            )
-        );
-
-        parallaxLayers[3] = ImageIO.read(
-            getClass().getResourceAsStream(
-                "/assets/background/parallax_layer4.png"
-            )
-        );
-
-        System.out.println("Loaded parallax layers");
-
-    } catch (Exception e) {
-        e.printStackTrace();
+        parallaxRenderer.load();
     }
-}
 
-private void drawParallax(Graphics2D g2) {
-
-    double[] speeds = {
-        0.05,
-        0.2,
-        0.4,
-        0.8 // foreground layer, moves almost with the camera
-    };
-
-    for (int i = 0; i < parallaxLayers.length; i++) {
-
-        BufferedImage layer = parallaxLayers[i];
-
-        if (layer == null) continue;
-
-        int x = (int)(-camera.getX() * speeds[i]);
-        int y = (int)(-camera.getY() * speeds[i]);
-
-        g2.drawImage(layer, x, y, null);
+    private void drawParallax(Graphics2D g2) {
+        parallaxRenderer.render(g2, camera);
     }
-}
 
     private void update() {
         if (gameOver) {
@@ -477,29 +375,19 @@ private void drawParallax(Graphics2D g2) {
 
     public void saveSettings() {
         SettingsStore.save(settings);
-        backgroundMusic.setVolume(settings.getVolume());
-        soundEffects.setVolume(settings.getVolume());
+        gameAudio.applyVolume(settings.getVolume());
     }
 
     public void playMenuClickSound() {
-        soundEffects.play(MENU_CLICK_SOUND);
+        gameAudio.playMenuClick();
     }
 
     public void playPauseSound() {
-        soundEffects.play(PAUSE_SOUND);
+        gameAudio.playPause();
     }
 
     public void playItemUseSound(Item.ItemType type, ItemUseResult result) {
-        if (type == null || result == null || !result.success()) {
-            return;
-        }
-
-        switch (type) {
-            case HP_POTION -> soundEffects.play(HP_HEAL_SOUND);
-            case MP_POTION -> soundEffects.play(MP_HEAL_SOUND);
-            case KEY -> {
-            }
-        }
+        gameAudio.playItemUse(type, result);
     }
 
     private void playPlayerDamageSound(int hpBeforeDamage) {
@@ -507,27 +395,27 @@ private void drawParallax(Graphics2D g2) {
             return;
         }
 
-        soundEffects.play(player.getHp() <= 0 ? PLAYER_DEATH_SOUND : PLAYER_HURT_SOUND);
+        if (player.getHp() <= 0) {
+            gameAudio.playPlayerDeath();
+        } else {
+            gameAudio.playPlayerDamage(hpBeforeDamage - player.getHp());
+        }
     }
 
     private void playEnemyDeathSounds(int defeatedMonsterCount) {
-        for (int i = 0; i < defeatedMonsterCount; i++) {
-            soundEffects.play(ENEMY_DEATH_SOUND);
-        }
+        gameAudio.playEnemyDeaths(defeatedMonsterCount);
     }
 
     private void playItemPickupSounds(int collectedItemCount) {
-        for (int i = 0; i < collectedItemCount; i++) {
-            soundEffects.play(PICK_ITEM_SOUND);
-        }
+        gameAudio.playItemPickups(collectedItemCount);
     }
 
     private void playCurrentMapMusic() {
-        backgroundMusic.playLoop(MapCatalog.get(currentMapId).getMusicPath());
+        gameAudio.playMapMusic(currentMapId);
     }
 
     public void playMenuMusic() {
-        backgroundMusic.playLoop("/assets/audio/Menu.wav");
+        gameAudio.playMenuMusic();
     }
 
     private void syncWorldStateFromGameWorld() {
@@ -589,7 +477,7 @@ private void drawParallax(Graphics2D g2) {
                 player.getAttack().tryLeftShoot(originX, originY, worldMouseX, worldMouseY);
 
             for (goldenroad.entity.projectile.BulletSpec spec : leftBullets) {
-                soundEffects.play(LEFT_SHOT_SOUND);
+                gameAudio.playLeftShot();
                 spawnBullet(spec.originX, spec.originY, spec.dirX, spec.dirY, spec.speed, spec.diameter, spec.color, spec.damage, spec.type);
             }
         } else {
@@ -601,7 +489,7 @@ private void drawParallax(Graphics2D g2) {
                 player.getAttack().tryRightShoot(originX, originY, worldMouseX, worldMouseY);
 
             if (!rightBullets.isEmpty()) {
-                soundEffects.play(RIGHT_SHOT_SOUND);
+                gameAudio.playRightShot();
             }
 
             for (goldenroad.entity.projectile.BulletSpec spec : rightBullets) {
@@ -650,15 +538,6 @@ private void drawParallax(Graphics2D g2) {
         );
     }
 
-    private double[] rotateVector(double x, double y, double angleRadians) {
-        double cos = Math.cos(angleRadians);
-        double sin = Math.sin(angleRadians);
-
-        return new double[] {
-            (x * cos) - (y * sin),
-            (x * sin) + (y * cos)
-        };
-    }
 
     private double getMouseWorldX() {
         double scale = renderScale <= 0 ? 1.0 : renderScale;
@@ -673,13 +552,6 @@ private void drawParallax(Graphics2D g2) {
         return mouseY + camera.getY();
     }
 
-    private List<Monster> getCurrentMonsters() {
-        return sceneManager.getCurrentScreen().getMonsters();
-    }
-
-    private List<Item> getCurrentItems() {
-        return sceneManager.getCurrentScreen().getItems();
-    }
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -738,19 +610,15 @@ private void drawParallax(Graphics2D g2) {
     private void drawHudAndOverlays(Graphics2D bufferG) {
         hud.render(bufferG);
 
-        if (toastMessage != null && System.nanoTime() >= toastExpireAtNanos) {
-            toastMessage = null;
-        }
-
-        overlayRenderer.renderToast(bufferG, toastMessage);
+        overlayRenderer.renderToast(bufferG, toastManager.currentMessage());
 
         if (gameOver) {
-            drawGameOver(bufferG);
+            endScreenOverlay.renderGameOver(bufferG);
             return;
         }
 
         if (victory) {
-            drawVictoryScreen(bufferG);
+            endScreenOverlay.renderVictory(bufferG);
             return;
         }
 
@@ -767,77 +635,18 @@ private void drawParallax(Graphics2D g2) {
         }
     }
 
-    private void drawGameOver(Graphics2D g) {
-        g.setColor(new Color(8, 10, 12, 220));
-        g.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-        g.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 48));
-        g.setColor(new Color(100, 228, 250));
-        String title = "CONSTRUCT DOWN";
-        int tw = g.getFontMetrics().stringWidth(title);
-        g.drawString(title, (SCREEN_WIDTH - tw) / 2, 140);
-
-        // draw restart button
-        drawGameOverButton(g, gameOverRestartButton, "Restart");
-        // draw return button
-        drawGameOverButton(g, gameOverReturnButton, "Return to Menu");
-        // draw exit button
-        drawGameOverButton(g, gameOverExitButton, "Exit Game");
-    }
-
-    private void drawVictoryScreen(Graphics2D g) {
-        g.setColor(new Color(8, 10, 12, 220));
-        g.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-        g.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 52));
-        g.setColor(new Color(190, 240, 160));
-        String title = "YOU WIN!";
-        int tw = g.getFontMetrics().stringWidth(title);
-        g.drawString(title, (SCREEN_WIDTH - tw) / 2, 140);
-
-        g.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 20));
-        g.setColor(new Color(220, 230, 240));
-        String message = "Congratulation! Ban da hoan thanh man cuoi cung.";
-        int mw = g.getFontMetrics().stringWidth(message);
-        g.drawString(message, (SCREEN_WIDTH - mw) / 2, 190);
-
-        drawGameOverButton(g, victoryReturnButton, "Return to Menu");
-        drawGameOverButton(g, victoryExitButton, "Exit Game");
-    }
-
-    private void drawGameOverButton(Graphics2D g, java.awt.Rectangle btn, String label) {
-        g.setColor(new Color(40, 45, 60));
-        g.fillRoundRect(btn.x, btn.y, btn.width, btn.height, 8, 8);
-        g.setColor(new Color(185, 210, 255));
-        g.drawRoundRect(btn.x, btn.y, btn.width, btn.height, 8, 8);
-        g.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 20));
-        int lw = g.getFontMetrics().stringWidth(label);
-        int lx = btn.x + (btn.width - lw) / 2;
-        int ly = btn.y + (btn.height / 2) + 7;
-        g.setColor(new Color(230, 230, 240));
-        g.drawString(label, lx, ly);
-    }
 
     private void handleGameOverInput() {
         if (!mouseHandler.isLeftJustPressed()) return;
         if (!mouseHandler.consumeLeftJustPressed()) return;
 
-        double scale = renderScale <= 0 ? 1.0 : renderScale;
-        int mx = (int) ((mouseHandler.getMouseX() - renderOffsetX) / scale);
-        int my = (int) ((mouseHandler.getMouseY() - renderOffsetY) / scale);
-
-        if (gameOverRestartButton.contains(mx, my)) {
-            // restart current map
+        EndScreenAction action = endScreenOverlay.gameOverActionAt(getScreenMouseX(), getScreenMouseY());
+        if (action == EndScreenAction.RESTART) {
             restartMap();
-        } else if (gameOverReturnButton.contains(mx, my)) {
-            // open main menu
+        } else if (action == EndScreenAction.RETURN_TO_MENU) {
             gameOver = false;
-            player.heal(10_000);
-            player.restoreMp(10_000);
-            bullets.clear();
-            menu.open();
-        } else if (gameOverExitButton.contains(mx, my)) {
-            // exit game
+            returnToMenuFromEndScreen();
+        } else if (action == EndScreenAction.EXIT) {
             System.exit(0);
         }
     }
@@ -846,19 +655,30 @@ private void drawParallax(Graphics2D g2) {
         if (!mouseHandler.isLeftJustPressed()) return;
         if (!mouseHandler.consumeLeftJustPressed()) return;
 
-        double scale = renderScale <= 0 ? 1.0 : renderScale;
-        int mx = (int) ((mouseHandler.getMouseX() - renderOffsetX) / scale);
-        int my = (int) ((mouseHandler.getMouseY() - renderOffsetY) / scale);
-
-        if (victoryReturnButton.contains(mx, my)) {
+        EndScreenAction action = endScreenOverlay.victoryActionAt(getScreenMouseX(), getScreenMouseY());
+        if (action == EndScreenAction.RETURN_TO_MENU) {
             victory = false;
-            player.heal(10_000);
-            player.restoreMp(10_000);
-            bullets.clear();
-            menu.open();
-        } else if (victoryExitButton.contains(mx, my)) {
+            returnToMenuFromEndScreen();
+        } else if (action == EndScreenAction.EXIT) {
             System.exit(0);
         }
+    }
+
+    private void returnToMenuFromEndScreen() {
+        player.heal(10_000);
+        player.restoreMp(10_000);
+        bullets.clear();
+        menu.open();
+    }
+
+    private int getScreenMouseX() {
+        double scale = renderScale <= 0 ? 1.0 : renderScale;
+        return (int) ((mouseHandler.getMouseX() - renderOffsetX) / scale);
+    }
+
+    private int getScreenMouseY() {
+        double scale = renderScale <= 0 ? 1.0 : renderScale;
+        return (int) ((mouseHandler.getMouseY() - renderOffsetY) / scale);
     }
 
     private void restartMap() {
@@ -915,30 +735,4 @@ private void drawParallax(Graphics2D g2) {
         }
     }
 
-    private MapId loadSavedMap() {
-        try {
-            if (Files.exists(SAVE_FILE)) {
-                List<String> lines = Files.readAllLines(SAVE_FILE, StandardCharsets.UTF_8);
-                if (!lines.isEmpty()) {
-                    return MapId.valueOf(lines.get(0).trim());
-                }
-            }
-        } catch (Exception e) {
-            // fall back to the current in-memory/default map
-        }
-
-        return currentMapId;
-    }
-
-    private void saveCurrentMap(MapId mapId) {
-        if (mapId == null) {
-            return;
-        }
-
-        try {
-            Files.write(SAVE_FILE, List.of(mapId.name()), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            // ignore save failures so the game keeps running
-        }
-    }
 }
