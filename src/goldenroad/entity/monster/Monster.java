@@ -23,7 +23,7 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 
 public class Monster extends Entity {
-    private static final int MAX_ANIMATION_FRAMES = 64;
+    private static final int MAX_ANIMATION_FRAMES = 60;
     private static final int PATH_TILE_SIZE = 16;
     private static final int PATH_MAX_VISITED_NODES = 2500;
     private static final GridPathfinder PATHFINDER = new GridPathfinder(PATH_TILE_SIZE);

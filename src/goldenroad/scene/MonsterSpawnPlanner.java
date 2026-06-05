@@ -11,11 +11,11 @@ import goldenroad.entity.monster.MonsterType;
 
 final class MonsterSpawnPlanner {
     private static final MonsterConfig[] AIRBORNE_POOL = new MonsterConfig[] {
-        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_1", 16, 7, 1.2f, 1.0f, 80, 105, 240f, 340f, 42f, 32f, "/assets/monster/airborne-monster/monster_1"),
-        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_2", 18, 8, 1.2f, 1.05f, 64, 64, 260f, 360f, 42f, 32f, "/assets/monster/airborne-monster/monster_2"),
-        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_3", 20, 9, 1.3f, 1.1f, 64, 64, 280f, 380f, 42f, 32f, "/assets/monster/airborne-monster/monster_3"),
-        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_4", 22, 10, 1.3f, 1.15f, 57, 95, 300f, 400f, 42f, 32f, "/assets/monster/airborne-monster/monster_4"),
-        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_5", 24, 11, 1.35f, 1.2f, 31, 54, 320f, 420f, 42f, 32f, "/assets/monster/airborne-monster/monster_5")
+        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_1", 16, 7, 1.2f, 1.0f, 80, 105, 240f, 140f, 42f, 32f, "/assets/monster/airborne-monster/monster_1"),
+        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_2", 18, 8, 1.2f, 1.05f, 64, 64, 260f, 160f, 42f, 32f, "/assets/monster/airborne-monster/monster_2"),
+        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_3", 20, 9, 1.3f, 1.1f, 64, 64, 280f, 180f, 42f, 32f, "/assets/monster/airborne-monster/monster_3"),
+        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_4", 22, 10, 1.3f, 1.15f, 57, 95, 300f, 200f, 42f, 32f, "/assets/monster/airborne-monster/monster_4"),
+        new MonsterConfig(MonsterType.AIRBORNE, "airborne_monster_5", 24, 11, 1.35f, 1.2f, 31, 54, 320f, 220f, 42f, 32f, "/assets/monster/airborne-monster/monster_5")
     };
 
     private static final SpawnLane[] AIRBORNE_LANES = new SpawnLane[] {
