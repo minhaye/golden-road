@@ -4,6 +4,7 @@ Scientific Witchery là game platformer 2D phong cách metroidvania được ph�
 
 ## Tài liệu nhóm
 
+- Báo cáo tổng: https://docs.google.com/document/d/1MrxgA7x5BaSrnTLDqTEuLMbqwj0k8qiKsfzggrGQr1M/edit?usp=sharing
 - Báo cáo tiến độ: https://docs.google.com/document/d/1UuNXtMHy_4ewUpr_JN-LcqvNzZqqJhtlUja23kPz9RQ/edit?tab=t.0#heading=h.orhg72i9j0dq
 - Plot và đề xuất: https://docs.google.com/document/d/138VPqWpEGtzm8KxrY4FCCdarLBsm77eg-wRZ5wo0ONM/edit?tab=t.0
 
