@@ -264,7 +264,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void switchMap() {
         victory = false;
-        world.switchMap(sceneManager, player, true, settings.getDifficulty());
+        world.switchMap(sceneManager, player, false, settings.getDifficulty());
         syncWorldStateFromGameWorld();
         progressStore.save(currentMapId);
         camera.reset();

@@ -16,6 +16,7 @@ import goldenroad.entity.monster.MonsterConfig;
 import goldenroad.entity.monster.MonsterFactory;
 import goldenroad.entity.monster.MonsterType;
 import goldenroad.map.CollisionMap;
+import goldenroad.map.ItemSpawnPoint;
 import goldenroad.map.GridPathfinder;
 import goldenroad.map.MonsterSpawnPoint;
 import goldenroad.settings.Difficulty;
@@ -298,6 +299,33 @@ public class SceneManager {
                 placedPositions.add(new int[] { item.getBounds().x, item.getBounds().y });
                 spawned++;
             }
+        }
+
+        return spawned;
+    }
+
+    public int spawnMapItems(
+        List<ItemSpawnPoint> spawnPoints,
+        CollisionMap collisionMap
+    ) {
+        Screen screen = getCurrentScreen();
+        screen.clearItems();
+
+        if (spawnPoints == null || spawnPoints.isEmpty()) {
+            return 0;
+        }
+
+        int spawned = 0;
+        for (ItemSpawnPoint point : spawnPoints) {
+            if (collisionMap != null
+                && collisionMap.isLoaded()
+                && collisionMap.isAreaSolid(point.getX(), point.getY(), Item.ITEM_SIZE, Item.ITEM_SIZE)) {
+                continue;
+            }
+
+            Item item = Item.ofType(point.getX(), point.getY(), point.getType());
+            screen.addItem(item);
+            spawned++;
         }
 
         return spawned;
