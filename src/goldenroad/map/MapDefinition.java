@@ -1,5 +1,7 @@
 package goldenroad.map;
 
+import java.util.List;
+
 public final class MapDefinition {
     private final MapId id;
     private final String backgroundPath;
@@ -10,6 +12,7 @@ public final class MapDefinition {
     private final int worldHeight;
     private final int spawnX;
     private final int spawnY;
+    private final List<MonsterSpawnPoint> monsterSpawnPoints;
 
     public MapDefinition(
         MapId id,
@@ -20,7 +23,8 @@ public final class MapDefinition {
         int worldWidth,
         int worldHeight,
         int spawnX,
-        int spawnY
+        int spawnY,
+        List<MonsterSpawnPoint> monsterSpawnPoints
     ) {
         this.id = id;
         this.backgroundPath = backgroundPath;
@@ -31,6 +35,7 @@ public final class MapDefinition {
         this.worldHeight = worldHeight;
         this.spawnX = spawnX;
         this.spawnY = spawnY;
+        this.monsterSpawnPoints = monsterSpawnPoints;
     }
 
     public MapId getId() {
@@ -67,5 +72,9 @@ public final class MapDefinition {
 
     public int getSpawnY() {
         return spawnY;
+    }
+
+    public List<MonsterSpawnPoint> getMonsterSpawnPoints() {
+        return monsterSpawnPoints;
     }
 }

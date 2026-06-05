@@ -307,14 +307,10 @@ public class GameWorld {
 
         if (spawnInitialItems && sceneManager != null && player != null) {
             sceneManager.spawnMonsters(
-                    25,
-                    worldWidth,
-                    worldHeight,
+                    mapDefinition.getMonsterSpawnPoints(),
                     collisionMap,
-                    player.getX(),
-                    player.getY(),
-                    player.getWidth(),
-                    player.getHeight());
+                    worldWidth,
+                    worldHeight);
             sceneManager.spawnMapItems(
                     sceneManager.getLastSpawnedMonsterCount(),
                     worldWidth,
