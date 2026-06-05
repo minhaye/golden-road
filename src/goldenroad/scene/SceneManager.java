@@ -17,6 +17,7 @@ import goldenroad.entity.monster.MonsterFactory;
 import goldenroad.entity.monster.MonsterType;
 import goldenroad.map.CollisionMap;
 import goldenroad.map.GridPathfinder;
+import goldenroad.map.MonsterSpawnPoint;
 import goldenroad.settings.Difficulty;
 import goldenroad.util.AssetLoader;
 import java.awt.image.BufferedImage;
@@ -36,7 +37,6 @@ public class SceneManager {
     };
 
     private final List<Floor> floors = new ArrayList<>();
-    private final MonsterSpawnPlanner monsterSpawnPlanner = new MonsterSpawnPlanner();
 
     private static final int ITEM_MIN_DISTANCE = 80;
     private static final int ITEM_SPAWN_ATTEMPTS = 48;
@@ -369,24 +369,18 @@ public class SceneManager {
     // Spawn up to `count` monsters distributed evenly across the map area.
     // This should be called after the map/world dimensions are known.
     public void spawnMonsters(
-        int count,
-        int worldWidth,
-        int worldHeight,
+        List<MonsterSpawnPoint> spawnPoints,
         CollisionMap collisionMap,
-        double playerX,
-        double playerY,
-        double playerWidth,
-        double playerHeight
+        int worldWidth,
+        int worldHeight
     ) {
-        if (count <= 0 || worldWidth <= 0 || worldHeight <= 0) return;
+        if (spawnPoints == null || spawnPoints.isEmpty() || worldWidth <= 0 || worldHeight <= 0) {
+            lastSpawnedMonsterCount = 0;
+            return;
+        }
 
-        int cap = Math.min(AIRBORNE_MONSTER_COUNT, count);
         lastSpawnedMonsterCount = 0;
-        Random rnd = new Random();
         Screen screen = getCurrentScreen();
-        GridPathfinder pathfinder = new GridPathfinder(TILE_SIZE);
-        double playerCenterX = playerX + playerWidth / 2.0;
-        double playerCenterY = playerY + playerHeight / 2.0;
 
         // Clear existing monsters (remove all by creating a fresh list in Screen is not exposed,
         // so remove by iterating current monsters)
@@ -395,36 +389,16 @@ public class SceneManager {
             screen.removeMonster(m);
         }
 
-        MonsterConfig[] spawnOrder = new MonsterConfig[AIRBORNE_MONSTER_COUNT];
-        for (int i = 0; i < spawnOrder.length; i++) {
-            spawnOrder[i] = AIRBORNE_POOL[i % AIRBORNE_POOL.length];
-        }
+        for (MonsterSpawnPoint point : spawnPoints) {
+            int index = Math.max(0, Math.min(point.getConfigIndex(), AIRBORNE_POOL.length - 1));
+            MonsterConfig config = AIRBORNE_POOL[index];
 
-        // Distribute spawn by splitting width into segments
-        for (int i = 0; i < cap; i++) {
-            Monster monster = null;
-            MonsterConfig config = spawnOrder[i];
+            int x = clamp(point.getX(), 0, Math.max(0, worldWidth - config.width));
+            int y = clamp(point.getY(), 0, Math.max(0, worldHeight - config.height));
+            int leftBoundary = Math.max(0, x - 80);
+            int rightBoundary = Math.min(worldWidth, x + 80);
 
-            for (int attempt = 0; attempt < 32 && monster == null; attempt++) {
-                double slotCenter = (double) (i + 1) * worldWidth / (cap + 1);
-                int jitterX = Math.max(8, worldWidth / Math.max(10, cap * 4));
-                int x = clamp(
-                    (int) Math.round(slotCenter + (rnd.nextInt(jitterX * 2 + 1) - jitterX)),
-                    0,
-                    Math.max(0, worldWidth - config.width)
-                );
-
-                int minY = Math.max(0, worldHeight / 10);
-                int maxY = Math.max(minY + 1, worldHeight - worldHeight / 10);
-                int y = clamp(minY + rnd.nextInt(maxY - minY), 0, Math.max(0, worldHeight - config.height));
-
-                if (!isReachableSpawn(collisionMap, pathfinder, playerCenterX, playerCenterY, x, y, config.width, config.height)) {
-                    continue;
-                }
-
-                monster = createAirborneMonster(config, x, y, Math.max(0, x - 80), Math.min(worldWidth, x + 80));
-            }
-
+            Monster monster = createAirborneMonster(config, x, y, leftBoundary, rightBoundary);
             if (monster != null) {
                 screen.addMonster(monster);
                 lastSpawnedMonsterCount++;

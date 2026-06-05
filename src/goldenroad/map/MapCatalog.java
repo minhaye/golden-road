@@ -1,7 +1,30 @@
 package goldenroad.map;
 
+import goldenroad.entity.monster.MonsterType;
+import java.util.List;
+
 public final class MapCatalog {
     private static final int TILE_SIZE = 16;
+
+    private static final List<MonsterSpawnPoint> MAP_0_SPAWNS = List.of(
+        new MonsterSpawnPoint(500, 1990, MonsterType.AIRBORNE, 0),
+        new MonsterSpawnPoint(800, 1990, MonsterType.AIRBORNE, 2),
+        new MonsterSpawnPoint(1200, 1550, MonsterType.AIRBORNE, 1)
+    );
+
+    private static final List<MonsterSpawnPoint> MAP_1_SPAWNS = List.of(
+        new MonsterSpawnPoint(450, 1800, MonsterType.AIRBORNE, 1),
+        new MonsterSpawnPoint(900, 1700, MonsterType.AIRBORNE, 3)
+    );
+
+    private static final List<MonsterSpawnPoint> MAP_2_SPAWNS = List.of(
+        new MonsterSpawnPoint(300, 3800, MonsterType.AIRBORNE, 0)
+    );
+
+    private static final List<MonsterSpawnPoint> MAP_3_SPAWNS = List.of(
+        new MonsterSpawnPoint(600, 1950, MonsterType.AIRBORNE, 4),
+        new MonsterSpawnPoint(1400, 1900, MonsterType.AIRBORNE, 2)
+    );
 
     private static final MapDefinition MAP_0 = new MapDefinition(
         MapId.MAP_0,
@@ -12,7 +35,8 @@ public final class MapCatalog {
         280 * TILE_SIZE,
         160 * TILE_SIZE,
         400,
-        1995
+        1995,
+        MAP_0_SPAWNS
     );
 
     private static final MapDefinition MAP_1 = new MapDefinition(
@@ -24,7 +48,8 @@ public final class MapCatalog {
         330 * TILE_SIZE,
         140 * TILE_SIZE,
         400,
-        1995
+        1995,
+        MAP_1_SPAWNS
     );
 
     private static final MapDefinition MAP_2 = new MapDefinition(
@@ -36,7 +61,8 @@ public final class MapCatalog {
         180 * TILE_SIZE,
         300 * TILE_SIZE,
         400,
-        3995
+        3995,
+        MAP_2_SPAWNS
     );
 
     private static final MapDefinition MAP_3 = new MapDefinition(
@@ -48,7 +74,8 @@ public final class MapCatalog {
         500 * TILE_SIZE,
         210 * TILE_SIZE,
         400,
-        1995
+        1995,
+        MAP_3_SPAWNS
     );
 
     private MapCatalog() {
