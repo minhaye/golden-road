@@ -1,81 +1,103 @@
 # SCIENTIFIC WITCHERY
 
-Mô tả ngắn: trò chơi 2D theo phong cách metroidvania, phát triển bằng Java cho môn Lập trình Hướng đối tượng. Người chơi khám phá một cơ sở nghiên cứu, chiến đấu với quái vật, thu thập vật phẩm và mở khóa kỹ năng để tiến sâu vào các tầng tiếp theo.
+Scientific Witchery là game platformer 2D phong cách metroidvania được phát triển bằng Java Swing cho môn Lập trình Hướng đối tượng. Người chơi điều khiển nhân vật khám phá các phòng thí nghiệm, tiêu diệt quái vật, thu thập vật phẩm và dùng key để mở đường sang map tiếp theo.
 
-Link báo cáo tiến độ
-https://docs.google.com/document/d/1UuNXtMHy_4ewUpr_JN-LcqvNzZqqJhtlUja23kPz9RQ/edit?tab=t.0#heading=h.orhg72i9j0dq
+## Tài liệu nhóm
 
-Link plot + đề xuất 
-https://docs.google.com/document/d/138VPqWpEGtzm8KxrY4FCCdarLBsm77eg-wRZ5wo0ONM/edit?tab=t.0
+- Báo cáo tiến độ: https://docs.google.com/document/d/1UuNXtMHy_4ewUpr_JN-LcqvNzZqqJhtlUja23kPz9RQ/edit?tab=t.0#heading=h.orhg72i9j0dq
+- Plot và đề xuất: https://docs.google.com/document/d/138VPqWpEGtzm8KxrY4FCCdarLBsm77eg-wRZ5wo0ONM/edit?tab=t.0
 
----
+## Thông tin dự án
 
-**Thông tin về game**
-
-- Thể loại: Metroidvania / Platformer 2D
-- Ngôn ngữ: Java (Swing cho rendering)
+- Thể loại: Metroidvania / 2D platformer shooter
+- Ngôn ngữ: Java
+- Giao diện: Java Swing
 - Entry point: [src/goldenroad/main/Main.java](src/goldenroad/main/Main.java)
-- Thư mục assets: `src/assets/` và `src/assets/player/`
+- Assets: [src/assets/](src/assets/)
+- Package chính: [src/goldenroad/](src/goldenroad/)
 
----
+## Tính năng hiện có
 
-**Những gì đã hoàn thành hiện tại**
+- Game loop 60 FPS, cửa sổ Swing và render theo buffer trong [GamePanel.java](src/goldenroad/game/GamePanel.java)
+- Menu chính, pause menu, settings, tutorial và màn hình kết thúc trong [Menu.java](src/goldenroad/scene/Menu.java) và [EndScreenOverlay.java](src/goldenroad/ui/EndScreenOverlay.java)
+- Hệ thống map nhiều phòng, collision map, hidden layer và chuyển map trong [MapCatalog.java](src/goldenroad/map/MapCatalog.java), [CollisionMap.java](src/goldenroad/map/CollisionMap.java), [GameWorld.java](src/goldenroad/game/GameWorld.java)
+- Nhân vật người chơi với di chuyển, nhảy, dash, tài nguyên HP/MP và bắn đạn trong [Player.java](src/goldenroad/entity/player/Player.java), [PlayerMovement.java](src/goldenroad/entity/player/PlayerMovement.java), [PlayerAttack.java](src/goldenroad/entity/player/PlayerAttack.java)
+- Quái vật mặt đất và bay với nhiều behavior như idle, patrol, aggressive, airborne trong [src/goldenroad/entity/monster/](src/goldenroad/entity/monster/)
+- Vật phẩm HP, MP, Key, inventory và quick-use trong [src/goldenroad/entity/item/](src/goldenroad/entity/item/) và [InventoryPanel.java](src/goldenroad/ui/InventoryPanel.java)
+- HUD, minimap, toast thông báo và overlay game over/victory trong [src/goldenroad/ui/](src/goldenroad/ui/)
+- Âm thanh menu, nhạc nền theo map và hiệu ứng gameplay trong [src/goldenroad/audio/](src/goldenroad/audio/)
+- Lưu settings và tiến độ map trong [src/goldenroad/settings/](src/goldenroad/settings/)
 
-- Hệ thống thực thể cơ bản: [src/goldenroad/entity/Entity.java](src/goldenroad/entity/Entity.java), [src/goldenroad/entity/Player.java](src/goldenroad/entity/Player.java), [src/goldenroad/entity/Monster.java](src/goldenroad/entity/Monster.java), [src/goldenroad/entity/Bullet.java](src/goldenroad/entity/Bullet.java), [src/goldenroad/entity/Item.java](src/goldenroad/entity/Item.java)
-- Giao diện game và panel: [src/goldenroad/game/GamePanel.java](src/goldenroad/game/GamePanel.java)
-- Xử lý input: [src/goldenroad/input/KeyHandler.java](src/goldenroad/input/KeyHandler.java), [src/goldenroad/input/MouseHandler.java](src/goldenroad/input/MouseHandler.java)
-- Hệ thống map & va chạm: [src/goldenroad/map/CollisionMap.java](src/goldenroad/map/CollisionMap.java), [src/goldenroad/map/CollisionHandler.java](src/goldenroad/map/CollisionHandler.java)
-- Hệ thống render & camera: [src/goldenroad/render/RenderSystem.java](src/goldenroad/render/RenderSystem.java), [src/goldenroad/render/Camera.java](src/goldenroad/render/Camera.java)
-- Quản lý scene/menu: [src/goldenroad/scene/SceneManager.java](src/goldenroad/scene/SceneManager.java), [src/goldenroad/scene/Floor.java](src/goldenroad/scene/Floor.java), [src/goldenroad/scene/Menu.java](src/goldenroad/scene/Menu.java)
+## Điều khiển
 
----
+| Hành động | Phím / chuột |
+| --- | --- |
+| Di chuyển trái/phải | A / D hoặc phím mũi tên trái/phải |
+| Nhảy | W, mũi tên lên hoặc Space |
+| Đi xuống | S hoặc mũi tên xuống |
+| Chạy nhanh | Ctrl |
+| Dash | Shift |
+| Ngắm và bắn | Chuột trái / chuột phải |
+| Mở inventory | Tab hoặc I |
+| Dùng nhanh item | 1, 2, 3 |
+| Pause / mở menu | Esc |
+| Toggle minimap | Alt + N |
+| Chuyển map để test | Alt + M |
+| Diệt toàn bộ quái để test | Alt + X |
 
-**Các công việc cần triển khai tiếp**
+## Cách chạy
 
-1. Hoàn thiện AI kẻ địch (pathfinding, trạng thái tấn công/tuần tra)
-2. Cơ chế nhặt vật phẩm, cập nhật inventory và hiệu ứng dùng item
-3. Thêm animation cho nhân vật, kẻ địch và vật phẩm
-4. Âm thanh: hiệu ứng va chạm, nhạc nền, hiệu ứng kỹ năng
-5. Giao diện HUD (HP/MP/skill cooldown/inventory)
-6. Thiết kế level/maps bổ sung và cân bằng gameplay
-7. Lưu/Load trạng thái người chơi
-8. Tối ưu va chạm và render để giảm lag
-9. Kiểm thử (unit/integration) và sửa lỗi
-10. Đóng gói thành file JAR để chạy độc lập
+Yêu cầu:
 
----
+- JDK 17 trở lên
+- Terminal hỗ trợ lệnh Unix/Git Bash hoặc chạy trực tiếp bằng IDE
 
-**Dự định phân chia công việc (gợi ý)**
-
-- Game Logic & Entities: phát triển các lớp entity, hệ thống skill, inventory
-- AI & Enemy Behavior: thiết kế trạng thái và hành vi kẻ địch
-- Map & Collisions: xây dựng công cụ thiết kế map, tối ưu hệ va chạm
-- Rendering & Camera: cải thiện hệ render, animation, camera theo nhân vật
-- Input & Controls: hoàn thiện điều khiển, mapping phím, chuột
-- UI & Scenes: menu, HUD, màn hình tạm dừng, màn hình kết thúc
-- Assets & Sound: quản lý sprites, tilesets, âm thanh
-- Testing & Build: test, CI, đóng gói release
-
-Gợi ý phân công: mỗi mục giao cho 1 dev (hoặc nhóm nhỏ) tùy quy mô. Giao việc bằng issue/branch theo `feature/<tên>`.
-
----
-
-**Hướng dẫn đóng góp nhanh**
-
-- Tạo branch mới từ `main`: `feature/<mô-tả-ngắn>`
-- Mỗi PR kèm mô tả, checklist các bước kiểm thử
-- Kiểm tra build bằng IDE hoặc dòng lệnh trước khi gửi PR
-
-Ví dụ chạy nhanh (từ IDE hoặc terminal):
+Chạy bằng terminal từ thư mục gốc project:
 
 ```bash
-# Biên dịch (tham khảo cấu trúc project)
-javac -d bin src/goldenroad/main/Main.java src/goldenroad/**/**/*.java
-
-# Chạy (điều chỉnh classpath nếu cần)
-java -cp bin goldenroad.main.Main
+mkdir -p bin
+javac -encoding UTF-8 -d bin $(git ls-files "src/**/*.java")
+java -cp "bin:src" goldenroad.main.Main
 ```
 
----
+Nếu chạy trên Windows Command Prompt hoặc PowerShell, hãy đổi dấu phân tách classpath từ `:` sang `;`:
 
-Nếu muốn, tôi có thể mở thêm các issue/tickets tương ứng cho từng công việc trên để phân công cụ thể.
+```bash
+java -cp "bin;src" goldenroad.main.Main
+```
+
+Có thể chạy trực tiếp trong IDE bằng class [Main.java](src/goldenroad/main/Main.java).
+
+## Cấu trúc thư mục
+
+```text
+src/
+├── assets/                 # Hình ảnh, map, âm thanh, sprites
+└── goldenroad/
+    ├── audio/              # Nhạc nền và hiệu ứng âm thanh
+    ├── entity/             # Player, monster, projectile, item
+    ├── game/               # GamePanel, GameWorld, input controller
+    ├── input/              # Keyboard và mouse handler
+    ├── main/               # Entry point
+    ├── map/                # Map catalog, collision, pathfinding
+    ├── render/             # Camera, render system, parallax
+    ├── scene/              # Menu, screen, scene manager, spawn planner
+    ├── settings/           # Difficulty, settings, progress store
+    ├── ui/                 # HUD, inventory panel, overlays
+    └── util/               # Asset loader
+```
+
+## Đóng góp
+
+- Tạo branch mới từ `main`, ví dụ: `feature/inventory-ui` hoặc `fix/player-collision`
+- Mỗi PR nên có mô tả thay đổi, ảnh/video nếu có UI, và checklist đã test
+- Trước khi gửi PR, hãy build lại và chạy thử game bằng [Main.java](src/goldenroad/main/Main.java)
+
+## Công việc có thể phát triển tiếp
+
+- Hoàn thiện cân bằng gameplay theo từng difficulty
+- Bổ sung map, quái và boss
+- Hoàn thiện animation cho player, monster và vật phẩm
+- Cải thiện lưu/load trạng thái người chơi
+- Thêm test tự động và cấu hình build/đóng gói JAR
+- Tối ưu render/collision nếu map hoặc số lượng entity tăng
