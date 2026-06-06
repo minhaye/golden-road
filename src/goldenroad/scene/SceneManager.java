@@ -20,6 +20,7 @@ import goldenroad.map.ItemSpawnPoint;
 import goldenroad.map.GridPathfinder;
 import goldenroad.map.MonsterSpawnPoint;
 import goldenroad.settings.Difficulty;
+import goldenroad.settings.GameSaveData;
 import goldenroad.util.AssetLoader;
 import java.awt.image.BufferedImage;
 
@@ -428,10 +429,75 @@ public class SceneManager {
 
             Monster monster = createAirborneMonster(config, x, y, leftBoundary, rightBoundary);
             if (monster != null) {
+                monster.setConfigName(config.name);
                 screen.addMonster(monster);
                 lastSpawnedMonsterCount++;
             }
         }
+    }
+
+    public void replaceMonsters(List<GameSaveData.MonsterSnapshot> snapshots, int worldWidth, int worldHeight) {
+        Screen screen = getCurrentScreen();
+        screen.clearMonsters();
+        if (snapshots == null || snapshots.isEmpty()) {
+            return;
+        }
+
+        for (GameSaveData.MonsterSnapshot snapshot : snapshots) {
+            Monster monster = createMonsterFromSave(snapshot, worldWidth, worldHeight);
+            if (monster != null) {
+                screen.addMonster(monster);
+            }
+        }
+    }
+
+    public void replaceItems(List<GameSaveData.ItemSnapshot> snapshots) {
+        Screen screen = getCurrentScreen();
+        screen.clearItems();
+        if (snapshots == null || snapshots.isEmpty()) {
+            return;
+        }
+
+        for (GameSaveData.ItemSnapshot snapshot : snapshots) {
+            if (snapshot == null || snapshot.getType() == null) {
+                continue;
+            }
+            screen.addItem(Item.ofType(snapshot.getX(), snapshot.getY(), snapshot.getType()));
+        }
+    }
+
+    private Monster createMonsterFromSave(GameSaveData.MonsterSnapshot snapshot, int worldWidth, int worldHeight) {
+        if (snapshot == null || snapshot.getConfigName() == null || snapshot.getConfigName().isBlank()) {
+            return null;
+        }
+
+        MonsterConfig config = findConfigByName(snapshot.getConfigName());
+        if (config == null) {
+            return null;
+        }
+
+        int x = clamp(Math.round(snapshot.getX()), 0, Math.max(0, worldWidth - config.width));
+        int y = clamp(Math.round(snapshot.getY()), 0, Math.max(0, worldHeight - config.height));
+        int leftBoundary = Math.max(0, x - 80);
+        int rightBoundary = Math.min(worldWidth, x + 80);
+
+        Monster monster = createAirborneMonster(config, x, y, leftBoundary, rightBoundary);
+        if (monster == null) {
+            return null;
+        }
+
+        monster.setConfigName(config.name);
+        monster.applySnapshot(snapshot);
+        return monster;
+    }
+
+    private MonsterConfig findConfigByName(String configName) {
+        for (MonsterConfig config : AIRBORNE_POOL) {
+            if (config.name.equals(configName)) {
+                return config;
+            }
+        }
+        return null;
     }
 
     private boolean isReachableSpawn(

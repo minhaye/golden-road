@@ -56,4 +56,8 @@ public class Screen {
     public void clearItems() {
         items.clear();
     }
+
+    public void clearMonsters() {
+        monsters.clear();
+    }
 }

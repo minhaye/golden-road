@@ -244,7 +244,15 @@ public class GameWorld {
             mapId = MapId.MAP_0;
         }
 
-        loadMapInternal(mapId, sceneManager, player, spawnInitialItems, difficulty);
+        loadMapInternal(mapId, sceneManager, player, spawnInitialItems, difficulty, true);
+    }
+
+    public void loadMapShell(MapId mapId, SceneManager sceneManager) {
+        if (mapId == null) {
+            mapId = MapId.MAP_0;
+        }
+
+        loadMapInternal(mapId, sceneManager, null, false, Difficulty.NORMAL, false);
     }
 
     public void switchMap(SceneManager sceneManager, Player player, boolean spawnInitialItems) {
@@ -253,17 +261,27 @@ public class GameWorld {
 
     public void switchMap(SceneManager sceneManager, Player player, boolean spawnInitialItems, Difficulty difficulty) {
         MapId nextMapId = currentMapId == null ? MapId.MAP_0 : currentMapId.next();
-        loadMapInternal(nextMapId, sceneManager, player, spawnInitialItems, difficulty);
+        loadMapInternal(nextMapId, sceneManager, player, spawnInitialItems, difficulty, true);
     }
 
     private void loadMapInternal(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems,
             Difficulty difficulty) {
+        loadMapInternal(mapId, sceneManager, player, spawnInitialItems, difficulty, true);
+    }
+
+    private void loadMapInternal(MapId mapId, SceneManager sceneManager, Player player, boolean spawnInitialItems,
+            Difficulty difficulty, boolean resetPlayerPosition) {
         currentMapId = mapId;
-        applyMap(MapCatalog.get(mapId), sceneManager, player, spawnInitialItems, difficulty);
+        applyMap(MapCatalog.get(mapId), sceneManager, player, spawnInitialItems, difficulty, resetPlayerPosition);
     }
 
     private void applyMap(MapDefinition mapDefinition, SceneManager sceneManager, Player player,
             boolean spawnInitialItems, Difficulty difficulty) {
+        applyMap(mapDefinition, sceneManager, player, spawnInitialItems, difficulty, true);
+    }
+
+    private void applyMap(MapDefinition mapDefinition, SceneManager sceneManager, Player player,
+            boolean spawnInitialItems, Difficulty difficulty, boolean resetPlayerPosition) {
         mapImage = AssetLoader.loadImage(mapDefinition.getBackgroundPath());
         hiddenImage = null;
 
@@ -274,7 +292,7 @@ public class GameWorld {
         worldWidth = mapDefinition.getWorldWidth();
         worldHeight = mapDefinition.getWorldHeight();
 
-        if (player != null) {
+        if (resetPlayerPosition && player != null) {
             double spawnX = clamp(mapDefinition.getSpawnX(), 0, Math.max(0, worldWidth - 1));
             double spawnY = clamp(mapDefinition.getSpawnY(), 0, Math.max(0, worldHeight - 1));
             double resolvedX = spawnX;
@@ -323,6 +341,7 @@ public class GameWorld {
                     difficulty);
         } else if (sceneManager != null) {
             sceneManager.getCurrentScreen().clearItems();
+            sceneManager.getCurrentScreen().clearMonsters();
         }
     }
 

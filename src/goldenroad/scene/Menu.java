@@ -52,6 +52,7 @@ public class Menu {
 
     private final String[] pauseLabels = {
         "Continue",
+        "Save",
         "Restart",
         "Settings",
         "Tutorial",
@@ -224,8 +225,9 @@ public class Menu {
                 closeMenu();
                 break;
             case 1:
-                panel.continueGame();
-                closeMenu();
+                if (panel.continueGame()) {
+                    closeMenu();
+                }
                 break;
             case 2:
                 view = View.SETTINGS;
@@ -244,6 +246,10 @@ public class Menu {
     }
 
     private void handlePauseButton(int index) {
+        if (panel.isSaveInProgress()) {
+            return;
+        }
+
         switch (index) {
             case 0:
                 paused = false;
@@ -251,24 +257,27 @@ public class Menu {
                 panel.requestFocusInWindow();
                 break;
             case 1:
+                panel.saveGame();
+                break;
+            case 2:
                 panel.restartCurrentMap();
                 paused = false;
                 resetSubmenuState();
                 break;
-            case 2:
+            case 3:
                 view = View.SETTINGS;
                 aboutOpen = false;
                 break;
-            case 3:
+            case 4:
                 view = View.TUTORIAL;
                 aboutOpen = false;
                 break;
-            case 4:
+            case 5:
                 panel.menu.open();
                 paused = false;
                 resetSubmenuState();
                 break;
-            case 5:
+            case 6:
                 System.exit(0);
                 break;
             default:
@@ -456,6 +465,8 @@ public class Menu {
             "Walk into HP, MP, or Key items to pick them up.",
             "Open inventory with Tab or I, use quick items with 1/2/3.",
             "Esc opens this menu while playing.",
+            "Pause menu has Save to store your current progress.",
+            "Use Continue on the main menu to load your last save.",
             "Test controls stay enabled: Alt+M changes map, Alt+X kills monsters."
         };
 

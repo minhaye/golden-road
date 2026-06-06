@@ -1,6 +1,7 @@
 package goldenroad.entity.player;
 
 import goldenroad.input.KeyHandler;
+import goldenroad.settings.GameSaveData;
 
 public class PlayerMovement {
     // movement state
@@ -139,5 +140,39 @@ public class PlayerMovement {
         velocityX = moveX;
 
         return moveX;
+    }
+
+    public void captureState(GameSaveData.PlayerSnapshot snapshot) {
+        if (snapshot == null) {
+            return;
+        }
+
+        snapshot.setVelocityX(velocityX);
+        snapshot.setVelocityY(velocityY);
+        snapshot.setOnGround(onGround);
+        snapshot.setDirection(direction);
+        snapshot.setDashDuration(dashDuration);
+        snapshot.setDashCooldown(dashCooldown);
+        snapshot.setDashUsed(dashUsed);
+        snapshot.setDashOnAirCount(dashOnAirCount);
+    }
+
+    public void applyState(GameSaveData.PlayerSnapshot snapshot) {
+        if (snapshot == null) {
+            return;
+        }
+
+        velocityX = snapshot.getVelocityX();
+        velocityY = snapshot.getVelocityY();
+        onGround = snapshot.isOnGround();
+        direction = snapshot.getDirection();
+        dashDuration = snapshot.getDashDuration();
+        dashCooldown = snapshot.getDashCooldown();
+        dashUsed = snapshot.isDashUsed();
+        dashOnAirCount = snapshot.getDashOnAirCount();
+        jumpCount = onGround ? 0 : Math.min(jumpCount, MAX_JUMPS);
+        dropDownTimer = 0;
+        coyoteTime = onGround ? COYOTE_MAX : 0;
+        jumpBuffer = 0;
     }
 }

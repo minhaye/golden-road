@@ -5,6 +5,7 @@ import goldenroad.entity.item.Inventory;
 import goldenroad.entity.item.Item;
 import goldenroad.entity.item.ItemUseContext;
 import goldenroad.entity.item.ItemUseResult;
+import goldenroad.entity.monster.Monster;
 import goldenroad.entity.player.Player;
 import goldenroad.entity.projectile.Bullet;
 import goldenroad.input.KeyHandler;
@@ -16,7 +17,8 @@ import goldenroad.scene.SceneManager;
 import goldenroad.scene.Menu;
 import goldenroad.settings.GameSettings;
 import goldenroad.settings.SettingsStore;
-import goldenroad.settings.MapProgressStore;
+import goldenroad.settings.GameSaveData;
+import goldenroad.settings.GameSaveStore;
 import goldenroad.render.Camera;
 import goldenroad.render.RenderSystem;
 import goldenroad.render.ParallaxRenderer;
@@ -27,6 +29,7 @@ import goldenroad.ui.ToastManager;
 import goldenroad.ui.EndScreenOverlay;
 import goldenroad.ui.EndScreenOverlay.EndScreenAction;
 import goldenroad.ui.InventoryPanel;
+import goldenroad.ui.SaveFeedback;
 import goldenroad.util.AssetLoader;
 
 
@@ -49,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 
 public class GamePanel extends JPanel implements Runnable {
@@ -102,11 +106,12 @@ public class GamePanel extends JPanel implements Runnable {
     private final GameSettings settings = SettingsStore.load();
 
     private final GameAudio gameAudio = new GameAudio(settings);
-    private final MapProgressStore progressStore = new MapProgressStore();
+    private final GameSaveStore gameSaveStore = new GameSaveStore();
     public final Menu menu = new Menu(this, settings);
   
     private final GameOverlayRenderer overlayRenderer = new GameOverlayRenderer();
     private final ToastManager toastManager = new ToastManager();
+    private final SaveFeedback saveFeedback = new SaveFeedback();
     private final EndScreenOverlay endScreenOverlay = new EndScreenOverlay();
     private final GameInputController inputController;
     private final List<Bullet> bullets = new ArrayList<>();
@@ -115,6 +120,8 @@ public class GamePanel extends JPanel implements Runnable {
     private InventoryPanel inventoryPanel;
     private boolean gameOver = false;
     private boolean victory = false;
+    private boolean saveInProgress = false;
+    private long saveFrameCounter = 0;
 
 
     private Thread gameThread;
@@ -240,16 +247,122 @@ public class GamePanel extends JPanel implements Runnable {
         loadMap(MapId.MAP_0);
     }
 
-    public void continueGame() {
+    public boolean continueGame() {
+        if (!gameSaveStore.hasSave()) {
+            showToast("Khong co file save");
+            return false;
+        }
+
+        try {
+            GameSaveData data = gameSaveStore.load();
+            if (data == null) {
+                showToast("Khong co file save");
+                return false;
+            }
+            restoreFromSave(data);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            showToast("Load save that bai");
+            return false;
+        }
+    }
+
+    public boolean hasSaveFile() {
+        return gameSaveStore.hasSave();
+    }
+
+    public boolean isSaveInProgress() {
+        return saveInProgress;
+    }
+
+    public void saveGame() {
+        if (saveInProgress || gameOver || victory || menu.isActive()) {
+            return;
+        }
+
+        GameSaveData snapshot = captureGameState();
+        saveInProgress = true;
+        saveFeedback.startSaving();
+
+        new Thread(() -> {
+            boolean success = false;
+            try {
+                gameSaveStore.save(snapshot);
+                success = true;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            boolean finalSuccess = success;
+            SwingUtilities.invokeLater(() -> {
+                saveInProgress = false;
+                saveFeedback.finishSaving();
+                if (finalSuccess) {
+                    showToast("Da luu game");
+                    menu.setPaused(false);
+                } else {
+                    showToast("Luu that bai");
+                }
+                requestFocusInWindow();
+            });
+        }, "game-save").start();
+    }
+
+    private GameSaveData captureGameState() {
+        GameSaveData data = new GameSaveData();
+        data.setSaveVersion(GameSaveData.SAVE_VERSION);
+        data.setCurrentMapId(currentMapId);
+        data.setMinimapVisible(minimapVisible);
+        data.setPlayer(player.captureSnapshot());
+        data.setInventoryCounts(inventory.captureCounts());
+
+        List<GameSaveData.MonsterSnapshot> monsters = new ArrayList<>();
+        for (Monster monster : sceneManager.getCurrentScreen().getMonsters()) {
+            if (monster == null || monster.getConfigName() == null || monster.getConfigName().isBlank()) {
+                continue;
+            }
+            monsters.add(monster.captureSnapshot());
+        }
+        data.setMonsters(monsters);
+
+        List<GameSaveData.ItemSnapshot> items = new ArrayList<>();
+        for (Item item : sceneManager.getCurrentScreen().getItems()) {
+            if (item == null || item.isCollected()) {
+                continue;
+            }
+            GameSaveData.ItemSnapshot itemSnapshot = new GameSaveData.ItemSnapshot();
+            itemSnapshot.setType(item.getType());
+            itemSnapshot.setX(item.getBounds().x);
+            itemSnapshot.setY(item.getBounds().y);
+            items.add(itemSnapshot);
+        }
+        data.setItems(items);
+        return data;
+    }
+
+    private void restoreFromSave(GameSaveData data) throws Exception {
+        world.loadMapShell(data.getCurrentMapId(), sceneManager);
+        syncWorldStateFromGameWorld();
+        player.applySnapshot(data.getPlayer());
+        inventory.applyCounts(data.getInventoryCounts());
+        sceneManager.replaceMonsters(data.getMonsters(), worldWidth, worldHeight);
+        sceneManager.replaceItems(data.getItems());
+        minimapVisible = data.isMinimapVisible();
         victory = false;
-        loadMap(progressStore.load(currentMapId));
+        gameOver = false;
+        bullets.clear();
+        camera.reset();
+        menu.setPaused(false);
+        inventoryPanel.close();
+        playCurrentMapMusic();
+        requestFocusInWindow();
     }
 
     private void loadMap(MapId mapId) {
         try {
             world.loadMap(mapId, sceneManager, player, true, settings.getDifficulty());
             syncWorldStateFromGameWorld();
-            progressStore.save(currentMapId);
             camera.reset();
             player.getAttack().resetCooldowns();
             bullets.clear();
@@ -266,7 +379,6 @@ public class GamePanel extends JPanel implements Runnable {
         victory = false;
         world.switchMap(sceneManager, player, false, settings.getDifficulty());
         syncWorldStateFromGameWorld();
-        progressStore.save(currentMapId);
         camera.reset();
         player.getAttack().resetCooldowns();
         bullets.clear();
@@ -290,7 +402,6 @@ public class GamePanel extends JPanel implements Runnable {
         victory = false;
         world.switchMap(sceneManager, player, true, settings.getDifficulty());
         syncWorldStateFromGameWorld();
-        progressStore.save(currentMapId);
         camera.reset();
         player.getAttack().resetCooldowns();
         bullets.clear();
@@ -323,6 +434,10 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void update() {
+        if (saveInProgress) {
+            saveFrameCounter++;
+        }
+
         if (gameOver) {
             handleGameOverInput();
             return;
@@ -562,6 +677,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         if (menu.isActive()) {
             menu.render(bufferG);
+            overlayRenderer.renderToast(bufferG, toastManager.currentMessage());
         } else {
             renderScene(bufferG);
         }
@@ -653,6 +769,10 @@ public class GamePanel extends JPanel implements Runnable {
 
         if (menu.isPaused()) {
             menu.render(bufferG);
+        }
+
+        if (saveFeedback.isSaving()) {
+            saveFeedback.render(bufferG, saveFeedback.getSavingLabel(saveFrameCounter));
         }
 
         if (!menu.isPaused() && minimapVisible) {
