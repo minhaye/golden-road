@@ -92,4 +92,9 @@ public class PlayerAttack {
         leftCooldown = 0;
         rightCooldown = 0;
     }
+
+    public void applyCooldowns(int left, int right) {
+        leftCooldown = Math.max(0, left);
+        rightCooldown = Math.max(0, right);
+    }
 }

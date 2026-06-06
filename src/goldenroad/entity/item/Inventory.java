@@ -71,4 +71,23 @@ public class Inventory {
         }
         return "";
     }
+
+    public Map<Item.ItemType, Integer> captureCounts() {
+        Map<Item.ItemType, Integer> copy = new EnumMap<>(Item.ItemType.class);
+        for (Item.ItemType type : Item.ItemType.values()) {
+            copy.put(type, getCount(type));
+        }
+        return copy;
+    }
+
+    public void applyCounts(Map<Item.ItemType, Integer> counts) {
+        clear();
+        if (counts == null) {
+            return;
+        }
+
+        for (Item.ItemType type : Item.ItemType.values()) {
+            this.counts.put(type, Math.max(0, counts.getOrDefault(type, 0)));
+        }
+    }
 }

@@ -6,6 +6,7 @@ import goldenroad.entity.projectile.Bullet;
 import goldenroad.map.CollisionMap;
 import goldenroad.map.GridPathfinder;
 import goldenroad.settings.Difficulty;
+import goldenroad.settings.GameSaveData;
 import goldenroad.util.AssetLoader;
 
 import java.awt.Color;
@@ -50,6 +51,7 @@ public class Monster extends Entity {
     protected MonsterBehavior behavior;
     protected BufferedImage fallbackSprite;
     protected BufferedImage projectileSprite;
+    private String configName;
     private int attackCooldownTicks;
     private int attackCooldownRemaining;
     private Difficulty difficulty = Difficulty.NORMAL;
@@ -156,6 +158,55 @@ public class Monster extends Entity {
 
     public MonsterState getCurrentState() {
         return currentState;
+    }
+
+    public String getConfigName() {
+        return configName;
+    }
+
+    public void setConfigName(String configName) {
+        this.configName = configName;
+    }
+
+    public int getAttackCooldownRemaining() {
+        return attackCooldownRemaining;
+    }
+
+    public void setAttackCooldownRemaining(int attackCooldownRemaining) {
+        this.attackCooldownRemaining = Math.max(0, attackCooldownRemaining);
+    }
+
+    public GameSaveData.MonsterSnapshot captureSnapshot() {
+        GameSaveData.MonsterSnapshot snapshot = new GameSaveData.MonsterSnapshot();
+        snapshot.setConfigName(configName);
+        snapshot.setX(getX());
+        snapshot.setY(getY());
+        snapshot.setSpawnX(spawnX);
+        snapshot.setSpawnY(spawnY);
+        snapshot.setHp(hp);
+        snapshot.setDead(isDead);
+        snapshot.setDirection(direction);
+        snapshot.setState(currentState);
+        snapshot.setAttackCooldownRemaining(attackCooldownRemaining);
+        return snapshot;
+    }
+
+    public void applySnapshot(GameSaveData.MonsterSnapshot snapshot) {
+        if (snapshot == null) {
+            return;
+        }
+
+        setPosition(snapshot.getX(), snapshot.getY());
+        spawnX = snapshot.getSpawnX();
+        spawnY = snapshot.getSpawnY();
+        hp = snapshot.getHp();
+        isDead = snapshot.isDead();
+        isAttacking = snapshot.getState() == MonsterState.ATTACK;
+        direction = snapshot.getDirection() == null ? Direction.RIGHT : snapshot.getDirection();
+        currentState = snapshot.getState() == null ? MonsterState.IDLE : snapshot.getState();
+        currentFrame = 0;
+        frameTimer = 0;
+        attackCooldownRemaining = snapshot.getAttackCooldownRemaining();
     }
 
     public void setBehavior(MonsterBehavior behavior) {

@@ -27,4 +27,12 @@ public class PlayerCombat {
         invulnerabilityTimer = INVULNERABILITY_DURATION;
         return true;
     }
+
+    public int getInvulnerabilityTimer() {
+        return invulnerabilityTimer;
+    }
+
+    public void setInvulnerabilityTimer(int invulnerabilityTimer) {
+        this.invulnerabilityTimer = Math.max(0, invulnerabilityTimer);
+    }
 }

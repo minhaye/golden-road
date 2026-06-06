@@ -47,4 +47,22 @@ public class PlayerResources {
         if (damage <= 0) return;
         hp = Math.max(0, hp - damage);
     }
+
+    public void setHp(int hp) {
+        this.hp = Math.max(0, Math.min(maxHp, hp));
+    }
+
+    public void setMaxHp(int maxHp) {
+        this.maxHp = Math.max(1, maxHp);
+        this.hp = Math.min(this.hp, this.maxHp);
+    }
+
+    public void setMp(int mp) {
+        this.mp = Math.max(0, Math.min(maxMp, mp));
+    }
+
+    public void setMaxMp(int maxMp) {
+        this.maxMp = Math.max(1, maxMp);
+        this.mp = Math.min(this.mp, this.maxMp);
+    }
 }
