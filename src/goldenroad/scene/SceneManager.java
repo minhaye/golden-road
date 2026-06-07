@@ -395,19 +395,47 @@ public class SceneManager {
 
     private int lastSpawnedMonsterCount = 0;
 
-    // Spawn up to `count` monsters distributed evenly across the map area.
-    // This should be called after the map/world dimensions are known.
+    // Spawn map-defined monsters after the map/world dimensions are known.
     public void spawnMonsters(
         List<MonsterSpawnPoint> spawnPoints,
         CollisionMap collisionMap,
         int worldWidth,
         int worldHeight
     ) {
+        spawnMonsters(
+            spawnPoints,
+            collisionMap,
+            worldWidth,
+            worldHeight,
+            0,
+            0,
+            0,
+            0,
+            Difficulty.NORMAL
+        );
+    }
+
+    public void spawnMonsters(
+        List<MonsterSpawnPoint> spawnPoints,
+        CollisionMap collisionMap,
+        int worldWidth,
+        int worldHeight,
+        double playerX,
+        double playerY,
+        double playerWidth,
+        double playerHeight,
+        Difficulty difficulty
+    ) {
         if (spawnPoints == null || spawnPoints.isEmpty() || worldWidth <= 0 || worldHeight <= 0) {
             lastSpawnedMonsterCount = 0;
             return;
         }
 
+        Difficulty safeDifficulty = difficulty == null ? Difficulty.NORMAL : difficulty;
+        boolean hasPlayerAnchor = playerWidth > 0 && playerHeight > 0;
+        GridPathfinder pathfinder = hasPlayerAnchor ? new GridPathfinder(TILE_SIZE) : null;
+        double playerCenterX = playerX + playerWidth / 2.0;
+        double playerCenterY = playerY + playerHeight / 2.0;
         lastSpawnedMonsterCount = 0;
         Screen screen = getCurrentScreen();
 
@@ -418,22 +446,141 @@ public class SceneManager {
             screen.removeMonster(m);
         }
 
-        for (MonsterSpawnPoint point : spawnPoints) {
-            int index = Math.max(0, Math.min(point.getConfigIndex(), AIRBORNE_POOL.length - 1));
-            MonsterConfig config = AIRBORNE_POOL[index];
-
-            int x = clamp(point.getX(), 0, Math.max(0, worldWidth - config.width));
-            int y = clamp(point.getY(), 0, Math.max(0, worldHeight - config.height));
-            int leftBoundary = Math.max(0, x - 80);
-            int rightBoundary = Math.min(worldWidth, x + 80);
-
-            Monster monster = createAirborneMonster(config, x, y, leftBoundary, rightBoundary);
-            if (monster != null) {
-                monster.setConfigName(config.name);
-                screen.addMonster(monster);
+        for (int i = 0; i < spawnPoints.size(); i++) {
+            MonsterSpawnPoint point = spawnPoints.get(i);
+            MonsterConfig config = selectSpawnConfig(point, i, safeDifficulty);
+            if (spawnMonsterAt(
+                screen,
+                point,
+                config,
+                collisionMap,
+                pathfinder,
+                worldWidth,
+                worldHeight,
+                playerCenterX,
+                playerCenterY,
+                0,
+                0
+            )) {
                 lastSpawnedMonsterCount++;
             }
+
+            if (safeDifficulty == Difficulty.HARD && i % 2 == 0) {
+                MonsterConfig extraConfig = selectSpawnConfig(point, i + 2, safeDifficulty);
+                if (spawnExtraHardMonster(
+                    screen,
+                    point,
+                    extraConfig,
+                    collisionMap,
+                    pathfinder,
+                    worldWidth,
+                    worldHeight,
+                    playerCenterX,
+                    playerCenterY,
+                    i
+                )) {
+                    lastSpawnedMonsterCount++;
+                }
+            }
         }
+    }
+
+    private MonsterConfig selectSpawnConfig(MonsterSpawnPoint point, int spawnOrder, Difficulty difficulty) {
+        if (difficulty == Difficulty.EASY) {
+            int index = Math.max(0, Math.min(point.getConfigIndex(), AIRBORNE_POOL.length - 1));
+            return AIRBORNE_POOL[index];
+        }
+
+        int poolSize = difficulty == Difficulty.HARD ? AIRBORNE_POOL.length : 4;
+        int index = Math.floorMod(spawnOrder, poolSize);
+        return AIRBORNE_POOL[index];
+    }
+
+    private boolean spawnExtraHardMonster(
+        Screen screen,
+        MonsterSpawnPoint point,
+        MonsterConfig config,
+        CollisionMap collisionMap,
+        GridPathfinder pathfinder,
+        int worldWidth,
+        int worldHeight,
+        double playerCenterX,
+        double playerCenterY,
+        int spawnOrder
+    ) {
+        int direction = spawnOrder % 4 < 2 ? 1 : -1;
+        int[][] offsets = {
+            { direction * 64, 0 },
+            { -direction * 64, 0 },
+            { direction * 96, -32 },
+            { -direction * 96, -32 },
+            { 0, -48 },
+            { 0, 48 }
+        };
+
+        for (int[] offset : offsets) {
+            if (spawnMonsterAt(
+                screen,
+                point,
+                config,
+                collisionMap,
+                pathfinder,
+                worldWidth,
+                worldHeight,
+                playerCenterX,
+                playerCenterY,
+                offset[0],
+                offset[1]
+            )) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean spawnMonsterAt(
+        Screen screen,
+        MonsterSpawnPoint point,
+        MonsterConfig config,
+        CollisionMap collisionMap,
+        GridPathfinder pathfinder,
+        int worldWidth,
+        int worldHeight,
+        double playerCenterX,
+        double playerCenterY,
+        int offsetX,
+        int offsetY
+    ) {
+        if (screen == null || point == null || config == null || point.getType() != MonsterType.AIRBORNE) {
+            return false;
+        }
+
+        int x = clamp(point.getX() + offsetX, 0, Math.max(0, worldWidth - config.width));
+        int y = clamp(point.getY() + offsetY, 0, Math.max(0, worldHeight - config.height));
+        if (!isReachableSpawn(
+            collisionMap,
+            pathfinder,
+            playerCenterX,
+            playerCenterY,
+            x,
+            y,
+            config.width,
+            config.height
+        )) {
+            return false;
+        }
+
+        int leftBoundary = Math.max(0, x - 80);
+        int rightBoundary = Math.min(worldWidth, x + 80);
+        Monster monster = createAirborneMonster(config, x, y, leftBoundary, rightBoundary);
+        if (monster == null) {
+            return false;
+        }
+
+        monster.setConfigName(config.name);
+        screen.addMonster(monster);
+        return true;
     }
 
     public void replaceMonsters(List<GameSaveData.MonsterSnapshot> snapshots, int worldWidth, int worldHeight) {
@@ -516,6 +663,10 @@ public class SceneManager {
 
         if (collisionMap.isAreaSolid(x, y, monsterWidth, monsterHeight)) {
             return false;
+        }
+
+        if (pathfinder == null) {
+            return true;
         }
 
         double monsterCenterX = x + monsterWidth / 2.0;

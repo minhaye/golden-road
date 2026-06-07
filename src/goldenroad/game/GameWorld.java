@@ -329,7 +329,12 @@ public class GameWorld {
                     mapDefinition.getMonsterSpawnPoints(),
                     collisionMap,
                     worldWidth,
-                    worldHeight);
+                    worldHeight,
+                    player.getX(),
+                    player.getY(),
+                    player.getWidth(),
+                    player.getHeight(),
+                    difficulty);
             sceneManager.spawnMapItems(
                     ItemSpawnCatalog.get(mapDefinition.getId()),
                     collisionMap);

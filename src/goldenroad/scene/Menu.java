@@ -449,9 +449,9 @@ public class Menu {
 
     private String difficultyHint(Difficulty difficulty) {
         return switch (difficulty) {
-            case EASY -> "Monster cham hon, item HP/MP xuat hien nhieu hon.";
-            case HARD -> "Monster nhanh va danh mau hon, HP/MP item it hon.";
-            case NORMAL -> "Can bang toc do monster va item.";
+            case EASY -> "2 loai quai, quai cham hon, HP/MP xuat hien nhieu hon.";
+            case HARD -> "5 loai quai, dong hon, nhanh hon, danh mau hon, HP/MP it hon.";
+            case NORMAL -> "4 loai quai, can bang toc do quai va so luong item.";
         };
     }
 
