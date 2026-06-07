@@ -2,6 +2,7 @@ package goldenroad.entity.player;
     
 import goldenroad.entity.Entity;
 import goldenroad.input.KeyHandler;
+import goldenroad.settings.GameSaveData;
 import java.awt.*;
 import java.awt.geom.Point2D;
 
@@ -172,4 +173,35 @@ public class Player extends Entity {
     }
 
     public PlayerState getState() { return state; }
+
+    public GameSaveData.PlayerSnapshot captureSnapshot() {
+        GameSaveData.PlayerSnapshot snapshot = new GameSaveData.PlayerSnapshot();
+        snapshot.setX(getX());
+        snapshot.setY(getY());
+        snapshot.setHp(getHp());
+        snapshot.setMaxHp(getMaxHp());
+        snapshot.setMp(getMp());
+        snapshot.setMaxMp(getMaxMp());
+        movement.captureState(snapshot);
+        snapshot.setLeftCooldown(attack.getLeftCooldown());
+        snapshot.setRightCooldown(attack.getRightCooldown());
+        snapshot.setInvulnerabilityTimer(combat.getInvulnerabilityTimer());
+        return snapshot;
+    }
+
+    public void applySnapshot(GameSaveData.PlayerSnapshot snapshot) {
+        if (snapshot == null) {
+            return;
+        }
+
+        setX(snapshot.getX());
+        setY(snapshot.getY());
+        resources.setMaxHp(snapshot.getMaxHp());
+        resources.setMaxMp(snapshot.getMaxMp());
+        resources.setHp(snapshot.getHp());
+        resources.setMp(snapshot.getMp());
+        movement.applyState(snapshot);
+        attack.applyCooldowns(snapshot.getLeftCooldown(), snapshot.getRightCooldown());
+        combat.setInvulnerabilityTimer(snapshot.getInvulnerabilityTimer());
+    }
 }
