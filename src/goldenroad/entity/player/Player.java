@@ -53,7 +53,7 @@ public class Player extends Entity {
 
     // ====== UPDATE ======
     public void update(KeyHandler input) {
-        double moveX = movement.update(input);
+        double moveX = movement.update(input, resources);
 
         // ===== STATE =====
         updateState(moveX);

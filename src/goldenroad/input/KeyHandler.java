@@ -23,6 +23,8 @@ public class KeyHandler implements KeyListener {
     private boolean keyMarkerToggleArmed;
     private boolean killAllMonstersJustPressed;
     private boolean killAllMonstersArmed;
+    private boolean jumpMpCostBlocked;
+    private boolean jumpMpCostBlockArmed;
     private final boolean[] quickUseJustPressed = new boolean[3];
 
 
@@ -109,6 +111,10 @@ public class KeyHandler implements KeyListener {
         return false;
     }
 
+    public boolean isJumpMpCostBlocked() {
+        return jumpMpCostBlocked;
+    }
+
     @Override
     public void keyTyped(KeyEvent e) {
     }
@@ -184,6 +190,12 @@ public class KeyHandler implements KeyListener {
             killAllMonstersArmed = true;
         }
 
+        if (code == KeyEvent.VK_J && e.isAltDown() && !jumpMpCostBlockArmed) {
+            e.consume();
+            jumpMpCostBlocked = !jumpMpCostBlocked;
+            jumpMpCostBlockArmed = true;
+        }
+
         if (code >= KeyEvent.VK_1 && code <= KeyEvent.VK_3) {
             quickUseJustPressed[code - KeyEvent.VK_1] = true;
         }
@@ -230,6 +242,10 @@ public class KeyHandler implements KeyListener {
 
         if (code == KeyEvent.VK_ALT || code == KeyEvent.VK_K) {
             keyMarkerToggleArmed = false;
+        }
+
+        if (code == KeyEvent.VK_ALT || code == KeyEvent.VK_J) {
+            jumpMpCostBlockArmed = false;
         }
     }
 

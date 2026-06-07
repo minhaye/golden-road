@@ -19,6 +19,9 @@ public class PlayerMovement {
 
     private int jumpCount = 0;
     private static final int MAX_JUMPS = 2;
+    private int jumpsSinceGround = 0;
+    private static final int CONTINUOUS_JUMP_FREE_COUNT = 2;
+    private static final int CONTINUOUS_JUMP_MP_COST = 20;
     private int dropDownTimer = 0;
     private static final int DROP_DOWN_DURATION = 10;
 
@@ -52,6 +55,7 @@ public class PlayerMovement {
         if (val) {
             coyoteTime = COYOTE_MAX;
             jumpCount = 0;
+            jumpsSinceGround = 0;
             dashOnAirCount = 0;
         }
         this.onGround = val;
@@ -69,7 +73,7 @@ public class PlayerMovement {
     }
 
     // Performs movement update and returns the final horizontal moveX used
-    public double update(KeyHandler input) {
+    public double update(KeyHandler input, PlayerResources resources) {
         double moveX = 0;
 
         if (input.leftPressed && dashDuration == 0) {
@@ -123,6 +127,12 @@ public class PlayerMovement {
 
         // jump
         if (jumpBuffer > 0) {
+            jumpsSinceGround++;
+            boolean shouldSpendMp = jumpsSinceGround > CONTINUOUS_JUMP_FREE_COUNT
+                && !input.isJumpMpCostBlocked();
+            if (shouldSpendMp && resources != null) {
+                resources.spendMp(CONTINUOUS_JUMP_MP_COST);
+            }
             velocityY = JUMP_SPEED;
             onGround = false;
             dashDuration = 0;
@@ -171,6 +181,7 @@ public class PlayerMovement {
         dashUsed = snapshot.isDashUsed();
         dashOnAirCount = snapshot.getDashOnAirCount();
         jumpCount = onGround ? 0 : Math.min(jumpCount, MAX_JUMPS);
+        jumpsSinceGround = 0;
         dropDownTimer = 0;
         coyoteTime = onGround ? COYOTE_MAX : 0;
         jumpBuffer = 0;
