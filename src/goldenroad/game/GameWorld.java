@@ -7,6 +7,7 @@ import goldenroad.entity.player.Player;
 import goldenroad.entity.projectile.Bullet;
 import goldenroad.map.CollisionHandler;
 import goldenroad.map.CollisionMap;
+import goldenroad.map.ItemSpawnCatalog;
 import goldenroad.map.MapCatalog;
 import goldenroad.map.MapDefinition;
 import goldenroad.map.MapId;
@@ -330,15 +331,8 @@ public class GameWorld {
                     worldWidth,
                     worldHeight);
             sceneManager.spawnMapItems(
-                    sceneManager.getLastSpawnedMonsterCount(),
-                    worldWidth,
-                    worldHeight,
-                    collisionMap,
-                    player.getX(),
-                    player.getY(),
-                    player.getWidth(),
-                    player.getHeight(),
-                    difficulty);
+                    ItemSpawnCatalog.get(mapDefinition.getId()),
+                    collisionMap);
         } else if (sceneManager != null) {
             sceneManager.getCurrentScreen().clearItems();
             sceneManager.getCurrentScreen().clearMonsters();

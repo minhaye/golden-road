@@ -5,26 +5,70 @@ import java.util.List;
 
 public final class ItemSpawnCatalog {
     private static final List<ItemSpawnPoint> MAP_0_SPAWNS = List.of(
-        new ItemSpawnPoint(600, 1900, Item.ItemType.HP_POTION),
-        new ItemSpawnPoint(700, 1900, Item.ItemType.MP_POTION),
-        new ItemSpawnPoint(850,2190, Item.ItemType.KEY)
+        new ItemSpawnPoint(3450, 1250, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(3400, 1250, Item.ItemType.MP_POTION),
+
+        new ItemSpawnPoint(2250, 1670, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(2250, 1600, Item.ItemType.MP_POTION),
+        new ItemSpawnPoint(1400, 950, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(600, 900, Item.ItemType.MP_POTION),
+
+        new ItemSpawnPoint(3870, 450, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(4000, 900, Item.ItemType.MP_POTION),
+
+        new ItemSpawnPoint(2660, 600, Item.ItemType.KEY)
     );
 
     private static final List<ItemSpawnPoint> MAP_1_SPAWNS = List.of(
-        new ItemSpawnPoint(500, 1850, Item.ItemType.HP_POTION),
-        new ItemSpawnPoint(950, 1700, Item.ItemType.MP_POTION),
-        new ItemSpawnPoint(600, 2030, Item.ItemType.KEY)
+        new ItemSpawnPoint(0550, 1650, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(2200, 1550, Item.ItemType.MP_POTION),
+        new ItemSpawnPoint(1550, 1500, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(1500, 1500, Item.ItemType.MP_POTION),
+        new ItemSpawnPoint(2050, 2000, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(2150, 2000, Item.ItemType.MP_POTION),
+        new ItemSpawnPoint(5000, 1200, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(4250, 1500, Item.ItemType.MP_POTION),
+        new ItemSpawnPoint(3100, 0400, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(4900, 0370, Item.ItemType.MP_POTION),
+        new ItemSpawnPoint(3750, 1200, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(3800, 1200, Item.ItemType.MP_POTION),
+        new ItemSpawnPoint(3850, 1200, Item.ItemType.MP_POTION),
+        new ItemSpawnPoint(1970, 880, Item.ItemType.MP_POTION),
+        new ItemSpawnPoint(1750, 880, Item.ItemType.KEY)
     );
 
     private static final List<ItemSpawnPoint> MAP_2_SPAWNS = List.of(
-        new ItemSpawnPoint(300, 3850, Item.ItemType.HP_POTION),
-        new ItemSpawnPoint(450, 3600, Item.ItemType.MP_POTION),
-        new ItemSpawnPoint(600,3995, Item.ItemType.KEY)
+        new ItemSpawnPoint(300, 4400, Item.ItemType.HP_POTION),
+
+        new ItemSpawnPoint(2600, 4550, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(2600, 4600, Item.ItemType.MP_POTION),
+        new ItemSpawnPoint(2600, 4650, Item.ItemType.MP_POTION),
+
+        new ItemSpawnPoint(1600, 2800, Item.ItemType.HP_POTION),
+
+        new ItemSpawnPoint(2290, 1680, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(2340, 1680, Item.ItemType.MP_POTION),
+
+        new ItemSpawnPoint(950, 1840, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(950, 1790, Item.ItemType.MP_POTION),
+
+        new ItemSpawnPoint(2400, 1200, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(2150, 1200, Item.ItemType.MP_POTION),
+        new ItemSpawnPoint(1320, 1200, Item.ItemType.HP_POTION),
+
+        new ItemSpawnPoint(2590, 300, Item.ItemType.MP_POTION),
+
+        new ItemSpawnPoint(800,300, Item.ItemType.KEY),
+
+        new ItemSpawnPoint(720, 3435, Item.ItemType.HP_POTION),
+        new ItemSpawnPoint(720, 3400, Item.ItemType.MP_POTION)
     );
 
     private static final List<ItemSpawnPoint> MAP_3_SPAWNS = List.of(
         new ItemSpawnPoint(650, 1900, Item.ItemType.HP_POTION),
         new ItemSpawnPoint(1450, 1850, Item.ItemType.MP_POTION),
+
+        
         new ItemSpawnPoint(600,1995, Item.ItemType.KEY)
     );
 
