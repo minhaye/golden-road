@@ -469,7 +469,8 @@ public class Menu {
             "Esc opens this menu while playing.",
             "Pause menu has Save to store your current progress.",
             "Use Continue on the main menu to load your last save.",
-            "Test controls stay enabled: Alt+M changes map, Alt+X kills monsters."
+            "Test controls stay enabled: Alt+M changes map, Alt+X kills monsters.",
+            "Alt+K toggles Key position on the minimap."
         };
 
         g2.setFont(new Font("SansSerif", Font.PLAIN, 15));
@@ -478,7 +479,7 @@ public class Menu {
         int y = 122;
         for (String line : lines) {
             g2.drawString(line, x, y);
-            y += 28;
+            y += 24;
         }
 
         renderButton(g2, tutorialBackButton, "Back", false);
@@ -530,6 +531,7 @@ public class Menu {
         g2.drawString("Esc: pause / close menu", x, sy + 44);
         g2.drawString("Alt+M: switch map for testing", x, sy + 66);
         g2.drawString("Alt+X: kill all monsters for testing", x, sy + 88);
+        g2.drawString("Alt+K: toggle key marker on minimap", x, sy + 110);
     }
 
     private void drawCentered(Graphics2D g2, String text, int y) {

@@ -85,6 +85,7 @@ public class GamePanel extends JPanel implements Runnable {
     private final Map<Item.ItemType, BufferedImage> itemSprites = new EnumMap<>(Item.ItemType.class);
 
     private boolean minimapVisible = true;
+    private boolean keyMarkerVisible = false;
 
     int worldWidth;
     int worldHeight;
@@ -424,6 +425,12 @@ public class GamePanel extends JPanel implements Runnable {
         requestFocusInWindow();
     }
 
+    public void toggleKeyMarker() {
+        keyMarkerVisible = !keyMarkerVisible;
+        showToast(keyMarkerVisible ? "Hien vi tri Key tren minimap" : "An vi tri Key tren minimap");
+        requestFocusInWindow();
+    }
+
     public void loadParallax() {
         parallaxRenderer.load();
     }
@@ -751,7 +758,17 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         if (!menu.isPaused() && minimapVisible) {
-            overlayRenderer.renderMinimap(bufferG, world, sceneManager, player, camera.getX(), camera.getY(), SCREEN_WIDTH, SCREEN_HEIGHT);
+            overlayRenderer.renderMinimap(
+                bufferG,
+                world,
+                sceneManager,
+                player,
+                camera.getX(),
+                camera.getY(),
+                SCREEN_WIDTH,
+                SCREEN_HEIGHT,
+                keyMarkerVisible
+            );
         }
     }
 

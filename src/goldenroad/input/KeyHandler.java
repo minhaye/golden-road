@@ -19,6 +19,8 @@ public class KeyHandler implements KeyListener {
     private boolean mapSwitchArmed;
     private boolean minimapToggleJustPressed;
     private boolean minimapToggleArmed;
+    private boolean keyMarkerToggleJustPressed;
+    private boolean keyMarkerToggleArmed;
     private boolean killAllMonstersJustPressed;
     private boolean killAllMonstersArmed;
     private final boolean[] quickUseJustPressed = new boolean[3];
@@ -83,6 +85,14 @@ public class KeyHandler implements KeyListener {
     public boolean consumeMinimapToggleJustPressed() {
         if (minimapToggleJustPressed) {
             minimapToggleJustPressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean consumeKeyMarkerToggleJustPressed() {
+        if (keyMarkerToggleJustPressed) {
+            keyMarkerToggleJustPressed = false;
             return true;
         }
         return false;
@@ -162,6 +172,12 @@ public class KeyHandler implements KeyListener {
             minimapToggleArmed = true;
         }
 
+        if (code == KeyEvent.VK_K && e.isAltDown() && !keyMarkerToggleArmed) {
+            e.consume();
+            keyMarkerToggleJustPressed = true;
+            keyMarkerToggleArmed = true;
+        }
+
         if (code == KeyEvent.VK_X && e.isAltDown() && !killAllMonstersArmed) {
             e.consume();
             killAllMonstersJustPressed = true;
@@ -210,6 +226,10 @@ public class KeyHandler implements KeyListener {
 
         if (code == KeyEvent.VK_ALT || code == KeyEvent.VK_N) {
             minimapToggleArmed = false;
+        }
+
+        if (code == KeyEvent.VK_ALT || code == KeyEvent.VK_K) {
+            keyMarkerToggleArmed = false;
         }
     }
 

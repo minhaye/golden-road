@@ -1,6 +1,7 @@
 package goldenroad.ui;
 
 import goldenroad.entity.player.Player;
+import goldenroad.entity.item.Item;
 import goldenroad.game.GameWorld;
 import goldenroad.map.MapId;
 
@@ -43,7 +44,7 @@ public class GameOverlayRenderer {
         g2.drawString(toastMessage, x + (boxWidth - textWidth) / 2, y + 19);
     }
 
-    public void renderMinimap(Graphics2D g2, GameWorld world, SceneManager sceneManager, Player player, double cameraX, double cameraY, int viewportWidth, int viewportHeight) {
+    public void renderMinimap(Graphics2D g2, GameWorld world, SceneManager sceneManager, Player player, double cameraX, double cameraY, int viewportWidth, int viewportHeight, boolean showKeyMarker) {
         if (world == null || sceneManager == null || player == null || world.getWorldWidth() <= 0 || world.getWorldHeight() <= 0) {
             return;
         }
@@ -76,6 +77,10 @@ public class GameOverlayRenderer {
         }
 
         if (sceneManager.getCurrentScreen() != null) {
+            if (showKeyMarker) {
+                renderKeyMarkers(g2, sceneManager, world, miniX, miniY, miniW, miniH);
+            }
+
             g2.setColor(new Color(255, 170, 70, 200));
             for (Monster monster : sceneManager.getCurrentScreen().getMonsters()) {
                 if (monster == null || monster.isDead()) {
@@ -118,6 +123,27 @@ public class GameOverlayRenderer {
         MapId mapId = world.getCurrentMapId();
         String label = mapId == null ? "MAP ?" : mapId.displayName();
         g2.drawString(label, miniX + 8, miniY + miniH + 16);
+    }
+
+    private void renderKeyMarkers(Graphics2D g2, SceneManager sceneManager, GameWorld world, int miniX, int miniY, int miniW, int miniH) {
+        g2.setColor(UiTheme.ITEM_KEY);
+        g2.setStroke(new BasicStroke(1.5f));
+        for (Item item : sceneManager.getCurrentScreen().getItems()) {
+            if (item == null || item.isCollected() || item.getType() != Item.ItemType.KEY) {
+                continue;
+            }
+
+            double keyRatioX = clampDouble(item.getBounds().getCenterX() / Math.max(1.0, world.getWorldWidth()), 0.0, 1.0);
+            double keyRatioY = clampDouble(item.getBounds().getCenterY() / Math.max(1.0, world.getWorldHeight()), 0.0, 1.0);
+            int keyX = miniX + (int) Math.round(keyRatioX * miniW);
+            int keyY = miniY + (int) Math.round(keyRatioY * miniH);
+            int[] xs = { keyX, keyX + 4, keyX, keyX - 4 };
+            int[] ys = { keyY - 5, keyY, keyY + 5, keyY };
+            g2.fillPolygon(xs, ys, 4);
+            g2.setColor(Color.WHITE);
+            g2.drawPolygon(xs, ys, 4);
+            g2.setColor(UiTheme.ITEM_KEY);
+        }
     }
 
     private double clampDouble(double value, double min, double max) {

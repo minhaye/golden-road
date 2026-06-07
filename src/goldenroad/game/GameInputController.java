@@ -41,6 +41,10 @@ public class GameInputController {
             panel.toggleMinimap();
         }
 
+        if (keyHandler.consumeKeyMarkerToggleJustPressed()) {
+            panel.toggleKeyMarker();
+        }
+
         if (keyHandler.consumeMapSwitchJustPressed()) {
             panel.switchMap();
             return true;
