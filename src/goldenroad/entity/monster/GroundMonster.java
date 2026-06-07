@@ -29,6 +29,7 @@ public class GroundMonster extends Monster {
     @Override
     protected void move(Player player, CollisionMap collisionMap) {
         if (player != null && canDetectPlayer(player)) {
+            setAiState(MonsterAiState.CHASE);
             moveHorizontallyToward(player.getX(), (float) player.getWidth());
             setState(MonsterState.MOVE);
             return;
@@ -50,6 +51,7 @@ public class GroundMonster extends Monster {
             x += speed;
         }
 
+        setAiState(MonsterAiState.PATROL);
         setState(MonsterState.MOVE);
     }
 }

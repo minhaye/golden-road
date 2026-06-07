@@ -27,7 +27,10 @@ public class Monster extends Entity {
     private static final int MAX_ANIMATION_FRAMES = 60;
     private static final int PATH_TILE_SIZE = 16;
     private static final int PATH_MAX_VISITED_NODES = 2500;
+    private static final float RETREAT_HP_RATIO = 0.25f;
+    private static final float RETREAT_SPEED_MULTIPLIER = 1.25f;
     private static final GridPathfinder PATHFINDER = new GridPathfinder(PATH_TILE_SIZE);
+    protected final int maxHp;
     protected int hp;
     protected int damage;
     protected float attackSpeed;
@@ -48,6 +51,7 @@ public class Monster extends Entity {
     protected boolean isDead;
     protected boolean isAttacking;
     protected MonsterType monsterType = MonsterType.GROUND;
+    protected MonsterAiState aiState = MonsterAiState.IDLE;
     protected MonsterBehavior behavior;
     protected BufferedImage fallbackSprite;
     protected BufferedImage projectileSprite;
@@ -79,6 +83,7 @@ public class Monster extends Entity {
         super(x, y);
         this.width = width;
         this.height = height;
+        this.maxHp = Math.max(1, hp);
         this.hp = hp;
         this.damage = damage;
         this.moveSpeed = moveSpeed;
@@ -160,6 +165,16 @@ public class Monster extends Entity {
         return currentState;
     }
 
+    public MonsterAiState getAiState() {
+        return aiState;
+    }
+
+    public void setAiState(MonsterAiState aiState) {
+        if (aiState != null) {
+            this.aiState = aiState;
+        }
+    }
+
     public String getConfigName() {
         return configName;
     }
@@ -204,6 +219,7 @@ public class Monster extends Entity {
         isAttacking = snapshot.getState() == MonsterState.ATTACK;
         direction = snapshot.getDirection() == null ? Direction.RIGHT : snapshot.getDirection();
         currentState = snapshot.getState() == null ? MonsterState.IDLE : snapshot.getState();
+        aiState = currentState == MonsterState.ATTACK ? MonsterAiState.ATTACK : MonsterAiState.IDLE;
         currentFrame = 0;
         frameTimer = 0;
         attackCooldownRemaining = snapshot.getAttackCooldownRemaining();
@@ -305,7 +321,9 @@ public class Monster extends Entity {
             attackCooldownRemaining--;
         }
 
-        if (behavior != null) {
+        if (!isActionState() && shouldRetreatFrom(player)) {
+            retreatFrom(player, collisionMap);
+        } else if (behavior != null) {
             behavior.update(this, player, collisionMap);
         } else {
             move(player, collisionMap);
@@ -313,7 +331,7 @@ public class Monster extends Entity {
 
         int damageDealt = 0;
         if (player != null && !isDead) {
-            if (isInAttackRange(player) && attackCooldownRemaining == 0) {
+            if (aiState != MonsterAiState.RETREAT && isInAttackRange(player) && attackCooldownRemaining == 0) {
                 damageDealt = attack(player);
             }
         }
@@ -343,6 +361,7 @@ public class Monster extends Entity {
 
     protected void move(Player player, CollisionMap collisionMap) {
         if (player == null) {
+            setAiState(MonsterAiState.IDLE);
             setState(MonsterState.IDLE);
             return;
         }
@@ -352,6 +371,7 @@ public class Monster extends Entity {
         float distance = (float) Math.hypot(dx, dy);
 
         if (distance <= detectRange) {
+            setAiState(MonsterAiState.CHASE);
             if (dx < 0) {
                 direction = Direction.LEFT;
             } else if (dx > 0) {
@@ -361,12 +381,14 @@ public class Monster extends Entity {
             x += clampStep(dx, getMoveSpeed());
             y += clampStep(dy, getMoveSpeed());
         } else {
+            setAiState(MonsterAiState.IDLE);
             setState(MonsterState.IDLE);
         }
     }
 
     protected int attack(Player player) {
         isAttacking = true;
+        setAiState(MonsterAiState.ATTACK);
         setState(MonsterState.ATTACK);
         attackCooldownRemaining = getEffectiveAttackCooldownTicks();
         return damage;
@@ -394,7 +416,68 @@ public class Monster extends Entity {
 
     protected void die() {
         isDead = true;
+        setAiState(MonsterAiState.IDLE);
         setState(MonsterState.DEATH);
+    }
+
+    public boolean shouldRetreatFrom(Player player) {
+        return player != null && hp > 0 && hp <= getRetreatHpThreshold() && canDetectPlayer(player);
+    }
+
+    private int getRetreatHpThreshold() {
+        return Math.max(1, Math.round(maxHp * RETREAT_HP_RATIO));
+    }
+
+    private void retreatFrom(Player player, CollisionMap collisionMap) {
+        if (player == null) {
+            setAiState(MonsterAiState.IDLE);
+            setState(MonsterState.IDLE);
+            return;
+        }
+
+        setAiState(MonsterAiState.RETREAT);
+
+        float currentCenterX = x + width * 0.5f;
+        float currentCenterY = y + height * 0.5f;
+        float playerCenterX = getPlayerCenterX(player);
+        float playerCenterY = getPlayerCenterY(player);
+        float dx = currentCenterX - playerCenterX;
+        float dy = currentCenterY - playerCenterY;
+        float distance = (float) Math.hypot(dx, dy);
+
+        if (distance < 0.001f) {
+            dx = direction == Direction.LEFT ? -1f : 1f;
+            dy = 0f;
+            distance = 1f;
+        }
+
+        float retreatDistance = Math.max(attackRange * 2f, detectRange * 0.5f);
+        float targetCenterX = currentCenterX + (dx / distance) * retreatDistance;
+        float targetCenterY = currentCenterY + (dy / distance) * retreatDistance;
+
+        if (collisionMap != null && collisionMap.isLoaded()) {
+            float minCenterX = width * 0.5f;
+            float minCenterY = height * 0.5f;
+            float maxCenterX = Math.max(minCenterX, collisionMap.getWidth() - width * 0.5f);
+            float maxCenterY = Math.max(minCenterY, collisionMap.getHeight() - height * 0.5f);
+            targetCenterX = clamp(targetCenterX, minCenterX, maxCenterX);
+            targetCenterY = clamp(targetCenterY, minCenterY, maxCenterY);
+        }
+
+        float startX = x;
+        float startY = y;
+        moveTowardAvoidingSolid(
+                targetCenterX,
+                targetCenterY,
+                collisionMap,
+                getMoveSpeed() * RETREAT_SPEED_MULTIPLIER
+        );
+
+        if (Math.hypot(x - startX, y - startY) > 0.01) {
+            setState(MonsterState.MOVE);
+        } else {
+            setState(MonsterState.IDLE);
+        }
     }
 
     protected boolean isActionState() {
@@ -657,6 +740,13 @@ public class Monster extends Entity {
     protected float clampStep(float delta, float speed) {
         float step = Math.min(Math.abs(delta), speed);
         return Math.copySign(step, delta);
+    }
+
+    private float clamp(float value, float min, float max) {
+        if (max < min) {
+            return min;
+        }
+        return Math.max(min, Math.min(value, max));
     }
 
     protected BufferedImage getCurrentImage() {

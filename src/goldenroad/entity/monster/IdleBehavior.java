@@ -6,6 +6,7 @@ import goldenroad.map.CollisionMap;
 public class IdleBehavior implements MonsterBehavior {
     @Override
     public void update(Monster monster, Player player, CollisionMap collisionMap) {
+        monster.setAiState(MonsterAiState.IDLE);
         monster.setState(MonsterState.IDLE);
     }
 }

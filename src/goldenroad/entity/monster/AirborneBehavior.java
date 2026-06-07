@@ -30,6 +30,7 @@ public class AirborneBehavior implements MonsterBehavior {
 
                 float targetCenterX = monster.getPlayerCenterX(player);
                 float targetCenterY = monster.getPlayerCenterY(player);
+                monster.setAiState(MonsterAiState.CHASE);
                 monster.moveTowardAvoidingSolid(
                         targetCenterX,
                         targetCenterY -20,
@@ -42,6 +43,7 @@ public class AirborneBehavior implements MonsterBehavior {
             }
         }
 
+        monster.setAiState(MonsterAiState.PATROL);
         float t = (float) ((System.nanoTime() / 1_000_000.0) * phaseSpeed);
         float targetX = monster.getSpawnX() + (float) Math.cos(t) * altitudeRange;
         float targetY = monster.getSpawnY() + (float) Math.sin(t * 1.3f) * (verticalDrift + idleRadius);

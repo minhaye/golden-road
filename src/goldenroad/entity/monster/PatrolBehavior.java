@@ -32,6 +32,7 @@ public class PatrolBehavior implements MonsterBehavior {
         }
 
         if (player != null && monster.canDetectPlayer(player)) {
+            monster.setAiState(MonsterAiState.CHASE);
             monster.moveHorizontallyToward(player.getX());
             monster.setState(MonsterState.MOVE);
             return;
@@ -39,34 +40,53 @@ public class PatrolBehavior implements MonsterBehavior {
 
         if (idleTicksRemaining > 0) {
             idleTicksRemaining--;
+            monster.setAiState(MonsterAiState.IDLE);
             monster.setState(MonsterState.IDLE);
             return;
         }
 
         float x = monster.getX();
         float speed = monster.getMoveSpeed() * patrolSpeedMultiplier;
+        float rightEdgeX = (float) (rightBoundary - monster.getWidth());
+        float safeRightBoundary = Math.max(leftBoundary, rightEdgeX);
 
         if (monster.getDirection() == Direction.LEFT && x <= leftBoundary + BORDER_MARGIN) {
             monster.setPosition(leftBoundary, monster.getY());
             monster.setDirection(Direction.RIGHT);
             idleTicksRemaining = idleTicks;
+            monster.setAiState(MonsterAiState.IDLE);
             monster.setState(MonsterState.IDLE);
             return;
         }
 
-        if (monster.getDirection() == Direction.RIGHT && x >= rightBoundary - BORDER_MARGIN) {
-            monster.setPosition(rightBoundary, monster.getY());
+        if (monster.getDirection() == Direction.RIGHT && x >= safeRightBoundary - BORDER_MARGIN) {
+            monster.setPosition(safeRightBoundary, monster.getY());
             monster.setDirection(Direction.LEFT);
             idleTicksRemaining = idleTicks;
+            monster.setAiState(MonsterAiState.IDLE);
+            monster.setState(MonsterState.IDLE);
+            return;
+        }
+
+        float nextX = monster.getDirection() == Direction.LEFT ? x - speed : x + speed;
+        nextX = Math.max(leftBoundary, Math.min(nextX, safeRightBoundary));
+
+        if (collisionMap != null
+                && collisionMap.isLoaded()
+                && !collisionMap.canStandAt(nextX, monster.getY(), monster.getWidth(), monster.getHeight())) {
+            monster.setDirection(monster.getDirection() == Direction.LEFT ? Direction.RIGHT : Direction.LEFT);
+            idleTicksRemaining = idleTicks;
+            monster.setAiState(MonsterAiState.IDLE);
             monster.setState(MonsterState.IDLE);
             return;
         }
 
         if (monster.getDirection() == Direction.LEFT) {
-            monster.setPosition(x - speed, monster.getY());
+            monster.setPosition(nextX, monster.getY());
         } else {
-            monster.setPosition(x + speed, monster.getY());
+            monster.setPosition(nextX, monster.getY());
         }
+        monster.setAiState(MonsterAiState.PATROL);
         monster.setState(MonsterState.MOVE);
     }
 }
