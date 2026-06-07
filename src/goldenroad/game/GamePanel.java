@@ -38,7 +38,6 @@ import java.awt.Color;
 import java.awt.Composite;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
@@ -709,7 +708,6 @@ public class GamePanel extends JPanel implements Runnable {
             && (mouseHandler.isLeftPressed() || mouseHandler.isRightPressed());
         player.draw(bufferG, aiming, getMouseWorldX(), getMouseWorldY());
         drawHiddenLayer(bufferG);
-        drawPlayerCoordinates(bufferG);
 
         bufferG.setTransform(new java.awt.geom.AffineTransform());
     }
@@ -723,29 +721,6 @@ public class GamePanel extends JPanel implements Runnable {
         bufferG.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
         bufferG.drawImage(hiddenImage, 0, 0, null);
         bufferG.setComposite(previousComposite);
-    }
-
-    private void drawPlayerCoordinates(Graphics2D bufferG) {
-        String coords = String.format("(%.0f, %.0f)", player.getX(), player.getY());
-        Font previousFont = bufferG.getFont();
-        Color previousColor = bufferG.getColor();
-
-        Font labelFont = previousFont.deriveFont(Font.BOLD, 14f);
-        bufferG.setFont(labelFont);
-
-        int textWidth = bufferG.getFontMetrics().stringWidth(coords);
-        int x = (int) Math.round(player.getX()) - textWidth / 2;
-        int y = (int) Math.round(player.getY()) - 12;
-
-        bufferG.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.85f));
-        bufferG.setColor(Color.BLACK);
-        bufferG.drawString(coords, x + 1, y + 1);
-        bufferG.setColor(Color.WHITE);
-        bufferG.drawString(coords, x, y);
-        bufferG.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
-
-        bufferG.setFont(previousFont);
-        bufferG.setColor(previousColor);
     }
 
     private void drawHudAndOverlays(Graphics2D bufferG) {

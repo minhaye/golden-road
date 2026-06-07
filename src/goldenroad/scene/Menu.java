@@ -39,6 +39,7 @@ public class Menu {
     private Rectangle volumeMinusButton;
     private Rectangle volumePlusButton;
     private Rectangle backButton;
+    private Rectangle tutorialBackButton;
     private Rectangle aboutButton;
     private Rectangle aboutSidebar;
 
@@ -120,6 +121,7 @@ public class Menu {
         volumeMinusButton = new Rectangle((BASE_W / 2) - 104, 142, 44, 38);
         volumePlusButton = new Rectangle((BASE_W / 2) + 60, 142, 44, 38);
         backButton = new Rectangle((BASE_W / 2) - 90, 338, 180, 42);
+        tutorialBackButton = new Rectangle((BASE_W / 2) - 90, BASE_H - 56, 180, 42);
     }
 
     public boolean isActive() {
@@ -172,7 +174,7 @@ public class Menu {
         }
 
         if (view == View.TUTORIAL) {
-            if (backButton.contains(mx, my)) {
+            if (tutorialBackButton.contains(mx, my)) {
                 panel.playMenuClickSound();
                 resetSubmenuState();
             }
@@ -479,7 +481,7 @@ public class Menu {
             y += 28;
         }
 
-        renderButton(g2, backButton, "Back", false);
+        renderButton(g2, tutorialBackButton, "Back", false);
     }
 
     private void renderButton(Graphics2D g2, Rectangle b, String label, boolean selected) {
