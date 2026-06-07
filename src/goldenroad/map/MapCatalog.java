@@ -79,10 +79,10 @@ public final class MapCatalog {
 
         new MonsterSpawnPoint(1600, 2700, MonsterType.AIRBORNE, 2),
         new MonsterSpawnPoint(1100, 2700, MonsterType.AIRBORNE, 2),
-        new MonsterSpawnPoint(1200, 3050, MonsterType.AIRBORNE, 1),
-        new MonsterSpawnPoint(1350, 3050, MonsterType.AIRBORNE, 1),
-        new MonsterSpawnPoint(1700, 3050, MonsterType.AIRBORNE, 2),
-        new MonsterSpawnPoint(1850, 3050, MonsterType.AIRBORNE, 1),
+        new MonsterSpawnPoint(1200, 3100, MonsterType.AIRBORNE, 1),
+        new MonsterSpawnPoint(1350, 3100, MonsterType.AIRBORNE, 1),
+        new MonsterSpawnPoint(1700, 3100, MonsterType.AIRBORNE, 2),
+        new MonsterSpawnPoint(1850, 3100, MonsterType.AIRBORNE, 1),
         new MonsterSpawnPoint(2650, 3100, MonsterType.AIRBORNE, 2),
         new MonsterSpawnPoint(2950, 2900, MonsterType.AIRBORNE, 2),
         new MonsterSpawnPoint(4000, 3050, MonsterType.AIRBORNE, 1),
@@ -97,7 +97,7 @@ public final class MapCatalog {
 
         new MonsterSpawnPoint(5550, 820, MonsterType.AIRBORNE, 2),
         new MonsterSpawnPoint(6050, 820, MonsterType.AIRBORNE, 2),
-        new MonsterSpawnPoint(6250, 1200, MonsterType.AIRBORNE, 1),
+        new MonsterSpawnPoint(6200, 1200, MonsterType.AIRBORNE, 1),
         new MonsterSpawnPoint(5850, 1500, MonsterType.AIRBORNE, 2),
         new MonsterSpawnPoint(5200, 1330, MonsterType.AIRBORNE, 1),
         new MonsterSpawnPoint(5350, 1150, MonsterType.AIRBORNE, 1),
@@ -108,12 +108,7 @@ public final class MapCatalog {
         new MonsterSpawnPoint(5550, 2500, MonsterType.AIRBORNE, 1),
         new MonsterSpawnPoint(5600, 2530, MonsterType.AIRBORNE, 1),
         new MonsterSpawnPoint(5750, 2520, MonsterType.AIRBORNE, 2),
-        new MonsterSpawnPoint(6000, 2580, MonsterType.AIRBORNE, 2),
-
-        
-        new MonsterSpawnPoint(1100, 180, MonsterType.AIRBORNE, 1),
-        new MonsterSpawnPoint(1600, 150, MonsterType.AIRBORNE, 2),
-        new MonsterSpawnPoint(2320, 50, MonsterType.AIRBORNE, 2)
+        new MonsterSpawnPoint(6000, 2580, MonsterType.AIRBORNE, 2)
  
     );
 
